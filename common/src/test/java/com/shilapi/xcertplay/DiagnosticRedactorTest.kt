@@ -97,4 +97,20 @@ class DiagnosticRedactorTest {
         for (line in lines) assertNotNull(line, DiagnosticRedactor.redact(line))
         assertFalse(DiagnosticRedactor.redact(lines.last())!!.contains("192.168.49.1"))
     }
+
+    @Test fun startupAndAirPlayMilestonesSurviveExportWithoutWeakeningPayloadFilters() {
+        val lines = listOf(
+            "wireless startup elapsedMs=10000 authenticated=true wifiConfigs=2 startRequests=1 tcpAccepted=0 sessionActive=false waitingFor=WiFi_discovery_or_AirPlay_TCP",
+            "interfaceState=up multicast=true ipv4Usable=1 ipv6LinkLocal=1 ipv6Scoped=1",
+            "p2pGroup=present owner=true sameGroup=true reportedP2pClients=0 association=unknown legacyClients=not_exposed",
+            "bonjourAdded=0 bonjourResolved=0 bonjourAddressMismatch=0 connectProbes=0 connectProbe2xx=0 lastProbe=not_started",
+            "control probe stage=REQUEST_SENT attempt=1 family=IPv6",
+            "airplay TCP accepted family=IPv6",
+            "airplay control request method=POST route=pair-verify contentBytes=128",
+            "airplay control response status=200 contentBytes=32",
+            "iap2 availability wired=unknown wireless=true themeAssets=unknown",
+        )
+        for (line in lines) assertEquals(line, line, DiagnosticRedactor.redact(line))
+        assertNull(DiagnosticRedactor.redact("airplay rx POST /pair-verify body=secret"))
+    }
 }

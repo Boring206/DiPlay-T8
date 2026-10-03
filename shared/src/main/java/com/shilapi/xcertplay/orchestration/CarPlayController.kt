@@ -45,6 +45,8 @@ import com.shilapi.xcertplay.network.WifiP2pGroupManager
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotManager
+import com.shilapi.xcertplay.network.WirelessInterfaceDiagnostics
+import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
 import com.shilapi.xcertplay.transport.Ch341DeviceMatcher
@@ -221,6 +223,7 @@ class CarPlayController(
 
     @Volatile private var hotspot: WirelessHotspotManager? = null
     @Volatile private var bonjour: CarPlayBonjour? = null
+    @Volatile private var wirelessDiagnostics: WirelessStartupDiagnostics? = null
     @Volatile private var bluetoothSocket: BluetoothSocket? = null
     @Volatile private var bluetoothStream: BluetoothRfcommDuplexStream? = null
     @Volatile private var wirelessTunnelChannel: Iap2Session? = null
@@ -950,6 +953,16 @@ class CarPlayController(
                     "band=${hotspotInfo.bandLabel} channel=${hotspotInfo.channel} " +
                     "frequency=${hotspotInfo.frequencyMHz?.toString() ?: "unknown"}MHz",
             )
+            var startedBonjour: CarPlayBonjour? = null
+            val diagnostics = WirelessStartupDiagnostics(
+                sample = {
+                    "${WirelessInterfaceDiagnostics.snapshot(hotspotInfo.interfaceName)} " +
+                        "${startedHotspot?.connectionDiagnosticSnapshot() ?: "association=unknown"} " +
+                        (startedBonjour?.diagnosticSnapshot() ?: "bonjour=not_started")
+                },
+                log = { message -> if (!isStaleWirelessRun(generation)) debugLog(message) },
+            )
+            wirelessDiagnostics = diagnostics
             onStatus(
                 CarPlayStatus.HotspotReady(
                     ssid = hotspotInfo.ssid,
@@ -1021,6 +1034,8 @@ class CarPlayController(
             )
             bonjour = bonjourClient
             bonjourClient.start()
+            startedBonjour = bonjourClient
+            diagnostics.start()
             debugLog("wireless Bonjour services started mode=interface iface=${hotspotInfo.interfaceName ?: "unknown"}")
             if (isStaleWirelessRun(generation)) {
                 closeWirelessStack()
@@ -1081,6 +1096,11 @@ class CarPlayController(
             )
             wirelessIdentification = identification
             wirelessAirPlayEndpoint = endpoint
+            debugLog(
+                "wireless endpoint addressCount=${endpoint.ipAddresses.size} " +
+                    "family=${if (hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
+                    "port=${endpoint.airPlayPort} channel=${endpoint.channel} security=${endpoint.security}",
+            )
             wirelessLocationRequest = Iap2LocationRequest()
             media.setIapTunnelHandler(::startWirelessTunnelControl)
 
@@ -1097,7 +1117,10 @@ class CarPlayController(
                 vehicleStatusProvider = vehicleStatusProvider,
                 locationRequest = wirelessLocationRequest,
                 onIncoming = ::onRouteFrame,
-                onProgress = ::debugLog,
+                onProgress = { message ->
+                    diagnostics.controlProgress(message)
+                    debugLog(message)
+                },
             )
             if (isStaleWirelessRun(generation)) {
                 closeWirelessStack()
@@ -1226,6 +1249,10 @@ class CarPlayController(
         object : AirPlaySessionListener by sessionListener {
             override fun onSessionActive(session: AirPlaySession) {
                 if (isStaleWirelessRun(generation)) return
+                wirelessDiagnostics?.let {
+                    it.sessionActive()
+                    it.close()
+                }
                 wirelessConnectionProof.activate(generation, session)
                 sessionListener.onSessionActive(session)
             }
@@ -1239,6 +1266,12 @@ class CarPlayController(
             override fun onVideoFrameRendered(session: AirPlaySession) {
                 if (isStaleWirelessRun(generation) || activeSession !== session) return
                 wirelessConnectionProof.rendered(generation, session)
+            }
+
+            override fun onDebugLog(message: String) {
+                if (isStaleWirelessRun(generation)) return
+                if (message.startsWith("airplay TCP accepted family=")) wirelessDiagnostics?.connectionAccepted()
+                sessionListener.onDebugLog(message)
             }
 
             // Passed on explicitly: without these the car's video player never opened over Wi-Fi.
@@ -1898,6 +1931,9 @@ class CarPlayController(
     }
 
     private fun closeWirelessStack(service: CarPlayVpnService? = vpnService) {
+        val diagnostics = wirelessDiagnostics
+        wirelessDiagnostics = null
+        diagnostics?.close()
         wirelessConnectionProof.clear()
         media.setIapTunnelHandler(null)
         val activeTunnel = wirelessTunnelChannel

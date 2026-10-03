@@ -273,6 +273,18 @@ class WifiP2pGroupManagerTest {
         assertTrue(logs.any { it.contains("cleanup skipped=another_app_owns_group") })
     }
 
+    @Test fun connectionSnapshotDoesNotInterpretAnEmptyP2pListAsFailedIphoneAssociation() {
+        val manager = WifiP2pGroupManager(context)
+        background { manager.start(5000) }
+        val snapshot = background { manager.connectionDiagnosticSnapshot() }
+        assertTrue(snapshot.contains("p2pGroup=present owner=true sameGroup=true"))
+        assertTrue(snapshot.contains("reportedP2pClients=0 association=unknown legacyClients=not_exposed"))
+        radio.group = null
+        assertEquals("p2pGroup=absent association=unknown", background { manager.connectionDiagnosticSnapshot() })
+        background { manager.close() }
+        assertEquals("p2pGroup=unavailable association=unknown", manager.connectionDiagnosticSnapshot())
+    }
+
     @Test fun staleCloseCannotRemoveANewerDiPlaySession() {
         val old = WifiP2pGroupManager(context)
         val previous = background { old.start(5000) }

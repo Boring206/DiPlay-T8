@@ -200,6 +200,9 @@ class CarPlayVpnService : VpnService() {
                         socket.close()
                         return
                     }
+                    runCatching { current.listener.onDebugLog(
+                        "airplay TCP accepted family=${if (socket.inetAddress is Inet6Address) "IPv6" else "IPv4"}",
+                    ) }
                     AirPlaySession(
                         socket = socket,
                         config = current.config,

@@ -158,6 +158,7 @@ class Iap2WirelessControlClient(
 
                     CARPLAY_AVAILABILITY -> {
                         onProgress("iap2 rx=0x4300 carplay-availability")
+                        onProgress(carPlayAvailabilityDiagnostic(incoming))
                         send(carPlayStartSession(endpoint), deadlineNanos)
                         stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
                         carPlayStartSessionsSent++
@@ -238,6 +239,16 @@ class Iap2WirelessControlClient(
         private const val MAX_PRE_TRANSPORT_WIFI_CONFIGURATION_SENDS = 5
         private const val MAX_POST_TRANSPORT_WIFI_CONFIGURATION_SENDS = 2
         private const val NANOS_PER_MILLISECOND = 1_000_000L
+
+        /** Malformed optional availability metadata must not change existing control behavior. */
+        internal fun carPlayAvailabilityDiagnostic(frame: Iap2Frame): String = try {
+            val value = Iap2CarPlayMessages.availability(frame)
+            "iap2 availability wired=${value.wired?.available ?: "unknown"} " +
+                "wireless=${value.wireless?.available ?: "unknown"} " +
+                "themeAssets=${value.themeAssets?.available ?: "unknown"}"
+        } catch (error: Exception) {
+            "iap2 availability decode=failed failureClass=${error.javaClass.simpleName}"
+        }
 
         /** Reference-compatible 0x5703 body. BSSID is omitted when the platform does not expose it. */
         fun accessoryWiFiConfiguration(endpoint: Iap2WirelessCarPlayEndpoint): Iap2Frame =

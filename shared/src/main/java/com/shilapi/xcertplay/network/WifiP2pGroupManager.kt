@@ -69,6 +69,30 @@ class WifiP2pGroupManager(
     @Volatile private var observedCreatedName: String? = null
     @Volatile private var requestedName: String? = null
 
+    override fun connectionDiagnosticSnapshot(): String {
+        val current = synchronized(stateLock) { if (closed) null else channel }
+            ?: return "p2pGroup=unavailable association=unknown"
+        val result = AtomicReference<WifiP2pGroup?>()
+        val latch = CountDownLatch(1)
+        return try {
+            p2pManager.requestGroupInfo(current) { result.set(it); latch.countDown() }
+            if (!latch.await(500, TimeUnit.MILLISECONDS)) {
+                "p2pGroup=callback_timeout association=unknown"
+            } else {
+                val group = result.get()
+                if (group == null) "p2pGroup=absent association=unknown"
+                else "p2pGroup=present owner=${group.isGroupOwner} " +
+                    "sameGroup=${group.networkName == observedCreatedName} " +
+                    "reportedP2pClients=${group.clientList.size} association=unknown legacyClients=not_exposed"
+            }
+        } catch (error: InterruptedException) {
+            Thread.currentThread().interrupt()
+            "p2pGroup=interrupted association=unknown"
+        } catch (error: RuntimeException) {
+            "p2pGroup=unavailable failureClass=${error.javaClass.simpleName} association=unknown"
+        }
+    }
+
     override fun start(timeoutMillis: Long): WirelessHotspotInfo {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             throw IOException("Wi-Fi P2P credentials require Android 10 (API 29) or newer")

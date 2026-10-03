@@ -334,6 +334,10 @@ class AirPlaySession(
                         "airplay rx ${request.method} ${request.path} cseq=$cseq body=${request.body.size}",
                         showInDebugOverlay,
                     )
+                    if (showInDebugOverlay) debugLog(
+                        AirPlayControlDiagnostics.request(request.method, request.path, request.body.size),
+                        false,
+                    )
                     trace(
                         "airplay control rx headers=${request.headers} " +
                             "bodyHex=${request.body.toHex()}",
@@ -351,6 +355,10 @@ class AirPlaySession(
                     debugLog(
                         "airplay tx status=${response.status ?: 200} cseq=$cseq body=${response.body.size}",
                         showInDebugOverlay,
+                    )
+                    if (showInDebugOverlay) debugLog(
+                        "airplay control response status=${response.status ?: 200} contentBytes=${response.body.size}",
+                        false,
                     )
                     val wire = RtspMessage.buildResponse(request, response)
                     trace("airplay control tx wireHex=${wire.toHex()}")
