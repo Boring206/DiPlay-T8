@@ -6,6 +6,72 @@ import org.junit.Test
 import java.io.IOException
 
 class P2pStartupRecoveryTest {
+    @Test fun manualChannelOverridesStationAndRememberedConfiguration() {
+        val remembered = P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)
+        for ((channel, frequency) in listOf(1 to 2412, 6 to 2437, 11 to 2462,
+            36 to 5180, 40 to 5200, 44 to 5220, 48 to 5240, 149 to 5745,
+            153 to 5765, 157 to 5785, 161 to 5805, 165 to 5825)) {
+            assertEquals(listOf(P2pCreationRequest(P2pCreationMode.PREFERRED_CHANNEL, frequency)),
+                P2pStartupRecovery.plan(5180, remembered, preferredChannel = channel))
+        }
+        assertEquals(P2pStartupRecovery.plan(5200, remembered),
+            P2pStartupRecovery.plan(5200, remembered, preferredChannel = WifiP2pChannels.AUTO))
+    }
+
+    @Test fun rejectedManualChannelNeverFallsBackToAnotherChannel() {
+        val attempts = mutableListOf<Int?>()
+        val rejection = P2pCreateRejected(WifiP2pManager.ERROR, "rejected")
+        val failure = assertThrows(P2pChannelUnavailableException::class.java) {
+            P2pStartupRecovery.create(5180, { fail("Unexpected fallback") }, preferredChannel = 149) {
+                attempts += it.frequencyMHz
+                throw rejection
+            }
+        }
+        assertEquals(listOf(5745), attempts)
+        assertSame(rejection, failure.cause)
+        assertTrue(failure.message!!.contains("channel 149"))
+        assertTrue(failure.message!!.contains("Choose Auto"))
+    }
+
+    @Test fun busyManualChannelRetriesTheSameChannelOnlyOnce() {
+        val attempts = mutableListOf<Int?>()
+        var retries = 0
+        assertThrows(P2pChannelUnavailableException::class.java) {
+            P2pStartupRecovery.create(5180, { retries++ }, preferredChannel = 149) {
+                attempts += it.frequencyMHz
+                throw P2pCreateRejected(WifiP2pManager.BUSY, "busy")
+            }
+        }
+        assertEquals(listOf(5745, 5745), attempts)
+        assertEquals(1, retries)
+    }
+
+    @Test fun manualChannelDoesNotUseSystemFallbackWhenBuilderIsUnavailable() {
+        var calls = 0
+        assertThrows(P2pChannelUnavailableException::class.java) {
+            P2pStartupRecovery.create(null, { fail("Unexpected fallback") }, preferredChannel = 149) {
+                calls++
+                throw P2pConfigBuildCompatibilityFailure(NoSuchMethodError("vendor framework"))
+            }
+        }
+        assertEquals(1, calls)
+    }
+
+    @Test fun manualChannelDoesNotRetryUncertainTimeoutOrMissingPermission() {
+        for (failure in listOf(IOException("timeout"),
+            P2pCreateRejected(WifiP2pManager.NO_PERMISSION, "permission"),
+            P2pCreateRejected(WifiP2pManager.P2P_UNSUPPORTED, "unsupported"))) {
+            var calls = 0
+            assertSame(failure, assertThrows(IOException::class.java) {
+                P2pStartupRecovery.create(null, { fail("Unsafe retry") }, preferredChannel = 149) {
+                    calls++
+                    throw failure
+                }
+            })
+            assertEquals(1, calls)
+        }
+    }
+
     @Test fun confirmedFrequencyGoesFirstWithoutBeingRetriedLater() {
         val preferred = P2pCreationRequest(P2pCreationMode.FIXED_2_GHZ, 2437)
         val plan = P2pStartupRecovery.plan(5180, preferred)

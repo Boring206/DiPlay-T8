@@ -1841,7 +1841,8 @@ class CarPlayController(
             throw IOException("The car hotspot is off. Turn it on in the car settings and connect again.")
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
-            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog)
+            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
+                preferredChannel = config.wifiP2pPreferredChannel)
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog)
             WirelessHotspotMode.MANUAL -> ManualHotspotManager(
                 context = appContext,

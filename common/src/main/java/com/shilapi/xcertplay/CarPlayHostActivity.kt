@@ -154,6 +154,7 @@ class CarPlayHostActivity : ComponentActivity() {
         wirelessBluetoothDeviceAddress = DiPlayPreferences.phoneAddress(this),
         transport = if (wirelessEnabled) CarPlayTransport.WIRELESS else CarPlayTransport.WIRED,
         wirelessHotspotMode = wirelessHotspotMode,
+        wifiP2pPreferredChannel = AirPlayPersistence.loadWifiP2pPreferredChannel(this),
         manualHotspotSsid = manualHotspotSsid,
         manualHotspotPassphrase = manualHotspotPassphrase,
         manualHotspotBand = manualHotspotBand,

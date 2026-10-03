@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="wifi_direct_channel_title">قناة Wi-Fi Direct المفضلة</string>
+    <string name="wifi_direct_channel_summary">القناة المفضلة: %1$s</string>
+    <string name="wifi_direct_channel_choice">القناة %1$d · %2$s</string>
+    <string name="wifi_direct_channel_description">يختار الوضع التلقائي القناة نيابةً عنك. تعتمد القنوات اليدوية على ما تدعمه سيارتك. تُطبَّق التغييرات عند اتصال Wi-Fi Direct التالي.</string>
     <string name="built_in_car_hotspot">نقطة اتصال السيارة المدمجة</string>
     <string name="hotspot_hint_manual">نقطة اتصال السيارة المدمجة · أبقِ نقطة الاتصال والبلوتوث وواي فاي iPhone مُفعّلة.</string>
     <string name="hotspot_hint_local">افتح إعداد الاتصال لحفظ بيانات نقطة اتصال السيارة المدمجة.</string>

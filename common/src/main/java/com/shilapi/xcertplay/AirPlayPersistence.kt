@@ -16,6 +16,7 @@ import com.shilapi.xcertplay.orchestration.ManualHotspotBand
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
+import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.transport.LockdownPairRecord
 import java.io.File
 
@@ -48,6 +49,7 @@ object AirPlayPersistence {
     private const val KEY_NAVIGATION_STREAM_TYPE = "navigation_stream_type"
     private const val KEY_WIRELESS_ENABLED = "wireless_enabled"
     private const val KEY_WIRELESS_HOTSPOT_MODE = "wireless_hotspot_mode"
+    private const val KEY_WIFI_P2P_PREFERRED_CHANNEL = "wifi_p2p_preferred_channel"
     private const val KEY_MANUAL_HOTSPOT_SSID = "manual_hotspot_ssid"
     private const val KEY_MANUAL_HOTSPOT_PASSPHRASE = "manual_hotspot_passphrase"
     private const val KEY_MANUAL_HOTSPOT_BAND = "manual_hotspot_band"
@@ -267,6 +269,18 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()
+    }
+
+    fun loadWifiP2pPreferredChannel(context: Context): Int = runCatching {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, WifiP2pChannels.AUTO)
+            .takeIf(WifiP2pChannels::isValid) ?: WifiP2pChannels.AUTO
+    }.getOrDefault(WifiP2pChannels.AUTO)
+
+    fun saveWifiP2pPreferredChannel(context: Context, channel: Int) {
+        require(WifiP2pChannels.isValid(channel))
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, channel).apply()
     }
 
     fun loadManualHotspotSsid(context: Context): String =

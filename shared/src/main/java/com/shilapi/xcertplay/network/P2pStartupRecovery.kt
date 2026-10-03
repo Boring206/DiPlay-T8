@@ -3,7 +3,7 @@ package com.shilapi.xcertplay.network
 import android.net.wifi.p2p.WifiP2pManager
 import java.io.IOException
 
-internal enum class P2pCreationMode { ALIGNED_5_GHZ, ALIGNED_2_GHZ, FIXED_5_GHZ, FIXED_2_GHZ, SYSTEM_DEFAULT }
+internal enum class P2pCreationMode { ALIGNED_5_GHZ, ALIGNED_2_GHZ, FIXED_5_GHZ, FIXED_2_GHZ, SYSTEM_DEFAULT, PREFERRED_CHANNEL }
 
 internal data class P2pCreationRequest(val mode: P2pCreationMode, val frequencyMHz: Int? = null)
 
@@ -24,7 +24,12 @@ internal object P2pStartupRecovery {
     }
 
     /** A band-only request still needs channel selection, which some BYD drivers cannot do. */
-    fun plan(stationFrequency: Int?, preferred: P2pCreationRequest? = null): List<P2pCreationRequest> = buildList {
+    fun plan(stationFrequency: Int?, preferred: P2pCreationRequest? = null,
+             preferredChannel: Int = WifiP2pChannels.AUTO): List<P2pCreationRequest> = buildList {
+        WifiP2pChannels.frequencyMhz(preferredChannel)?.let {
+            add(P2pCreationRequest(P2pCreationMode.PREFERRED_CHANNEL, it))
+            return@buildList
+        }
         val aligned24 = stationFrequency != null && stationFrequency in 2412..2462 &&
             (stationFrequency - 2412) % 5 == 0
         val aligned5 = stationFrequency in listOf(5180, 5200, 5220, 5240, 5745, 5765, 5785, 5805, 5825)
@@ -50,9 +55,10 @@ internal object P2pStartupRecovery {
         stationFrequency: Int?,
         beforeRetry: () -> Unit,
         preferred: P2pCreationRequest? = null,
+        preferredChannel: Int = WifiP2pChannels.AUTO,
         request: (P2pCreationRequest) -> Unit,
     ): P2pCreationRequest {
-        val modes = plan(stationFrequency, preferred)
+        val modes = plan(stationFrequency, preferred, preferredChannel)
         var lastRejection: P2pCreateRejected? = null
         for ((index, mode) in modes.withIndex()) {
             var retriedBusy = false
@@ -61,6 +67,9 @@ internal object P2pStartupRecovery {
                     request(mode)
                     return mode
                 } catch (failure: P2pConfigBuildCompatibilityFailure) {
+                    if (preferredChannel != WifiP2pChannels.AUTO) {
+                        throw P2pChannelUnavailableException(preferredChannel, failure.message.orEmpty(), failure)
+                    }
                     if (mode.mode == P2pCreationMode.SYSTEM_DEFAULT) throw failure
                     // No creation request was issued. Keep the existing foreign-group and
                     // prerequisite interlock, then try the API 29 null-config overload once.
@@ -89,7 +98,9 @@ internal object P2pStartupRecovery {
                             beforeRetry()
                             break
                         }
-                        else -> throw failure
+                        else -> if (preferredChannel != WifiP2pChannels.AUTO) {
+                            throw P2pChannelUnavailableException(preferredChannel, failure.message.orEmpty(), failure)
+                        } else throw failure
                     }
                 }
             }

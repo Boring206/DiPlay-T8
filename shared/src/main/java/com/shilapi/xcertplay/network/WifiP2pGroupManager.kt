@@ -39,7 +39,11 @@ import java.util.concurrent.atomic.AtomicReference
 class WifiP2pGroupManager(
     context: Context,
     private val diagnostic: (String) -> Unit = {},
+    private val preferredChannel: Int = WifiP2pChannels.AUTO,
 ) : WirelessHotspotManager {
+    init {
+        require(WifiP2pChannels.isValid(preferredChannel)) { "Unsupported Wi-Fi Direct channel: $preferredChannel" }
+    }
     private val appContext = context.applicationContext
     private val p2pManager = appContext.getSystemService(WifiP2pManager::class.java)
         ?: throw IllegalStateException("WifiP2pManager is unavailable")
@@ -121,8 +125,13 @@ class WifiP2pGroupManager(
             val stationFrequency = station.alignmentFrequency
             checkPrerequisites(station)
             val remembered = configurationMemory.read()
-            val preferred = remembered?.takeIf { it.stationMHz == stationFrequency }
+            val preferred = remembered?.takeIf {
+                preferredChannel == WifiP2pChannels.AUTO && it.stationMHz == stationFrequency
+            }
+            diagnostic("Wi-Fi P2P channel preference=${if (preferredChannel == WifiP2pChannels.AUTO) "auto" else preferredChannel} " +
+                "frequencyMHz=${WifiP2pChannels.frequencyMhz(preferredChannel) ?: "auto"}")
             diagnostic(when {
+                preferredChannel != WifiP2pChannels.AUTO -> "Wi-Fi P2P remembered skipped=manual_channel"
                 preferred != null -> "Wi-Fi P2P remembered first mode=${preferred.request.mode} frequencyMHz=${preferred.request.frequencyMHz ?: "auto"}"
                 remembered != null -> "Wi-Fi P2P remembered skipped=station_channel_changed"
                 else -> "Wi-Fi P2P remembered unavailable"
@@ -160,6 +169,7 @@ class WifiP2pGroupManager(
             val creation = P2pStartupRecovery.create(
                 stationFrequency = stationFrequency,
                 preferred = preferred?.request,
+                preferredChannel = preferredChannel,
                 beforeRetry = {
                     ensureStartActive(attempt)
                     // Do not cancel discovery, toggle Wi-Fi, or remove a newly observed group.
@@ -224,13 +234,20 @@ class WifiP2pGroupManager(
             }
             diagnostic("Wi-Fi P2P ready mode=${creation.mode} band=${group.bandLabel} channel=${group.channel} frequencyMHz=${group.frequencyMHz}")
             diagnostic("Wi-Fi P2P channel requestedMHz=${creation.frequencyMHz ?: "auto"} actualMHz=${group.frequencyMHz} matched=${creation.frequencyMHz?.let { it == group.frequencyMHz } ?: "system_selected"}")
+            if (preferredChannel != WifiP2pChannels.AUTO && group.frequencyMHz != creation.frequencyMHz) {
+                throw P2pChannelUnavailableException(preferredChannel,
+                    "The car selected channel ${group.channel} instead.")
+            }
             synchronized(stateLock) {
                 ensureStartActiveLocked(attempt)
                 created = true
                 startAttempt = null
-                pendingSuccess = {
-                    configurationMemory.remember(creation, requireNotNull(group.frequencyMHz), stationFrequency)
-                }
+                // Manual experiments must not replace the proven automatic configuration.
+                pendingSuccess = if (preferredChannel == WifiP2pChannels.AUTO) {
+                    {
+                        configurationMemory.remember(creation, requireNotNull(group.frequencyMHz), stationFrequency)
+                    }
+                } else null
             }
             return group
         } catch (failure: Exception) {

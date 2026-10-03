@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="wifi_direct_channel_title">Бажаний канал Wi-Fi Direct</string>
+    <string name="wifi_direct_channel_summary">Бажаний канал: %1$s</string>
+    <string name="wifi_direct_channel_choice">Канал %1$d · %2$s</string>
+    <string name="wifi_direct_channel_description">У режимі «Авто» канал вибирається автоматично. Доступність ручних каналів залежить від автомобіля. Зміни застосовуються під час наступного підключення Wi-Fi Direct.</string>
     <string name="built_in_car_hotspot">Вбудована точка доступу автомобіля</string>
     <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="hotspot_hint_manual">Вбудована точка доступу · Тримайте точку доступу автомобіля, Bluetooth і Wi-Fi на iPhone увімкненими.</string>

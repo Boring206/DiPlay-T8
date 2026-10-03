@@ -35,6 +35,17 @@ required; phone internet availability depends on its network settings.
 If you change the car hotspot name or password, update it in the app too.
 Test one projection app at a time.
 
+WI-FI DIRECT CHANNEL — DIPLAY
+In Settings → Connection setup, choose Wi-Fi Direct, then Preferred channel.
+Auto is the default and keeps DiPlay's automatic channel selection. You can
+choose a 5 GHz channel (36, 40, 44, 48, 149, 153, 157, 161 or 165), or a
+2.4 GHz channel (1–11). The car and its regional Wi-Fi settings must support
+the selected channel. Save applies the choice to the next Wi-Fi Direct
+connection; an existing connection continues until you disconnect/reconnect.
+If the car rejects the channel or creates a different one, DiPlay reports an
+error. Choose Auto or another channel and reconnect. Switching to the built-in
+hotspot preserves this choice without applying it to the car hotspot.
+
 OPTIONAL: DIPLAY BYD FEATURES REQUIRING ADB
 Settings → BYD features · needs ADB appears only when BYD navigation services or
 the factory BYD car settings app are present, and traditional network ADB is

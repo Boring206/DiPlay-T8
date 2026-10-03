@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="wifi_direct_channel_title">Canal preferido de Wi-Fi Direct</string>
+    <string name="wifi_direct_channel_summary">Canal preferido: %1$s</string>
+    <string name="wifi_direct_channel_choice">Canal %1$d · %2$s</string>
+    <string name="wifi_direct_channel_description">Auto elige un canal por ti. Los canales manuales dependen de lo que admita tu coche. Los cambios se aplican en la próxima conexión Wi-Fi Direct.</string>
     <string name="built_in_car_hotspot">Punto de acceso integrado del coche</string>
     <string name="hotspot_hint_manual">Punto de acceso integrado · Mantén activos el punto de acceso, el Bluetooth y el Wi‑Fi del iPhone.</string>
     <string name="hotspot_hint_local">Abre la configuración de conexión para guardar los datos del punto de acceso integrado.</string>
