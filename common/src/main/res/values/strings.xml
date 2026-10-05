@@ -34,7 +34,7 @@
     <string name="clipboard_usage_access">DiPlay Usage Access</string>
     <string name="report_clip_label">Diagnostic report</string>
     <string name="share_diagnostic_report">Share diagnostic report</string>
-    <string name="setup_error_auth">CarPlay authentication could not be loaded. Install the complete DiPlay build over this app. No uninstall or hotspot change is needed.</string>
+    <string name="setup_error_auth">CarPlay authentication was not found. This build does not carry it: install the original DiPlay on this head unit, then open DiPlay T8 again and it will copy it from there.</string>
     <string name="hotspot_state_stopped">stopped</string>
     <string name="hotspot_state_off">off</string>
     <string name="hotspot_wireless_prefix">Wireless hotspot:\u0020</string>

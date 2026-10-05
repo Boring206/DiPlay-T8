@@ -34,7 +34,7 @@
     <string name="clipboard_usage_access">DiPlay 使用情況訪問權限</string>
     <string name="report_clip_label">診斷報告</string>
     <string name="share_diagnostic_report">分享診斷報告</string>
-    <string name="setup_error_auth">無法載入 CarPlay 認證。請在本應用之上覆蓋安裝完整的 DiPlay 構建。無需解除安裝或更改熱點設定。</string>
+    <string name="setup_error_auth">找不到 CarPlay 認證。這個版本本身不含認證：請先在這台車機上安裝原版 DiPlay，再重新開啟 DiPlay T8，它會自動從原版複製過來。</string>
     <string name="hotspot_state_stopped">已停止</string>
     <string name="hotspot_state_off">已關閉</string>
     <string name="hotspot_wireless_prefix">無線熱點：</string>

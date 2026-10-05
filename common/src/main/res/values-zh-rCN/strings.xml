@@ -34,7 +34,7 @@
     <string name="clipboard_usage_access">DiPlay 使用情况访问权限</string>
     <string name="report_clip_label">诊断报告</string>
     <string name="share_diagnostic_report">分享诊断报告</string>
-    <string name="setup_error_auth">无法加载 CarPlay 认证。请在本应用之上覆盖安装完整的 DiPlay 构建。无需卸载或更改热点设置。</string>
+    <string name="setup_error_auth">找不到 CarPlay 认证。这个版本本身不含认证：请先在这台车机上安装原版 DiPlay，再重新打开 DiPlay T8，它会自动从原版复制过来。</string>
     <string name="hotspot_state_stopped">已停止</string>
     <string name="hotspot_state_off">已关闭</string>
     <string name="hotspot_wireless_prefix">无线热点：</string>
