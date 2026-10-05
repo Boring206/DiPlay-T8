@@ -488,8 +488,16 @@ object AirPlayPersistence {
 
     fun loadMediaBufferMillis(context: Context): Int = com.shilapi.xcertplay.media.MediaAudioBuffer.sanitize(
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_MEDIA_BUFFER_MS, com.shilapi.xcertplay.media.MediaAudioBuffer.DEFAULT_MILLIS),
+            .getInt(KEY_MEDIA_BUFFER_MS, defaultMediaBufferMillis()),
     )
+
+    /**
+     * Where the app-owned hotspot can only be 2.4 GHz it shares the band with Bluetooth, and the
+     * radio gaps outlast the smallest buffer; start those head units one preset higher.
+     */
+    private fun defaultMediaBufferMillis(): Int = com.shilapi.xcertplay.media.MediaAudioBuffer.run {
+        if (appHotspotOffered()) presets.first { it > DEFAULT_MILLIS } else DEFAULT_MILLIS
+    }
 
     fun saveMediaBufferMillis(context: Context, millis: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

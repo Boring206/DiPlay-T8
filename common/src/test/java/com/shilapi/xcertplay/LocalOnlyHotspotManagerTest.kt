@@ -50,10 +50,19 @@ class LocalOnlyHotspotManagerTest {
         assertEquals(1, radio.standardRequests)
     }
 
+    @Test fun eachManagerGetsAWifiManagerOfItsOwn() {
+        // A reservation's close and finalizer stop the current request of its WifiManager.
+        val context = RuntimeEnvironment.getApplication()
+        val shared = context.getSystemService(WifiManager::class.java)
+        val first = LocalOnlyHotspotManager.ownWifiManager(context)
+        assertNotSame(shared, first)
+        assertNotSame(first, LocalOnlyHotspotManager.ownWifiManager(context))
+    }
+
     private fun lateReservation(cancel: Boolean) {
         val context = RuntimeEnvironment.getApplication()
         val radio = shadowOf(context.getSystemService(WifiManager::class.java)) as Radio
-        val manager = LocalOnlyHotspotManager(context)
+        val manager = LocalOnlyHotspotManager(context, wifiManager = context.getSystemService(WifiManager::class.java))
         val worker = Executors.newSingleThreadExecutor()
         try {
             val result = worker.submit<Boolean> { runCatching { manager.start(if (cancel) 5000 else 100) }.isFailure }

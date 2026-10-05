@@ -21,6 +21,19 @@ class LocalOnlyHotspotInterfacePolicyTest {
         assertNull(LocalOnlyHotspotInterfacePolicy.select(networks, emptySet(), setOf("wlan0"), null))
     }
 
+    @Test fun apMayTakeOverTheInterfaceOfAStationThatWasSwitchedOff() {
+        // One radio: wlan0 was the station on a phone hotspot, then became the AP.
+        val ap = net("wlan0", "192.168.43.1")
+        val before = setOf("172.20.10.9")
+        val concurrent = LocalOnlyHotspotInterfacePolicy.upstreams(setOf("wlan0"), emptySet(), stationSwitchedOff = false)
+        assertNull(LocalOnlyHotspotInterfacePolicy.select(listOf(ap), before, concurrent, null))
+        val shared = LocalOnlyHotspotInterfacePolicy.upstreams(setOf("wlan0"), emptySet(), stationSwitchedOff = true)
+        assertEquals(ap, LocalOnlyHotspotInterfacePolicy.select(listOf(ap), before, shared, null))
+        // Still a live upstream: never the AP, whatever the station switch says.
+        val live = LocalOnlyHotspotInterfacePolicy.upstreams(emptySet(), setOf("wlan0"), stationSwitchedOff = true)
+        assertNull(LocalOnlyHotspotInterfacePolicy.select(listOf(ap), before, live, null))
+    }
+
     @Test fun refusesAmbiguityOrUnprovenExistingAp() {
         val ap = net("ap0", "192.168.43.1")
         assertNull(LocalOnlyHotspotInterfacePolicy.select(listOf(ap, net("wlan1", "192.168.44.1")), emptySet(), emptySet(), null))

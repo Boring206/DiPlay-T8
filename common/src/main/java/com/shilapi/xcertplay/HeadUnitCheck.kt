@@ -79,12 +79,13 @@ internal object HeadUnitCheck {
                 }
                 null -> Item(Level.INFO, context.getString(R.string.check_hotspot_unknown), Action.HOTSPOT_SETTINGS)
             }
-            // The iPhone can either share its own hotspot or join the car's, never both.
-            if (joinedPhoneHotspot(wifi)) {
-                items += Item(Level.BLOCKED, context.getString(R.string.check_joined_phone_hotspot))
-            }
         }
-        if (AirPlayPersistence.loadWirelessHotspotMode(context) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
+        val mode = AirPlayPersistence.loadWirelessHotspotMode(context)
+        // The iPhone can either share its own hotspot or join the car's, never both.
+        if ((mode == WirelessHotspotMode.MANUAL || mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) && joinedPhoneHotspot(wifi)) {
+            items += Item(Level.BLOCKED, context.getString(R.string.check_joined_phone_hotspot))
+        }
+        if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
             // The platform refuses an app-owned hotspot while location is off or tethering is on.
             if (!locationOn(context)) items += Item(Level.BLOCKED, context.getString(R.string.check_location_off), Action.LOCATION_SETTINGS)
             if (tetheredHotspotOn(context)) {
@@ -120,9 +121,12 @@ internal object HeadUnitCheck {
             wifi.dhcpInfo?.gateway == IOS_HOTSPOT_GATEWAY
     }.getOrDefault(false)
 
+    @Volatile private var avcDecoderFound: Boolean? = null
+
     private fun decoder(context: Context): Item = runCatching {
-        val found = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+        val found = avcDecoderFound ?: MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
             .any { info -> !info.isEncoder && info.supportedTypes.any { it.equals("video/avc", ignoreCase = true) } }
+            .also { avcDecoderFound = it }
         if (found) Item(Level.OK, context.getString(R.string.check_decoder_ok))
         else Item(Level.BLOCKED, context.getString(R.string.check_decoder_missing))
     }.getOrElse { Item(Level.INFO, context.getString(R.string.check_decoder_unknown)) }

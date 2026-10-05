@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay.network
 
 import android.content.Context
+import android.content.IntentFilter
+import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.wifi.SoftApConfiguration
 import android.net.wifi.WifiConfiguration
@@ -33,11 +35,13 @@ class LocalOnlyHotspotManager(
     context: Context,
     private val onDiagnostic: (String) -> Unit = {},
     private val preferIpv4: Boolean = false,
+    private val wifiManager: WifiManager = ownWifiManager(context),
 ) : WirelessHotspotManager {
+    private val appContext = context.applicationContext
     private val connectivityManager =
         context.applicationContext.getSystemService(ConnectivityManager::class.java)
-    private val wifiManager = context.applicationContext.getSystemService(WifiManager::class.java)
-        ?: throw IllegalStateException("WifiManager is unavailable")
+    private var lastInterfaceDiagnostic: String? = null
+
     private val stateLock = Object()
 
     private var startAttempt: StartAttempt? = null
@@ -254,7 +258,11 @@ class LocalOnlyHotspotManager(
                         onDiagnostic("LocalOnlyHotspot legacy AP radio iface=${ap.name} frequency=${settled}MHz channel=${wifiFrequencyMhzToChannel(settled)}")
                         return LocalOnlyHotspotRadioInfo.Radio(ap.bssid ?: configuration.bssid, settled)
                     }
-                    if (System.nanoTime() - legacyStart >= TimeUnit.MILLISECONDS.toNanos(
+                    val waited = System.nanoTime() - legacyStart
+                    // An errno is the driver's final answer; only an unsettled reading is worth the full wait.
+                    val refused = BAND_IS_FIRMWARE_CHOICE && reading.frequencyMHz == null && reading.error != null &&
+                        waited >= TimeUnit.MILLISECONDS.toNanos(DRIVER_REFUSAL_MILLIS)
+                    if (refused || waited >= TimeUnit.MILLISECONDS.toNanos(
                             if (configuration.bandLabel == "5 GHz") 1500 else 6000
                         )
                     ) {
@@ -603,11 +611,38 @@ class LocalOnlyHotspotManager(
         val candidates = interfaces.map { net ->
             LocalOnlyHotspotInterfacePolicy.Candidate(net.name, net.siteLocalIpv4Addresses(), net.interfaceBssid())
         }
-        val selected = LocalOnlyHotspotInterfacePolicy.select(
-            candidates, previousAddresses, previousUpstreams + upstreamInterfaceNames(), bssid?.toMacAddressString(),
-        ) ?: return null
-        return interfaces.singleOrNull { it.name == selected.name }
+        val currentUpstreams = upstreamInterfaceNames()
+        // The platform's own answer beats inference. A radio that cannot run a station and an AP
+        // together reuses the station's interface name and keeps the fixed AP address across
+        // restarts, so neither "was an upstream" nor "address is new" identifies it there.
+        val named = platformApInterfaceName()
+        val selected = candidates.singleOrNull { it.name == named && it.ipv4.isNotEmpty() }
+            ?: LocalOnlyHotspotInterfacePolicy.select(
+                candidates, previousAddresses,
+                LocalOnlyHotspotInterfacePolicy.upstreams(previousUpstreams, currentUpstreams, stationSwitchedOff()),
+                bssid?.toMacAddressString(),
+            )
+        val diagnostic = "LocalOnlyHotspot interface platform=${named ?: "unnamed"} selected=${selected?.name ?: "none"} " +
+            "candidates=" + candidates.joinToString(",") { candidate ->
+                "${candidate.name}(ipv4=${candidate.ipv4.size} new=${candidate.ipv4.any { it !in previousAddresses }} " +
+                    "upstream=${candidate.name in currentUpstreams} wasUpstream=${candidate.name in previousUpstreams})"
+            }
+        if (diagnostic != lastInterfaceDiagnostic) {
+            lastInterfaceDiagnostic = diagnostic
+            onDiagnostic(diagnostic)
+        }
+        return interfaces.singleOrNull { it.name == selected?.name }
     }
+
+    /** Android 8+ names the running AP's interface in its sticky state broadcast. */
+    private fun platformApInterfaceName(): String? = runCatching {
+        val sticky = appContext.registerReceiver(null, IntentFilter(ACTION_WIFI_AP_STATE_CHANGED))
+        sticky?.takeIf { it.getIntExtra(EXTRA_WIFI_AP_STATE, -1) == WIFI_AP_STATE_ENABLED }
+            ?.getStringExtra(EXTRA_WIFI_AP_INTERFACE_NAME)?.takeIf { it.isNotBlank() }
+    }.getOrNull()
+
+    /** True once the platform has turned the Wi-Fi client off to make room for the AP. */
+    private fun stationSwitchedOff(): Boolean = runCatching { !wifiManager.isWifiEnabled }.getOrDefault(false)
 
     private fun activeInterfaces(): List<NetworkInterface> =
         NetworkInterface.getNetworkInterfaces()?.let { Collections.list(it) }.orEmpty().filter { networkInterface ->
@@ -851,12 +886,32 @@ class LocalOnlyHotspotManager(
         val bssid: String?,
     )
 
-    private companion object {
-        const val MULTICAST_LOCK_TAG = "xcertplay-local-only-hotspot-mdns"
-        const val NANOS_PER_MILLISECOND = 1_000_000L
-        val INTERFACE_POLL_NANOS: Long = TimeUnit.MILLISECONDS.toNanos(100)
+    companion object {
+        /**
+         * A reservation stops "the current request" of the WifiManager that issued it, and its
+         * finalizer does so again. With the one WifiManager an application context caches, an
+         * earlier attempt's reservation being garbage-collected silently stops a later attempt's
+         * hotspot, and no callback ever arrives. A WifiManager of its own confines each manager's
+         * reservations to its own request.
+         */
+        fun ownWifiManager(context: Context): WifiManager {
+            val app = context.applicationContext
+            val separate = runCatching { app.createConfigurationContext(Configuration(app.resources.configuration)) }
+                .getOrNull() ?: app
+            return separate.getSystemService(WifiManager::class.java)
+                ?: throw IllegalStateException("WifiManager is unavailable")
+        }
+
+        private const val MULTICAST_LOCK_TAG = "xcertplay-local-only-hotspot-mdns"
+        private const val ACTION_WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
+        private const val EXTRA_WIFI_AP_STATE = "wifi_state"
+        private const val EXTRA_WIFI_AP_INTERFACE_NAME = "wifi_ap_interface_name"
+        private const val WIFI_AP_STATE_ENABLED = 13
+        private const val DRIVER_REFUSAL_MILLIS = 1_000L
+        private const val NANOS_PER_MILLISECOND = 1_000_000L
+        private val INTERFACE_POLL_NANOS: Long = TimeUnit.MILLISECONDS.toNanos(100)
         // Android 8/9 cannot ask for a band and have no Wi-Fi Direct path to fall back on, so the
         // 5 GHz requirement would leave them with no app-owned hotspot at all.
-        val BAND_IS_FIRMWARE_CHOICE = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+        private val BAND_IS_FIRMWARE_CHOICE = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
     }
 }

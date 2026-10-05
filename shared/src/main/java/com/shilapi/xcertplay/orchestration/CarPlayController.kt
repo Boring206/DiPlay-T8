@@ -58,6 +58,7 @@ import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
+import com.shilapi.xcertplay.transport.BluetoothLocalAddress
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
 import com.shilapi.xcertplay.transport.Ch341DeviceMatcher
 import com.shilapi.xcertplay.transport.Ch341I2cTransport
@@ -2094,6 +2095,9 @@ class CarPlayController(
             WIFI_P2P_START_TIMEOUT_MILLIS
         } else if (hotspotMode == WirelessHotspotMode.MANUAL) {
             ((readyDeadline - System.nanoTime()) / 1_000_000).coerceAtLeast(1)
+        } else if (hotspotMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
+            // The platform answers in a few seconds or not at all; retrying beats waiting it out.
+            LOCAL_HOTSPOT_START_TIMEOUT_MILLIS
         } else {
             HOTSPOT_START_TIMEOUT_MILLIS
         }
@@ -2318,7 +2322,7 @@ class CarPlayController(
         } catch (_: SecurityException) {
             null
         }
-        return listOfNotNull(address, settingsAddress)
+        return listOfNotNull(BluetoothLocalAddress.fromService(adapter), address, settingsAddress)
             .firstOrNull {
                 BLUETOOTH_ADDRESS.matches(it) &&
                     !it.equals(ADAPTER_ADDRESS_PLACEHOLDER, ignoreCase = true)
@@ -2581,6 +2585,7 @@ class CarPlayController(
         private val diagnosticAttempts = AtomicInteger()
         private const val IAP2_IPHONE_UUID = "00000000-deca-fade-deca-deafdecacafe"
         private const val HOTSPOT_START_TIMEOUT_MILLIS = 60_000L
+        private const val LOCAL_HOTSPOT_START_TIMEOUT_MILLIS = 20_000L
         private const val WIFI_P2P_START_TIMEOUT_MILLIS = 20_000L
         private const val PAIR_TIMEOUT_MILLIS = 5 * 60_000L
         private const val VPN_CONNECT_TIMEOUT_MILLIS = 10_000L
