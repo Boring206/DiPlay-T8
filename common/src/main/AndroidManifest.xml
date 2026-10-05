@@ -21,7 +21,11 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- A build published without the CarPlay identity copies it from an installed DiPlay. -->
+        <package android:name="com.shihab.diplay" />
+        <package android:name="com.shihab.diplay.hudtest" />
     </queries>
+
     <application>
         <provider
             android:name="com.shilapi.xcertplay.DiagnosticReportProvider"

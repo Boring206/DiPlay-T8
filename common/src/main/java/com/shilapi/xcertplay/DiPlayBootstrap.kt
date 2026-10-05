@@ -6,10 +6,17 @@ import com.shilapi.xcertplay.mfi.LocalMfiAuthenticationClient
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import java.io.File
 import java.security.MessageDigest
+import java.util.zip.ZipFile
 
-/** Installs the private beta's experimental identity. It has no remote fallback. */
+/**
+ * Installs the experimental identity from this build's assets, or copies it from an installed
+ * DiPlay that carries one. It has no remote fallback.
+ */
 internal object DiPlayBootstrap {
     @Volatile private var ready = false
+    private val IDENTITY_FILES = listOf("identity.pk8", "certificate.p7b")
+    // A build published without the identity takes it from one of these on the same device.
+    private val DONOR_PACKAGES = listOf("com.shihab.diplay", "com.shihab.diplay.hudtest")
 
     @Synchronized fun ensure(context: Context, mfiTarget: MfiTarget) {
         if (mfiTarget != MfiTarget.LOCAL) return
@@ -22,11 +29,9 @@ internal object DiPlayBootstrap {
             staging.setReadable(false, false); staging.setReadable(true, true)
             staging.setExecutable(false, false); staging.setExecutable(true, true)
             try {
-                for (name in listOf("identity.pk8", "certificate.p7b")) {
+                for ((name, bytes) in identityFiles(context)) {
                     val file = File(staging, name)
-                    context.assets.open("offline-mfi/$name").use { input ->
-                        file.outputStream().use { output -> input.copyTo(output) }
-                    }
+                    file.writeBytes(bytes)
                     file.setReadable(false, false); file.setReadable(true, true)
                     file.setWritable(false, false); file.setWritable(true, true)
                 }
@@ -39,6 +44,24 @@ internal object DiPlayBootstrap {
         LocalMfiAuthenticationClient.load(target)
         AirPlayPersistence.saveDebugLogsEnabled(context, false)
         ready = true
+    }
+
+    /** Both files always come from one source: a key from one build never matches another's certificate. */
+    private fun identityFiles(context: Context): Map<String, ByteArray> {
+        runCatching {
+            IDENTITY_FILES.associateWith { name -> context.assets.open("offline-mfi/$name").use { it.readBytes() } }
+        }.getOrNull()?.let { return it }
+        for (donor in DONOR_PACKAGES) {
+            if (donor == context.packageName) continue
+            runCatching {
+                ZipFile(context.packageManager.getApplicationInfo(donor, 0).sourceDir).use { apk ->
+                    IDENTITY_FILES.associateWith { name ->
+                        apk.getInputStream(checkNotNull(apk.getEntry("assets/offline-mfi/$name"))).use { it.readBytes() }
+                    }
+                }
+            }.getOrNull()?.let { return it }
+        }
+        error("No CarPlay identity in this build or in an installed DiPlay")
     }
 
     fun deviceId(identity: AirPlayIdentity): String {
