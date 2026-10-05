@@ -2037,6 +2037,7 @@ class CarPlayController(
         }
         var carHotspotOn = requestedMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
             com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(appContext)
+        var carHotspotStopFailed = false
         if (carHotspotOn && com.shilapi.xcertplay.network.CarHotspotSettings.mayStopForAppHotspot(appContext)) {
             val allowed = com.shilapi.xcertplay.network.CarHotspotStopBudget.shared.take(System.nanoTime() / 1_000_000)
             if (!allowed) debugLog("generation=$generation car hotspot keeps coming back on: not turning it off again")
@@ -2052,6 +2053,7 @@ class CarPlayController(
             } else if (!isStaleWirelessRun(generation)) {
                 // It does not work on this unit: let the user choose again rather than fail the same way.
                 com.shilapi.xcertplay.network.CarHotspotSettings.setStopForAppHotspot(appContext, false)
+                carHotspotStopFailed = true
             }
         }
         val hotspotMode = com.shilapi.xcertplay.network.resolveHotspotMode(
@@ -2060,8 +2062,13 @@ class CarPlayController(
             carHotspotSaved = ManualHotspotValidation.error(
                 config.manualHotspotSsid.orEmpty(), config.manualHotspotPassphrase.orEmpty()) == null,
         ) ?: throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
-            "The car hotspot is on, so DiPlay cannot open its own. Turn the car hotspot off, " +
-                "or save its name and password in Connection setup.")
+            if (carHotspotStopFailed) {
+                "DiPlay could not turn the car hotspot off, so it cannot open its own. Turn it off " +
+                    "in the car's settings, or save its name and password in Connection setup."
+            } else {
+                "The car hotspot is on, so DiPlay cannot open its own. Turn the car hotspot off, " +
+                    "or save its name and password in Connection setup."
+            })
         if (hotspotMode != requestedMode) debugLog("generation=$generation car hotspot is on: using it instead of an app-owned hotspot")
         if (com.shilapi.xcertplay.network.CarHotspotSettings.shouldEnable(
                 appContext, config.transport == CarPlayTransport.WIRELESS, hotspotMode,

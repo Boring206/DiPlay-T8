@@ -26,7 +26,9 @@ import java.util.Collections
  */
 internal object HeadUnitCheck {
     enum class Level { OK, WARNING, BLOCKED, INFO }
-    enum class Action { BLUETOOTH_SETTINGS, HOTSPOT_SETTINGS, LOCATION_SETTINGS, CONNECTION_SETUP, CHOOSE_PHONE }
+    enum class Action {
+        BLUETOOTH_SETTINGS, HOTSPOT_SETTINGS, LOCATION_SETTINGS, CONNECTION_SETUP, CHOOSE_PHONE, CAR_HOTSPOT_CHOICE,
+    }
     data class Item(val level: Level, val text: String, val action: Action? = null)
 
     fun run(context: Context): List<Item> = bluetooth(context) + wifi(context) + listOf(decoder(context))
@@ -94,7 +96,7 @@ internal object HeadUnitCheck {
                 } else if (carHotspotSaved(context)) {
                     Item(Level.INFO, context.getString(R.string.check_app_hotspot_uses_car))
                 } else {
-                    Item(Level.BLOCKED, context.getString(R.string.check_app_hotspot_conflict), Action.CONNECTION_SETUP)
+                    Item(Level.BLOCKED, context.getString(R.string.check_app_hotspot_conflict), Action.CAR_HOTSPOT_CHOICE)
                 }
             }
         }

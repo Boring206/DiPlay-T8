@@ -118,9 +118,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private var reconnectAttempts = 0
     private val startupRetryBudget = WirelessStartupRetryBudget()
     // Flipped each time the iPhone never reaches the listener, so retries cover both families.
+    // Starts from the order that worked last time, so a drive does not begin with the wrong one.
     private var manualHotspotPreferIpv4 = false
     private var startupRetryStopped = false
-    private var startupRetryButton: View? = null
+    private var startupRetryButton: Button? = null
+    // Null while that button retries. Otherwise it opens the home page's car hotspot choice,
+    // without the "let DiPlay turn it off" option when that is what just failed.
+    private var carHotspotChoiceAfterStopFailed: Boolean? = null
     private var startupFailureGeneration = -1
     private lateinit var airPlayIdentity: AirPlayIdentity
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
@@ -504,6 +508,7 @@ class CarPlayHostActivity : ComponentActivity() {
         advancedAudioChannelMappingSupported =
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
         airPlayIdentity = AirPlayPersistence.loadIdentity(this)
+        manualHotspotPreferIpv4 = DiPlayPreferences.hotspotPrefersIpv4(this)
         loadPersistedSettings()
         locationPermissionAvailable = hasFineLocationPermission()
         setContentView(buildContentView())
@@ -1254,6 +1259,13 @@ class CarPlayHostActivity : ComponentActivity() {
             setOnClickListener {
                 if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
                     shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
+                carHotspotChoiceAfterStopFailed?.let { stopFailed ->
+                    startActivity(Intent(this@CarPlayHostActivity, DiPlayActivity::class.java)
+                        .putExtra(DiPlayActivity.EXTRA_CAR_HOTSPOT_CHOICE,
+                            if (stopFailed) DiPlayActivity.CAR_HOTSPOT_CHOICE_WITHOUT_STOP else DiPlayActivity.CAR_HOTSPOT_CHOICE_ALL)
+                        .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+                    return@setOnClickListener
+                }
                 startupRetryBudget.manualRetry()
                 startupRetryStopped = false
                 reconnectAttempts = 0
@@ -3613,11 +3625,13 @@ class CarPlayHostActivity : ComponentActivity() {
                     if (controllerGeneration != restartGeneration || activeAirPlaySession !== session || shuttingDown.get()) return@runOnUiThread
                     if (!startupRetryBudget.firstFrame(session, android.os.SystemClock.elapsedRealtime())) return@runOnUiThread
                     DiPlayPreferences.markCarPlayWorked(this@CarPlayHostActivity)
+                    if (wirelessEnabled) DiPlayPreferences.saveHotspotPrefersIpv4(this@CarPlayHostActivity, manualHotspotPreferIpv4)
                     mainHandler.postDelayed({
                         if (controllerGeneration == restartGeneration && activeAirPlaySession === session &&
                             !shuttingDown.get() && CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) &&
                             startupRetryBudget.resetIfStable(session, android.os.SystemClock.elapsedRealtime())) {
                             appendLog("wireless startup retry budget reset after stable video session")
+                            com.shilapi.xcertplay.network.CarHotspotStopBudget.shared.reset()
                         }
                     }, WirelessStartupPolicy.STABLE_SESSION_MILLIS)
                 }
@@ -4074,7 +4088,17 @@ class CarPlayHostActivity : ComponentActivity() {
             startupRetryBudget.nextDelayMillis() else null
         if (startupFailure != null && startupDelay == null) {
             startupRetryStopped = true
-            startupRetryButton?.visibility = View.VISIBLE
+            // Retrying cannot get past a running car hotspot; only the choice on the home page can.
+            carHotspotChoiceAfterStopFailed = when (friendlyStage(reason)) {
+                getString(R.string.app_hotspot_stop_failed) -> true
+                getString(R.string.app_hotspot_blocked) -> false
+                else -> null
+            }
+            startupRetryButton?.apply {
+                text = getString(if (carHotspotChoiceAfterStopFailed != null) R.string.car_hotspot_choose
+                    else R.string.retry_carplay_connection)
+                visibility = View.VISIBLE
+            }
             setConnectionStage(if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) reason
                 else "$reason\n${getString(R.string.wireless_startup_retries_exhausted)}")
             appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
@@ -4120,6 +4144,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val size = activeDisplaySize ?: return
         startupRetryBudget.disconnected()
         startupRetryButton?.visibility = View.GONE
+        carHotspotChoiceAfterStopFailed = null
         appendLog(reason)
         activeScreenStreamTypes.clear()
         ClusterActivityOutput.setStreamActive(false)
@@ -4462,8 +4487,10 @@ class CarPlayHostActivity : ComponentActivity() {
         message.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         message.contains("Allow precise Location", true) -> getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p)
         message.contains("Allow Nearby devices", true) -> getString(R.string.allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per)
-        message.contains("car hotspot is on", true) || message.contains("incompatible Wi-Fi mode", true) ->
-            getString(R.string.app_hotspot_blocked)
+        message.contains("could not turn the car hotspot off", true) -> getString(R.string.app_hotspot_stop_failed)
+        message.contains("car hotspot is on", true) -> getString(R.string.app_hotspot_blocked)
+        // The car hotspot came on mid-attempt; the next attempt sees it and deals with it.
+        message.contains("incompatible Wi-Fi mode", true) -> getString(R.string.app_hotspot_interrupted)
         message.contains("LOCAL_ONLY_HOTSPOT", true) -> getString(R.string.app_hotspot_failed)
         message.contains("createGroup failed", true) -> getString(R.string.the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and)
         message.contains("needs a reset", true) -> getString(R.string.a_previous_wi_fi_direct_connection_is_still_running_reset)
