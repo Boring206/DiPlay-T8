@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.shihab.diplay"
-        minSdk = 28
+        minSdk = 27
         targetSdk = 37
         versionCode = 31
         versionName = "0.2.12"
@@ -43,6 +43,9 @@ android {
             versionNameSuffix = "-hud-test"
         }
         release {
+            // Side-by-side with the upstream-signed app: a differently signed build cannot update it.
+            applicationIdSuffix = ".t8"
+            versionNameSuffix = "-t8"
             optimization {
                 enable = false
             }

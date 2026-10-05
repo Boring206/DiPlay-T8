@@ -752,10 +752,25 @@ class AirPlaySession(
         return port
     }
 
+    /** "::" is dual-stack on stock Android; fall back for kernels that only take the IPv4 wildcard. */
+    private fun <T> bindAnyLocal(open: (InetAddress) -> T): T = try {
+        open(InetAddress.getByName("::"))
+    } catch (_: java.io.IOException) {
+        open(InetAddress.getByName("0.0.0.0"))
+    }
+
     private fun openKeepAlive(): Int {
-        val socket = DatagramSocket(null)
-        socket.reuseAddress = true
-        socket.bind(InetSocketAddress(InetAddress.getByName("::"), 0))
+        val socket = bindAnyLocal { address ->
+            DatagramSocket(null).also { candidate ->
+                try {
+                    candidate.reuseAddress = true
+                    candidate.bind(InetSocketAddress(address, 0))
+                } catch (failure: java.io.IOException) {
+                    candidate.close()
+                    throw failure
+                }
+            }
+        }
         keepAliveSocket = socket
         keepAliveThread = Thread({ runKeepAlive(socket) }, "airplay-keepalive").apply {
             isDaemon = true
@@ -776,7 +791,7 @@ class AirPlaySession(
     }
 
     private fun openEvent(): Int {
-        val server = ServerSocket(0, 50, InetAddress.getByName("::"))
+        val server = bindAnyLocal { address -> ServerSocket(0, 50, address) }
         eventServer = server
         spawnEvent("airplay-event-accept") { acceptEvent(server) }
         return server.localPort

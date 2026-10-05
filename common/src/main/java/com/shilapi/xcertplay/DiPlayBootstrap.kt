@@ -51,6 +51,10 @@ internal object DiPlayBootstrap {
 internal object DiPlayPreferences {
     private fun prefs(context: Context) = context.getSharedPreferences("diplay", Context.MODE_PRIVATE)
     fun phoneAddress(context: Context): String? = prefs(context).getString("phone_address", null)
+    fun autoConnectOnBluetooth(context: Context) = prefs(context).getBoolean("auto_connect_on_bluetooth", false)
+    fun saveAutoConnectOnBluetooth(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("auto_connect_on_bluetooth", value).apply()
+    }
     fun phoneName(context: Context): String = prefs(context).getString("phone_name", null) ?: "Your iPhone"
     fun savePhone(context: Context, address: String, name: String) {
         prefs(context).edit().putString("phone_address", address).putString("phone_name", name).apply()

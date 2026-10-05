@@ -28,7 +28,11 @@ internal data class HotspotSelection(val name: String, val index: Int, val addre
         (address as? Inet6Address)?.scopeId == (other.address as? Inet6Address)?.scopeId
 }
 
-internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (String) -> Unit): HotspotSelection? {
+internal fun selectHotspotInterface(
+    snapshot: HotspotNetworkSnapshot,
+    preferIpv4: Boolean = false,
+    log: (String) -> Unit,
+): HotspotSelection? {
     if (!snapshot.consistent || snapshot.apEnabled == false) {
         log("hotspot sample rejected: network_changed=${!snapshot.consistent} apEnabled=${snapshot.apEnabled}")
         return null
@@ -36,9 +40,12 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
     return snapshot.interfaces.mapNotNull { iface ->
         val owned = snapshot.apInterfaces?.contains(iface.name) == true
         val upstream = snapshot.wifiUpstreams?.contains(iface.name) == true
-        val address = wirelessHostAddress(iface.addresses.filter {
+        val usable = iface.addresses.filter {
             it is Inet6Address && it.isLinkLocalAddress || it is Inet4Address && it.isSiteLocalAddress
-        }, iface.index)
+        }
+        // Scoped link-local IPv6 is the default; IPv4 is the alternate when the phone never arrives.
+        val address = (if (preferIpv4) usable.firstOrNull { it is Inet4Address } else null)
+            ?: wirelessHostAddress(usable, iface.index)
         val reason = when {
             !iface.up || iface.index <= 0 -> "interface_down"
             address == null -> "address_unavailable"
@@ -67,6 +74,7 @@ internal class ManualHotspotReadiness(
     private val pause: (Long) -> Unit,
     private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
     private val log: (String) -> Unit = {},
+    private val preferIpv4: Boolean = false,
 ) {
     fun await(timeoutMillis: Long): HotspotSelection {
         val deadline = nowMillis() + timeoutMillis
@@ -77,7 +85,7 @@ internal class ManualHotspotReadiness(
             if (nowMillis() >= deadline) throw WirelessStartupException(
                 WirelessStartupFailure.HOTSPOT_NOT_READY, "Hotspot network is not ready",
             )
-            val selected = selectHotspotInterface(sample(), log)
+            val selected = selectHotspotInterface(sample(), preferIpv4, log)
             if (cancelled()) throw InterruptedIOException("Hotspot readiness cancelled")
             stable = if (selected != null && previous?.sameAddress(selected) == true) stable + 1 else 1
             previous = selected

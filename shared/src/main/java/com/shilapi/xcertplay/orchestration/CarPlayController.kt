@@ -1254,6 +1254,11 @@ class CarPlayController(
                     .also { bluetoothSocket = it }
             }
             logBluetoothConnectionSnapshot(device, "before-connect")
+            // An inquiry in progress starves the page; aftermarket units scan in the background.
+            // Android 12+ would need the SCAN permission for this, which DiPlay does not request.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                runCatching { if (adapter.isDiscovering) adapter.cancelDiscovery() }
+            }
             val bluetoothStarted = System.nanoTime()
             try {
                 connectBluetoothSocket(socket, device.address)
@@ -2059,7 +2064,8 @@ class CarPlayController(
         val manager: WirelessHotspotManager = when (hotspotMode) {
             WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
                 preferredChannel = config.wifiP2pPreferredChannel)
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog)
+            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog,
+                preferIpv4 = config.manualHotspotPreferIpv4)
             WirelessHotspotMode.EXISTING_WIFI -> ExistingWifiManager(
                 appContext, config.existingWifiSsid, config.existingWifiPassphrase, ::debugLog,
                 onNetworkChanged = { if (!isStaleWirelessRun(generation)) restartWireless() },
@@ -2074,6 +2080,7 @@ class CarPlayController(
                 security = config.manualHotspotSecurity,
                 onDiagnostic = { debugLog("generation=$generation $it") },
                 isCancelled = { isStaleWirelessRun(generation) },
+                preferIpv4 = config.manualHotspotPreferIpv4,
             )
         }
         synchronized(wirelessResourceLock) {

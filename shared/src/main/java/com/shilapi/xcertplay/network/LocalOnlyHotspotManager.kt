@@ -2,7 +2,6 @@ package com.shilapi.xcertplay.network
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.MacAddress
 import android.net.wifi.SoftApConfiguration
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
@@ -30,7 +29,11 @@ import java.util.concurrent.TimeUnit
  * the AP interface is usable. The reservation and multicast lock stay owned by this instance
  * until [close].
  */
-class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (String) -> Unit = {}) : WirelessHotspotManager {
+class LocalOnlyHotspotManager(
+    context: Context,
+    private val onDiagnostic: (String) -> Unit = {},
+    private val preferIpv4: Boolean = false,
+) : WirelessHotspotManager {
     private val connectivityManager =
         context.applicationContext.getSystemService(ConnectivityManager::class.java)
     private val wifiManager = context.applicationContext.getSystemService(WifiManager::class.java)
@@ -89,7 +92,9 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                 deadlineNanos = deadlineNanos,
             )
             val liveRadio = awaitRadioInfo(radioInfo, apInterface, configuration, attempt, deadlineNanos)
-            if (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz")) {
+            if (!BAND_IS_FIRMWARE_CHOICE &&
+                (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz"))
+            ) {
                 throw IOException("This firmware did not provide the requested 5 GHz local hotspot; choose Wi-Fi Direct or Car hotspot")
             }
 
@@ -114,6 +119,8 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                     ?: configuration.channel.takeIf { it > 0 } ?: requestedChannel ?: 36
                 configuration.channel > 0 -> configuration.channel
                 requestedChannel != null -> requestedChannel
+                // 36 would misdirect the phone when the firmware chose 2.4 GHz; 0 means "scan".
+                BAND_IS_FIRMWARE_CHOICE && configuration.bandLabel != "5 GHz" -> 0
                 else -> 36
             }
             if (liveRadio == null && configuration.channel == 0) {
@@ -259,6 +266,10 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                             // the reservation; the advertised channel falls back to the
                             // requested one and the phone joining is the live check.
                             onDiagnostic("LocalOnlyHotspot: 5 GHz band confirmed by configuration; live channel unreadable (${reading.error ?: "radio did not settle"}); advertising the requested channel without live verification")
+                            return null
+                        }
+                        if (BAND_IS_FIRMWARE_CHOICE) {
+                            onDiagnostic("LocalOnlyHotspot: ${configuration.bandLabel} hotspot with an unreadable live channel (${reading.error ?: "radio did not settle"}); advertising automatic channel")
                             return null
                         }
                         if (configuration.bandLabel == "2.4 GHz") {
@@ -444,12 +455,14 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         val ssid = validateSsid(configuration.SSID)
         val security = mapWifiConfigurationSecurity(configuration)
         val passphrase = validatePassphrase(security, unquote(configuration.preSharedKey))
-        val bssid = configuration.BSSID?.let {
-            try {
-                MacAddress.fromString(it)
-            } catch (failure: IllegalArgumentException) {
-                throw IOException("LocalOnlyHotspot reported an invalid BSSID: $it", failure)
+        // android.net.MacAddress needs API 28; this path also serves Android 8.
+        val bssidBytes = configuration.BSSID?.let { text ->
+            val octets = text.split(':')
+            val bytes = octets.mapNotNull { it.takeIf { part -> part.length == 2 }?.toIntOrNull(16)?.toByte() }
+            if (octets.size != 6 || bytes.size != 6) {
+                throw IOException("LocalOnlyHotspot reported an invalid BSSID: $text")
             }
+            bytes.toByteArray()
         }
         val channel = readWifiConfigurationChannel(configuration)
 
@@ -458,8 +471,8 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
             passphrase = passphrase,
             security = security,
             channel = channel,
-            bssid = bssid?.toString(),
-            bssidBytes = bssid?.toByteArray(),
+            bssid = bssidBytes?.toMacAddressString(),
+            bssidBytes = bssidBytes,
             bandLabel = readWifiConfigurationBandLabel(configuration, channel),
         )
     }
@@ -620,6 +633,10 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                 .firstNotNullOfOrNull { it.toEui64MacAddress() }
 
     private fun NetworkInterface.hotspotAddress(): InetAddress? {
+        // The alternate family, tried after the phone never reached the link-local address.
+        if (preferIpv4) {
+            Collections.list(inetAddresses).firstOrNull { it is Inet4Address && it.isSiteLocalAddress }?.let { return it }
+        }
         var ipv4: InetAddress? = null
         for (address in Collections.list(inetAddresses)) {
             if (address is Inet6Address && address.isLinkLocalAddress) {
@@ -838,5 +855,8 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         const val MULTICAST_LOCK_TAG = "xcertplay-local-only-hotspot-mdns"
         const val NANOS_PER_MILLISECOND = 1_000_000L
         val INTERFACE_POLL_NANOS: Long = TimeUnit.MILLISECONDS.toNanos(100)
+        // Android 8/9 cannot ask for a band and have no Wi-Fi Direct path to fall back on, so the
+        // 5 GHz requirement would leave them with no app-owned hotspot at all.
+        val BAND_IS_FIRMWARE_CHOICE = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
     }
 }

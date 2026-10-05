@@ -73,6 +73,8 @@ class DiPlayActivity : ComponentActivity() {
     private var lastRunning: Boolean? = null
     private var pendingWireless = false
     private var initialLaunch = true
+    private var pendingHotspotPermission = false
+    private var freshStart = false
     private var notificationTransport = true
     private var exportInProgress = false
     private var navigationStreamType = 14
@@ -160,6 +162,7 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        freshStart = savedInstanceState == null
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, true)
@@ -172,6 +175,10 @@ class DiPlayActivity : ComponentActivity() {
             android.util.Log.e("DiPlaySetup", "CarPlay authentication could not be loaded", it)
             getString(R.string.setup_error_auth)
         }
+        val reportContext = applicationContext
+        val reportVersion = version()
+        val reportSetupReady = setupError == null
+        DiagnosticLanServer.start { buildDiPlayDiagnosticReport(reportContext, reportVersion, reportSetupReady) }
         pendingCarHotspotSetup = savedInstanceState?.getBoolean("pending_car_hotspot") ?: false
         bydVehicleAdvancedExpanded = savedInstanceState?.getBoolean("byd_vehicle_advanced") ?: false
         page = savedInstanceState?.getString("page") ?: intent.getStringExtra("page") ?: "home"
@@ -189,6 +196,8 @@ class DiPlayActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent); setIntent(intent)
         page = intent.getStringExtra("page") ?: "home"; render()
+        if (intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false) && setupError == null &&
+            !CarPlayBackgroundSession.hasSession()) handler.post { connect(true) }
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
@@ -226,6 +235,10 @@ class DiPlayActivity : ComponentActivity() {
             return
         }
         handler.removeCallbacks(tick); handler.post(tick)
+        if (pendingHotspotPermission) {
+            pendingHotspotPermission = false
+            if (CarHotspotTethering.permitted(this)) CarHotspotSettings.setEnabled(this, true)
+        }
         // Back from the car settings: refresh the car hotspot reminder on the home page.
         if (!initialLaunch && !adbSwitchChangePending && !pausedForAdbSwitchChange &&
             (page == "home" || page == "settings" || page == "connection")) render()
@@ -233,9 +246,10 @@ class DiPlayActivity : ComponentActivity() {
         if (initialLaunch) {
             initialLaunch = false
             startCarHotspotOnLaunch()
+            val phoneArrived = freshStart && intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false)
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
-                DiPlayPreferences.autoConnect(this) && intent.getStringExtra("page") == null) {
-                handler.post { connect(AirPlayPersistence.loadWirelessEnabled(this)) }
+                (DiPlayPreferences.autoConnect(this) || phoneArrived) && intent.getStringExtra("page") == null) {
+                handler.post { connect(phoneArrived || AirPlayPersistence.loadWirelessEnabled(this)) }
             }
         }
     }
@@ -337,7 +351,11 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun home(content: LinearLayout) {
         val compact = isCompactLayout
+        val checks = HeadUnitCheck.run(this)
+        // A blocking finding outranks the connect button: connecting cannot succeed until it is fixed.
+        val checksFirst = checks.any { it.level == HeadUnitCheck.Level.BLOCKED }
         if (compact) {
+            if (checksFirst) { headUnitCheck(content, checks); content.addView(space(12)) }
             val card = card().apply { setPadding(dp(12), dp(10), dp(12), dp(10)) }
             status = label(getString(R.string.ready_when_you_are), 16, TEXT, true).apply {
                 setPadding(0, 0, 0, dp(8))
@@ -368,11 +386,13 @@ class DiPlayActivity : ComponentActivity() {
 
             content.addView(card)
             setupError?.let { content.addView(label(it, 13, WARNING).apply { setPadding(0, dp(6), 0, 0) }) }
+            if (!checksFirst) { content.addView(space(12)); headUnitCheck(content, checks) }
             return
         }
 
         val wide = resources.configuration.screenWidthDp >= 850
         val body = column()
+        if (checksFirst) { headUnitCheck(body, checks); body.addView(space(26)) }
         val left = column()
         left.addView(label(getString(R.string.your_phone_your_drive), 12, ACCENT, true).apply { letterSpacing = .16f })
         left.addView(label(getString(R.string.a_familiar_drive), if (wide) 42 else 36, TEXT, true).apply { setPadding(0, dp(12), 0, dp(10)) })
@@ -389,7 +409,7 @@ class DiPlayActivity : ComponentActivity() {
         val connectionHint = when (AirPlayPersistence.loadWirelessHotspotMode(this)) {
             WirelessHotspotMode.EXISTING_WIFI -> getString(R.string.existing_wifi_hint)
             WirelessHotspotMode.MANUAL -> getString(R.string.hotspot_hint_manual)
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> getString(R.string.hotspot_hint_local)
+            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> getString(R.string.app_hotspot_hint)
             else -> getString(R.string.hotspot_hint_p2p)
         }
         card.addView(label(connectionHint, 15, MUTED).apply { setPadding(0, dp(14), 0, 0) })
@@ -448,7 +468,35 @@ class DiPlayActivity : ComponentActivity() {
             body.addView(right)
         }
         setupError?.let { body.addView(label(it, 16, WARNING).apply { setPadding(0, dp(16), 0, 0) }) }
+        if (!checksFirst) { body.addView(space(26)); headUnitCheck(body, checks) }
         content.addView(body)
+    }
+
+    private fun headUnitCheck(parent: LinearLayout, checks: List<HeadUnitCheck.Item>) {
+        section(parent, getString(R.string.check_title), R.drawable.ic_dp_diagnostics) { card ->
+            for (item in checks) {
+                val (mark, color) = when (item.level) {
+                    HeadUnitCheck.Level.OK -> "\u2714" to GOOD
+                    HeadUnitCheck.Level.WARNING -> "!" to WARNING
+                    HeadUnitCheck.Level.BLOCKED -> "\u2718" to WARNING
+                    HeadUnitCheck.Level.INFO -> "\u2022" to MUTED
+                }
+                card.addView(label("$mark  ${item.text}", 16, color).apply { setPadding(0, dp(6), 0, dp(6)) })
+                val action = item.action ?: continue
+                val (title, run) = when (action) {
+                    HeadUnitCheck.Action.BLUETOOTH_SETTINGS ->
+                        getString(R.string.open_bluetooth) to { openSystem(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
+                    HeadUnitCheck.Action.HOTSPOT_SETTINGS ->
+                        getString(R.string.open_car_hotspot_settings) to { openCarWifiSettings() }
+                    HeadUnitCheck.Action.LOCATION_SETTINGS ->
+                        getString(R.string.check_open_location_settings) to { openSystem(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                    HeadUnitCheck.Action.CONNECTION_SETUP ->
+                        getString(R.string.open_connection_setup) to { page = "connection"; render() }
+                    HeadUnitCheck.Action.CHOOSE_PHONE -> getString(R.string.choose_iphone) to { choosePhone() }
+                }
+                card.addView(button(title, false, run), matchButton(4, 52))
+            }
+        }
     }
 
     private fun settings(content: LinearLayout) {
@@ -477,15 +525,39 @@ class DiPlayActivity : ComponentActivity() {
             }.apply { isEnabled = !exportInProgress }
             card.addView(exportButton, matchButton(10, 60))
             card.addView(button(getString(R.string.choose_save_location), false) { chooseReportDestination() }, matchButton(10, 60))
+            card.addView(button(getString(R.string.view_diagnostic_report), false) { viewDiagnosticReport() }, matchButton(10, 60))
+            val lanAddresses = DiagnosticLanServer.addresses()
+            if (lanAddresses.isNotEmpty()) {
+                card.addView(label(getString(R.string.report_lan_hint, lanAddresses.joinToString("\n")), 14, MUTED).apply { setPadding(0, dp(12), 0, 0) })
+            }
             val destination = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) getString(R.string.reports_save_to_downloads_diplay) else getString(R.string.choose_where_to_save_your_report)
             card.addView(label(destination + getString(R.string.nothing_is_sent_automatically_protocol_payloads_and_creden), 14, MUTED).apply { setPadding(0, dp(12), 0, 0) })
         }
         section(content, getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
             toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            if (!CarHotspotSetup.isBydHeadUnit(this)) {
+                // Android 10+ blocks a background receiver from opening the screen without this grant.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || Settings.canDrawOverlays(this)) {
+                    toggle(card, getString(R.string.auto_connect_on_bluetooth_title),
+                        getString(R.string.auto_connect_on_bluetooth_description),
+                        DiPlayPreferences.autoConnectOnBluetooth(this)) { DiPlayPreferences.saveAutoConnectOnBluetooth(this, it) }
+                }
+                if (AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL) {
+                    toggle(card, getString(R.string.auto_car_hotspot_title), getString(R.string.auto_car_hotspot_plain_description),
+                        CarHotspotSettings.enabled(this) && CarHotspotTethering.permitted(this)) { wanted ->
+                        if (!wanted || CarHotspotTethering.permitted(this)) CarHotspotSettings.setEnabled(this, wanted)
+                        else {
+                            pendingHotspotPermission = true
+                            openSystem(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+                        }
+                    }
+                }
+            }
             adbToggle(card, R.string.open_after_the_car_starts,
                 R.string.availability_depends_on_your_head_unit_s_startup_settings,
                 read = { AirPlayPersistence.loadAutoStartOnBoot(this) },
-                needsAdb = { CarHotspotSettings.enabled(this) &&
+                // Before Android 10 a boot receiver may open the screen without the overlay grant.
+                needsAdb = { Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && CarHotspotSettings.enabled(this) &&
                     AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL },
                 permissions = { listOf(CarHotspotSetup.Permission.BOOT_LAUNCH) }) {
                 AirPlayPersistence.saveAutoStartOnBoot(this, it)
@@ -1028,11 +1100,16 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun wirelessLinkControls(parent: LinearLayout) {
         val mode = if (pendingCarHotspotSetup) WirelessHotspotMode.MANUAL else AirPlayPersistence.loadWirelessHotspotMode(this)
-        val modes = listOf(WirelessHotspotMode.MANUAL, WirelessHotspotMode.WIFI_P2P, WirelessHotspotMode.EXISTING_WIFI)
-        val titles = listOf(getString(R.string.built_in_car_hotspot), getString(R.string.wifi_direct), getString(R.string.existing_wifi_title))
+        val appHotspot = AirPlayPersistence.appHotspotOffered()
+        val modes = listOf(WirelessHotspotMode.MANUAL,
+            if (appHotspot) WirelessHotspotMode.LOCAL_ONLY_HOTSPOT else WirelessHotspotMode.WIFI_P2P,
+            WirelessHotspotMode.EXISTING_WIFI)
+        val titles = listOf(getString(R.string.built_in_car_hotspot),
+            getString(if (appHotspot) R.string.app_hotspot_title else R.string.wifi_direct),
+            getString(R.string.existing_wifi_title))
         val descriptions = listOf(
             getString(R.string.hotspot_mode_manual_desc),
-            getString(R.string.hotspot_mode_p2p_desc),
+            getString(if (appHotspot) R.string.app_hotspot_description else R.string.hotspot_mode_p2p_desc),
             getString(R.string.existing_wifi_description)
         )
         val wide = resources.configuration.screenWidthDp >= 850
@@ -1081,7 +1158,7 @@ class DiPlayActivity : ComponentActivity() {
                     toast(getString(R.string.saved_for_your_next_connection))
                 }
             }, matchButton(12, 60))
-        } else {
+        } else if (mode == WirelessHotspotMode.WIFI_P2P) {
             parent.addView(label(getString(R.string.turn_the_car_s_wi_fi_switch_on_allow_location_nearby_devic), 16, MUTED))
             wifiDirectChannelControl(parent)
             parent.addView(button(getString(R.string.open_car_wi_fi_settings), false) { openCarClientWifiSettings() }, matchButton(12, 60))
@@ -1213,14 +1290,17 @@ class DiPlayActivity : ComponentActivity() {
     private fun askHotspotCredentials(existingWifi: Boolean = false, done: (String, String) -> Unit) {
         val fields = column().apply { setPadding(dp(24), dp(12), dp(24), dp(12)) }
         fields.addView(label(getString(if (existingWifi) R.string.existing_wifi_instructions else R.string.copy_these_from_the_car_s_hotspot_settings_use_5_ghz_if_av), 16, MUTED))
+        val fromCar = if (existingWifi) null else CarHotspotCredentials.read(this)
+        // Nothing saved yet: start from what the car reports rather than from the keyboard.
+        val prefill = fromCar?.takeIf { storedSsid().isNullOrBlank() }
         val ssid = EditText(this).apply {
             hint = getString(if (existingWifi) R.string.existing_wifi_ssid else R.string.hotspot_name)
-            setText(if (existingWifi) AirPlayPersistence.loadExistingWifiSsid(this@DiPlayActivity) else storedSsid())
+            setText(if (existingWifi) AirPlayPersistence.loadExistingWifiSsid(this@DiPlayActivity) else prefill?.ssid ?: storedSsid())
             setSingleLine()
         }
         val password = EditText(this).apply {
             hint = getString(if (existingWifi) R.string.existing_wifi_password else R.string.hotspot_password)
-            setText(if (existingWifi) AirPlayPersistence.loadExistingWifiPassphrase(this@DiPlayActivity) else storedPassword())
+            setText(if (existingWifi) AirPlayPersistence.loadExistingWifiPassphrase(this@DiPlayActivity) else prefill?.passphrase ?: storedPassword())
             setSingleLine()
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
@@ -1239,6 +1319,12 @@ class DiPlayActivity : ComponentActivity() {
             if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { hideKeyboard(); true } else false
         }
         fields.addView(ssid); fields.addView(password)
+        if (fromCar != null) {
+            fields.addView(label(getString(R.string.hotspot_read_from_car, fromCar.ssid), 14, GOOD))
+            fields.addView(button(getString(R.string.hotspot_use_car_values), false) {
+                ssid.setText(fromCar.ssid); password.setText(fromCar.passphrase)
+            }, matchButton(8, 52))
+        }
         fields.addView(CheckBox(this).apply {
             text = getString(R.string.show_password)
             setOnCheckedChangeListener { _, checked ->
@@ -1298,7 +1384,8 @@ class DiPlayActivity : ComponentActivity() {
             slider = SeekBar(context).apply {
                 max = steps.lastIndex
                 progress = steps.indexOf(current).coerceIn(steps.indices)
-                minHeight = dp(44)
+                // ProgressBar.setMinHeight needs API 29.
+                minimumHeight = dp(44)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                         val value = steps[progress.coerceIn(steps.indices)]
@@ -2480,7 +2567,10 @@ class DiPlayActivity : ComponentActivity() {
         }
         if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
         if (wireless && DiPlayPreferences.phoneAddress(this) == null) {
-            pendingWireless = true; choosePhone(); return
+            // One paired iPhone leaves nothing to choose.
+            val only = singlePairedIphone()
+            if (only == null) { pendingWireless = true; choosePhone(); return }
+            DiPlayPreferences.savePhone(this, only.address, only.name ?: "iPhone")
         }
         val preferences = getSharedPreferences("diplay", MODE_PRIVATE)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED && !preferences.getBoolean("notification_asked", false)) {
@@ -2499,6 +2589,14 @@ class DiPlayActivity : ComponentActivity() {
     private fun openProjection() {
         startActivity(Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
+    private fun singlePairedIphone(): android.bluetooth.BluetoothDevice? {
+        if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return null
+        val adapter = getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return null
+        return runCatching {
+            adapter.bondedDevices.orEmpty().filter { it.name?.contains("iPhone", ignoreCase = true) == true }.singleOrNull()
+        }.getOrNull()
+    }
+
     private fun choosePhone() {
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT); return
@@ -2637,76 +2735,7 @@ class DiPlayActivity : ComponentActivity() {
         val fileName = reportFileName()
         Thread({
             val result = runCatching {
-                val report = buildString {
-                    appendLine("DiPlay ${version()} · private beta diagnostic report")
-                    appendLine("Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
-                    appendLine("Head unit: ${Build.MANUFACTURER} ${Build.MODEL}")
-                    appendLine("Connection: ${if (AirPlayPersistence.loadWirelessEnabled(appContext)) "wireless" else "USB"}")
-                    appendLine("Authentication: local experimental beta identity; no remote fallback")
-                    appendLine("CarPlay setup: ${if (setupError == null) "ready" else "authentication unavailable"}")
-                    appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
-                    appendLine("CarPlay size: ${com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(appContext)).label}")
-                    appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
-                    appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
-                    appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
-                    appendLine()
-                    appendLine("--- Current cluster display diagnostics (even when disabled) ---")
-                    appendLine(ClusterMapPresentation.diagnosticReport(appContext))
-                    appendLine()
-                    appendLine("--- ADB cluster activity routing ---")
-                    appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
-                    appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
-                    AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
-                        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
-                    }
-                    appendLine()
-                    appendLine("--- Standalone HUD compatibility ---")
-                    appendLine(BydOutputSettings.standaloneHudDiagnosticReport(appContext))
-                    appendLine()
-                    appendLine("--- BYD vehicle-data probe ---")
-                    appendLine(
-                        "mode=${if (BydOutputSettings.legacyVehicleProbe(appContext)) "legacy-probe" else "default"} " +
-                            "switches location=${AirPlayPersistence.loadLocationReportingEnabled(appContext)} " +
-                            "battery=${BydOutputSettings.batteryToIphone(appContext)} " +
-                            "wheelSpeed=${BydOutputSettings.wheelSpeedToIphone(appContext)} " +
-                            "parkedVideo=${BydOutputSettings.videoWhileParked(appContext)}",
-                    )
-                    val bydCapabilities = BydVehicleFieldStore.load(appContext)
-                    if (bydCapabilities == null) {
-                        appendLine("no saved successful probe")
-                    } else {
-                        appendLine(
-                            "catalog=${bydCapabilities.catalogAvailable} detectedAt=${bydCapabilities.detectedAtMillis} " +
-                                "savedFirmware=${bydCapabilities.firmwareKey} " +
-                                "currentFirmware=${BydVehicleFieldStore.firmwareKey()}",
-                        )
-                        for (field in BydVehicleField.entries) {
-                            val probe = bydCapabilities.result(field)
-                            appendLine("${field.name}: supported=${probe.supported} " +
-                                (probe.address?.let { "tx=${it.transaction} dev=${it.device} fid=${it.fid} source=${it.source}" }
-                                    ?: "address=none"))
-                        }
-                    }
-                    appendLine()
-                    appendLine("--- Last display negotiation (timestamps distinguish it from current settings) ---")
-                    appendLine(DisplayDiagnosticSnapshot.report(appContext))
-                    appendLine()
-                    appendLine("--- Last received boot and app-launch result ---")
-                    appendLine(StartupDiagnosticSnapshot.report(appContext))
-                    appendLine("Startup settings: openAfterBoot=${AirPlayPersistence.loadAutoStartOnBoot(appContext)} " +
-                        "connectWhenOpened=${DiPlayPreferences.autoConnect(appContext)}")
-                    appendLine()
-                    appendLine("--- Recent own-app process exits (Android 11+) ---")
-                    appendLine(ProcessExitDiagnostics.report(appContext))
-                    appendLine()
-                    for (name in SessionLogFile.REPORT_NAMES) {
-                        val file = File(appContext.filesDir, "logs/$name")
-                        if (file.isFile) {
-                            appendLine("--- $name ---")
-                            file.useLines { lines -> lines.forEach { line -> DiagnosticRedactor.redact(line)?.let { appendLine(it) } } }
-                        }
-                    }
-                }
+                val report = buildDiPlayDiagnosticReport(appContext, version(), setupError == null)
                 val savedReport = if (uri != null) {
                     DiagnosticExportStore.write(appContext.contentResolver, uri, report)
                     DiagnosticExportStore.SavedReport(uri)
@@ -2745,6 +2774,17 @@ class DiPlayActivity : ComponentActivity() {
                 }
             }
         }, "diplay-export").start()
+    }
+
+    private fun viewDiagnosticReport() {
+        val appContext = applicationContext
+        val version = version()
+        val ready = setupError == null
+        Thread({
+            val report = runCatching { buildDiPlayDiagnosticReport(appContext, version, ready) }
+                .getOrElse { "Report failed: $it" }
+            runOnUiThread { if (!isFinishing && !isDestroyed) showDiagnosticReport(report) }
+        }, "diplay-report-view").start()
     }
 
     private fun showDiagnosticReport(report: String) {
@@ -2933,5 +2973,83 @@ class DiPlayActivity : ComponentActivity() {
         private val TEXT = Color.rgb(241, 245, 252)
         private val MUTED = Color.rgb(168, 182, 202)
         private val WARNING = Color.rgb(255, 196, 128)
+        private val GOOD = Color.rgb(134, 214, 160)
+        const val EXTRA_AUTO_CONNECT = "auto_connect"
     }
+}
+
+/** The exported report text; also served to the on-screen and same-Wi-Fi viewers. */
+internal fun buildDiPlayDiagnosticReport(appContext: Context, version: String, setupReady: Boolean): String = buildString {
+    appendLine("DiPlay $version · private beta diagnostic report")
+    appendLine("Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
+    appendLine("Head unit: ${Build.MANUFACTURER} ${Build.MODEL}")
+    appendLine("Connection: ${if (AirPlayPersistence.loadWirelessEnabled(appContext)) "wireless" else "USB"}")
+    appendLine("Authentication: local experimental beta identity; no remote fallback")
+    appendLine("CarPlay setup: ${if (setupReady) "ready" else "authentication unavailable"}")
+    appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
+    appendLine("CarPlay size: ${com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(appContext)).label}")
+    appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
+    appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
+    appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
+    appendLine()
+    appendLine("--- Head unit capabilities ---")
+    HeadUnitCheck.reportLines(appContext).forEach(::appendLine)
+    appendLine()
+    appendLine("--- Current cluster display diagnostics (even when disabled) ---")
+    appendLine(ClusterMapPresentation.diagnosticReport(appContext))
+    appendLine()
+    appendLine("--- ADB cluster activity routing ---")
+    appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
+    appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
+    AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
+        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
+    }
+    appendLine()
+    appendLine("--- Standalone HUD compatibility ---")
+    appendLine(BydOutputSettings.standaloneHudDiagnosticReport(appContext))
+    appendLine()
+    appendLine("--- BYD vehicle-data probe ---")
+    appendLine(
+        "mode=${if (BydOutputSettings.legacyVehicleProbe(appContext)) "legacy-probe" else "default"} " +
+            "switches location=${AirPlayPersistence.loadLocationReportingEnabled(appContext)} " +
+            "battery=${BydOutputSettings.batteryToIphone(appContext)} " +
+            "wheelSpeed=${BydOutputSettings.wheelSpeedToIphone(appContext)} " +
+            "parkedVideo=${BydOutputSettings.videoWhileParked(appContext)}",
+    )
+    val bydCapabilities = BydVehicleFieldStore.load(appContext)
+    if (bydCapabilities == null) {
+        appendLine("no saved successful probe")
+    } else {
+        appendLine(
+            "catalog=${bydCapabilities.catalogAvailable} detectedAt=${bydCapabilities.detectedAtMillis} " +
+                "savedFirmware=${bydCapabilities.firmwareKey} " +
+                "currentFirmware=${BydVehicleFieldStore.firmwareKey()}",
+        )
+        for (field in BydVehicleField.entries) {
+            val probe = bydCapabilities.result(field)
+            appendLine("${field.name}: supported=${probe.supported} " +
+                (probe.address?.let { "tx=${it.transaction} dev=${it.device} fid=${it.fid} source=${it.source}" }
+                    ?: "address=none"))
+        }
+    }
+    appendLine()
+    appendLine("--- Last display negotiation (timestamps distinguish it from current settings) ---")
+    appendLine(DisplayDiagnosticSnapshot.report(appContext))
+    appendLine()
+    appendLine("--- Last received boot and app-launch result ---")
+    appendLine(StartupDiagnosticSnapshot.report(appContext))
+    appendLine("Startup settings: openAfterBoot=${AirPlayPersistence.loadAutoStartOnBoot(appContext)} " +
+        "connectWhenOpened=${DiPlayPreferences.autoConnect(appContext)}")
+    appendLine()
+    appendLine("--- Recent own-app process exits (Android 11+) ---")
+    appendLine(ProcessExitDiagnostics.report(appContext))
+    appendLine()
+    for (name in SessionLogFile.REPORT_NAMES) {
+        val file = File(appContext.filesDir, "logs/$name")
+        if (file.isFile) {
+            appendLine("--- $name ---")
+            file.useLines { lines -> lines.forEach { line -> DiagnosticRedactor.redact(line)?.let { appendLine(it) } } }
+        }
+    }
+
 }
