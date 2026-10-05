@@ -284,17 +284,24 @@ object AirPlayPersistence {
     fun loadWirelessHotspotMode(context: Context): WirelessHotspotMode {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
+        // Nothing chosen yet: where it is offered, the app-owned hotspot needs no setup at all.
         val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: WirelessHotspotMode.MANUAL
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+            ?: if (appHotspotOffered()) WirelessHotspotMode.LOCAL_ONLY_HOTSPOT else WirelessHotspotMode.MANUAL
+        val supported = if ((mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT && !appHotspotOffered()) ||
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P)
         ) WirelessHotspotMode.MANUAL else mode
         if (stored != supported.name) saveWirelessHotspotMode(context, supported)
         return supported
     }
 
+    /**
+     * Android 8/9 have no Wi-Fi Direct path here, so the app-owned hotspot is their one
+     * alternative to typing the car hotspot's name and password.
+     */
+    fun appHotspotOffered(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) WirelessHotspotMode.MANUAL else mode
+        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT && !appHotspotOffered()) WirelessHotspotMode.MANUAL else mode
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()

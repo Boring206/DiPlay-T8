@@ -63,6 +63,8 @@ class CarPlayRuntimeConfig(
     val manualHotspotBand: ManualHotspotBand = ManualHotspotBand.AUTO,
     val manualHotspotChannel: Int = 0,
     val manualHotspotSecurity: ManualHotspotSecurity = ManualHotspotSecurity.WPA2,
+    // Also applies to the app-owned hotspot: both advertise one host address to the iPhone.
+    val manualHotspotPreferIpv4: Boolean = false,
     val wirelessBluetoothDeviceAddress: String? = null,
     val locationReportingEnabled: Boolean = false,
     val wifiP2pPreferredChannel: Int = WifiP2pChannels.AUTO,

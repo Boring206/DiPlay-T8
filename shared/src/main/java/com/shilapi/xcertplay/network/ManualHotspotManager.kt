@@ -32,6 +32,7 @@ class ManualHotspotManager(
     security: ManualHotspotSecurity,
     private val onDiagnostic: (String) -> Unit = {},
     private val isCancelled: () -> Boolean = { false },
+    private val preferIpv4: Boolean = false,
 ) : WirelessHotspotManager {
     private val appContext = context.applicationContext
     private val interfaces = ManualHotspotInterfaces(appContext, onDiagnostic)
@@ -85,7 +86,7 @@ class ManualHotspotManager(
             sample = {
                 interfaces.sample().also { snapshot ->
                     val messages = mutableListOf<String>()
-                    selectHotspotInterface(snapshot, messages::add)
+                    selectHotspotInterface(snapshot, preferIpv4, messages::add)
                     if (messages != lastSampleLog) {
                         messages.forEach(onDiagnostic)
                         lastSampleLog = messages
@@ -95,6 +96,7 @@ class ManualHotspotManager(
             cancelled = { closed || isCancelled() },
             pause = { millis -> synchronized(waitLock) { if (!closed && !isCancelled()) waitLock.wait(millis) } },
             log = {},
+            preferIpv4 = preferIpv4,
         ).await(timeoutMillis)
         confirmed = selected
         onDiagnostic("hotspot interface confirmed iface=${selected.name} index=${selected.index} atNs=${System.nanoTime()}")
@@ -105,6 +107,8 @@ class ManualHotspotManager(
                 ?: HotspotInterfaceBssid.read(selected.name))
         val connectionFrequency = frequencyFromConnectionInfo()
         val scanFrequency = frequencyFromScanResult(localInterface)
+            ?: if ((apConfiguration?.channel ?: 0) > 0 || connectionFrequency != null) null
+            else driverFrequency(selected.name)
         val channel = observedManualHotspotChannel(
             apChannel = apConfiguration?.channel ?: 0,
             connectionFrequencyMHz = connectionFrequency,
@@ -154,11 +158,30 @@ class ManualHotspotManager(
         )
     }
 
+    /**
+     * Old firmware hides the live AP channel from apps, which would leave the iPhone with
+     * channel 0 ("auto"). The driver answers the same read-only query the local hotspot uses.
+     */
+    private fun driverFrequency(interfaceName: String): Int? {
+        if (Build.VERSION.SDK_INT >= 33) return null
+        val bands = when (expectedBand) {
+            ManualHotspotBand.GHZ_2_4 -> listOf("2.4 GHz")
+            ManualHotspotBand.GHZ_5 -> listOf("5 GHz")
+            // A bare channel number needs a band; 1-14 and 32-177 do not overlap on these radios.
+            ManualHotspotBand.AUTO -> listOf("2.4 GHz", "5 GHz")
+        }
+        val readings = bands.map { LegacyHotspotRadio.read(interfaceName, it) }
+        val frequency = readings.firstNotNullOfOrNull { it.frequencyMHz }
+        onDiagnostic("Manual hotspot driver frequency=${frequency ?: "unknown"}" +
+            (if (frequency == null) " reason=${readings.last().error}" else ""))
+        return frequency
+    }
+
     override fun validateReady() {
         val expected = confirmed ?: throw WirelessStartupException(
             WirelessStartupFailure.HOTSPOT_NOT_READY, "Hotspot network is not ready",
         )
-        val current = selectHotspotInterface(interfaces.sample(), onDiagnostic)
+        val current = selectHotspotInterface(interfaces.sample(), preferIpv4, onDiagnostic)
         if (closed || isCancelled() || current == null || !expected.sameAddress(current)) {
             throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_NOT_READY,
                 "Hotspot interface or address changed before publication")

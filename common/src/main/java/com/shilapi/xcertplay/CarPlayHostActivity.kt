@@ -117,6 +117,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var wifiRecoveryButton: View? = null
     private var reconnectAttempts = 0
     private val startupRetryBudget = WirelessStartupRetryBudget()
+    // Flipped each time the iPhone never reaches the listener, so retries cover both families.
+    private var manualHotspotPreferIpv4 = false
     private var startupRetryStopped = false
     private var startupRetryButton: View? = null
     private var startupFailureGeneration = -1
@@ -169,6 +171,7 @@ class CarPlayHostActivity : ComponentActivity() {
         manualHotspotBand = manualHotspotBand,
         manualHotspotChannel = manualHotspotChannel,
         manualHotspotSecurity = manualHotspotSecurity,
+        manualHotspotPreferIpv4 = manualHotspotPreferIpv4,
         existingWifiSsid = existingWifiSsid,
         existingWifiPassphrase = existingWifiPassphrase,
         locationReportingEnabled = locationReportingEnabled,
@@ -273,6 +276,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var statusView: TextView? = null
     private var statusScrollView: ScrollView? = null
     private var stageStatusView: TextView? = null
+    private var connectionDetailView: TextView? = null
+    private val connectionDetailLines = mutableListOf<String>()
     private var resolutionValueView: TextView? = null
     private var resolutionPreviewView: TextView? = null
     private var hotspotStatusView: TextView? = null
@@ -1275,6 +1280,17 @@ class CarPlayHostActivity : ComponentActivity() {
             setTextColor(Color.rgb(168, 182, 202))
         }
         panel.addView(gestureHint)
+        // The friendly stage hides the cause; keep the exact state on screen for a photo.
+        val detail = TextView(this).apply {
+            gravity = Gravity.CENTER
+            textSize = 13f
+            maxLines = CONNECTION_DETAIL_LINES + 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(Color.rgb(128, 142, 162))
+            setPadding(0, dp(10), 0, 0)
+        }
+        panel.addView(detail)
+        connectionDetailView = detail
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
         var preparationHeight = -1
@@ -2799,6 +2815,8 @@ class CarPlayHostActivity : ComponentActivity() {
         val modes = buildList {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 add(WirelessHotspotMode.WIFI_P2P to getString(R.string.wi_fi_p2p_5_ghz))
+            } else {
+                add(WirelessHotspotMode.LOCAL_ONLY_HOTSPOT to getString(R.string.app_hotspot_title))
             }
             add(WirelessHotspotMode.MANUAL to getString(R.string.built_in_car_hotspot))
             add(WirelessHotspotMode.EXISTING_WIFI to getString(R.string.existing_wifi_title))
@@ -4061,6 +4079,10 @@ class CarPlayHostActivity : ComponentActivity() {
             appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
             return
         }
+        if (startupFailure == WirelessStartupFailure.FIRST_TCP_TIMEOUT) {
+            manualHotspotPreferIpv4 = !manualHotspotPreferIpv4
+            appendLog("no AirPlay TCP: next attempt advertises ${if (manualHotspotPreferIpv4) "IPv4" else "IPv6"} first")
+        }
         reconnectScheduled = true
         val generation = restartGeneration
         val delayMillis = if (startupDelay != null) {
@@ -4406,6 +4428,26 @@ class CarPlayHostActivity : ComponentActivity() {
         latestStage = message
         stageStatusView?.text = friendlyStage(message)
         updateDebugOverlays()
+        renderConnectionDetail()
+    }
+
+    private fun noteConnectionDetail(line: String) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread { noteConnectionDetail(line) }
+            return
+        }
+        // Periodic samples would push the lines that explain a failure off the screen.
+        if (connectionDetailLines.lastOrNull() == line || line.startsWith("THEME_DIAGNOSTIC")) return
+        connectionDetailLines += line
+        while (connectionDetailLines.size > CONNECTION_DETAIL_LINES) connectionDetailLines.removeAt(0)
+        renderConnectionDetail()
+    }
+
+    private fun renderConnectionDetail() {
+        val view = connectionDetailView ?: return
+        if (connectionPanel?.visibility != View.VISIBLE) return
+        view.text = (listOf(getString(R.string.connection_detail_title), latestStage) + connectionDetailLines)
+            .joinToString("\n")
     }
 
     private fun updateDebugOverlays() {
@@ -4419,6 +4461,7 @@ class CarPlayHostActivity : ComponentActivity() {
         message.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         message.contains("Allow precise Location", true) -> getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p)
         message.contains("Allow Nearby devices", true) -> getString(R.string.allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per)
+        message.contains("LOCAL_ONLY_HOTSPOT", true) -> getString(R.string.app_hotspot_failed)
         message.contains("createGroup failed", true) -> getString(R.string.the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and)
         message.contains("needs a reset", true) -> getString(R.string.a_previous_wi_fi_direct_connection_is_still_running_reset)
         message.contains("socket", true) || message.contains("RFCOMM", true) -> getString(R.string.your_iphone_isn_t_available_unlock_it_and_check_bluetooth)
@@ -4436,6 +4479,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun appendLog(message: String) {
         val safe = DiagnosticRedactor.redact(message) ?: return
         sessionLog?.append(formattedLogLine(safe, System.currentTimeMillis()))
+        noteConnectionDetail(safe)
     }
 
     private fun appendFileLog(message: String) {
@@ -4542,6 +4586,7 @@ class CarPlayHostActivity : ComponentActivity() {
         const val SCREEN_TYPE_ALT = 111
         private const val CENTER_MAP_IDLE_MILLIS = 3_000L // a reconnect is quicker; a session end is not
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
+        const val CONNECTION_DETAIL_LINES = 4
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L
         const val CONFIGURATION_POLL_INTERVAL_MILLIS = 2_000L
         const val RECONNECT_DELAY_MILLIS = 2_000L

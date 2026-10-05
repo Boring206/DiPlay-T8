@@ -133,6 +133,14 @@
         </service>
 
         <receiver
+            android:name="com.shilapi.xcertplay.PhoneBluetoothReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name="com.shilapi.xcertplay.BootReceiver"
             android:enabled="true"
             android:exported="true">
