@@ -1074,7 +1074,9 @@ class DiPlayActivity : ComponentActivity() {
         val hotspot = Intent("com.android.settings.WIFI_TETHER_SETTINGS")
         val target = packageManager.resolveActivity(hotspot, 0)?.activityInfo?.packageName
         if (target == null) {
-            openSystem(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+            // Android 8 has no action for this screen, and head units often leave it out of their own menus.
+            val screen = Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings")
+            if (runCatching { startActivity(screen) }.isFailure) openSystem(Intent(Settings.ACTION_WIRELESS_SETTINGS))
             return
         }
         if (target == "com.byd.carsettings") {
