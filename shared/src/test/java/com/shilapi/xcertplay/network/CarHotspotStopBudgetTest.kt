@@ -15,9 +15,27 @@ class CarHotspotStopBudgetTest {
         assertFalse(budget.take(119_999L))
     }
 
+    @Test fun defaultsRunOutAtTheRetryPacesSeenOnAHeadUnit() {
+        // Stops observed while a hotspot kept returning: on screen, then with DiPlay in the background.
+        for (pace in listOf(listOf(0L, 33_000L, 68_000L, 137_000L), listOf(0L, 176_000L, 312_000L, 478_000L))) {
+            val budget = CarHotspotStopBudget()
+            assertTrue(pace.take(3).all(budget::take))
+            assertFalse(budget.take(pace[3]))
+        }
+    }
+
+    @Test fun sessionThatStayedUpClearsTheCount() {
+        // Several short trips in a row each stop the hotspot once and each get a working session.
+        val budget = CarHotspotStopBudget()
+        repeat(10) { trip ->
+            assertTrue(budget.take(trip * 300_000L))
+            budget.reset()
+        }
+    }
+
     @Test fun oneStopPerDriveNeverRunsOut() {
-        val budget = CarHotspotStopBudget(limit = 3, windowMillis = 120_000L)
-        repeat(20) { drive -> assertTrue(budget.take(drive * 600_000L)) }
+        val budget = CarHotspotStopBudget()
+        repeat(20) { drive -> assertTrue(budget.take(drive * 1_800_000L)) }
     }
 
     @Test fun stopsOlderThanTheWindowAreForgotten() {

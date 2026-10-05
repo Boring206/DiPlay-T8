@@ -82,6 +82,17 @@ internal object DiPlayPreferences {
     fun markCarPlayWorked(context: Context) {
         if (!carPlayWorked(context)) prefs(context).edit().putBoolean("carplay_worked", true).apply()
     }
+    /**
+     * The address family order that last led to a working wireless session. Until one has, Android
+     * 8 and 9 start with IPv4: they never route a tethered hotspot's link-local prefix, and route
+     * an app-owned hotspot's only the first time after boot or after tethering, so IPv4 is the one
+     * family that is there on every attempt.
+     */
+    fun hotspotPrefersIpv4(context: Context) = prefs(context).getBoolean(
+        "hotspot_prefers_ipv4", android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q)
+    fun saveHotspotPrefersIpv4(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("hotspot_prefers_ipv4", value).apply()
+    }
     fun handsFreeOffered(context: Context) = prefs(context).getBoolean("hands_free_offered", false)
     fun markHandsFreeOffered(context: Context) {
         prefs(context).edit().putBoolean("hands_free_offered", true).apply()

@@ -578,11 +578,19 @@ class LocalOnlyHotspotManager(
         attempt: StartAttempt,
         deadlineNanos: Long,
     ): ApInterface {
+        var foundNanos = 0L
         while (true) {
             ensureStartActive(attempt)
             val networkInterface = findInterface(bssid, previousAddresses, previousUpstreams)
             if (networkInterface != null) {
-                networkInterface.hotspotAddress()?.let { hostAddress ->
+                val now = System.nanoTime()
+                if (foundNanos == 0L) foundNanos = now
+                // When the platform routes the hotspot's link-local prefix at all, it does so a
+                // moment after the interface comes up; deciding before that would pick a family by
+                // chance. Android 8 skips it for a hotspot that follows another app-owned one.
+                val settleForIpv4 = now - foundNanos >= LINK_LOCAL_ROUTE_WAIT_NANOS ||
+                    deadlineNanos - now <= INTERFACE_POLL_NANOS
+                networkInterface.hotspotAddress(settleForIpv4)?.let { hostAddress ->
                     val interfaceBssid = networkInterface.interfaceBssid()
                     if (bssid == null && interfaceBssid == null) {
                         return@let
@@ -673,13 +681,15 @@ class LocalOnlyHotspotManager(
             ?: Collections.list(inetAddresses).filterIsInstance<Inet6Address>()
                 .firstNotNullOfOrNull { it.toEui64MacAddress() }
 
-    private fun NetworkInterface.hotspotAddress(): InetAddress? {
+    /** Null while [settleForIpv4] is false and the link-local address may still become answerable. */
+    private fun NetworkInterface.hotspotAddress(settleForIpv4: Boolean): InetAddress? {
         // The alternate family, tried after the phone never reached the link-local address.
         if (preferIpv4) {
             Collections.list(inetAddresses).firstOrNull { it is Inet4Address && it.isSiteLocalAddress }?.let { return it }
         }
         val addresses = Collections.list(inetAddresses)
         val ipv4 = addresses.firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+        var linkLocalUnanswerable = false
         for (address in addresses) {
             if (address is Inet6Address && address.isLinkLocalAddress) {
                 val scoped = if (address.scopeId == index) address else try {
@@ -689,9 +699,10 @@ class LocalOnlyHotspotManager(
                 }
                 // Android 8/9 cannot answer on a hotspot's link-local address; see linkLocalRoutable.
                 if (ipv4 == null || linkLocalRoutable(scoped)) return scoped
+                linkLocalUnanswerable = true
             }
         }
-        return ipv4
+        return ipv4.takeIf { settleForIpv4 || !linkLocalUnanswerable }
     }
 
     private fun ensureStartActive(attempt: StartAttempt) {
@@ -915,6 +926,7 @@ class LocalOnlyHotspotManager(
         private const val DRIVER_REFUSAL_MILLIS = 1_000L
         private const val NANOS_PER_MILLISECOND = 1_000_000L
         private val INTERFACE_POLL_NANOS: Long = TimeUnit.MILLISECONDS.toNanos(100)
+        private val LINK_LOCAL_ROUTE_WAIT_NANOS: Long = TimeUnit.SECONDS.toNanos(3)
         // Android 8/9 cannot ask for a band and have no Wi-Fi Direct path to fall back on, so the
         // 5 GHz requirement would leave them with no app-owned hotspot at all.
         private val BAND_IS_FIRMWARE_CHOICE = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q

@@ -197,7 +197,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent); setIntent(intent)
         page = intent.getStringExtra("page") ?: "home"; render()
-        if (intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false) && setupError == null &&
+        if (!offerCarHotspotChoiceIfAsked() && intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false) && setupError == null &&
             !CarPlayBackgroundSession.hasSession()) handler.post { connect(true) }
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
@@ -255,7 +255,7 @@ class DiPlayActivity : ComponentActivity() {
             initialLaunch = false
             startCarHotspotOnLaunch()
             val phoneArrived = freshStart && intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false)
-            if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
+            if (!offerCarHotspotChoiceIfAsked() && setupError == null && !CarPlayBackgroundSession.hasSession() &&
                 (DiPlayPreferences.autoConnect(this) || phoneArrived) && intent.getStringExtra("page") == null) {
                 handler.post { connect(phoneArrived || AirPlayPersistence.loadWirelessEnabled(this)) }
             }
@@ -501,6 +501,8 @@ class DiPlayActivity : ComponentActivity() {
                     HeadUnitCheck.Action.CONNECTION_SETUP ->
                         getString(R.string.open_connection_setup) to { page = "connection"; render() }
                     HeadUnitCheck.Action.CHOOSE_PHONE -> getString(R.string.choose_iphone) to { choosePhone() }
+                    HeadUnitCheck.Action.CAR_HOTSPOT_CHOICE ->
+                        getString(R.string.car_hotspot_choose) to { carHotspotBlocksAppHotspotDialog() }
                 }
                 card.addView(button(title, false, run), matchButton(4, 52))
             }
@@ -1065,24 +1067,43 @@ class DiPlayActivity : ComponentActivity() {
     })
 
     /** The platform refuses an app-owned hotspot beside the car's own: let the user pick which one stays. */
-    private fun carHotspotBlocksAppHotspotDialog() {
-        val choices = arrayOf(
-            getString(R.string.car_hotspot_choice_stop),
-            getString(R.string.car_hotspot_choice_use),
-            getString(R.string.open_car_hotspot_settings),
-        )
-        AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_blocks_title))
-            .setItems(choices) { _, which ->
-                when (which) {
-                    0 -> letDiPlayStopCarHotspot()
-                    1 -> askHotspotCredentials { ssid, password ->
-                        saveHotspotCredentials(ssid, password)
-                        connect(true)
-                    }
-                    else -> openCarWifiSettings()
+    private fun carHotspotBlocksAppHotspotDialog(stopUnavailableReason: Int? = null) {
+        val choices = listOfNotNull<Pair<String, () -> Unit>>(
+            (getString(R.string.car_hotspot_choice_stop) to { letDiPlayStopCarHotspot() })
+                .takeIf { stopUnavailableReason == null },
+            getString(R.string.car_hotspot_choice_use) to {
+                askHotspotCredentials { ssid, password ->
+                    saveHotspotCredentials(ssid, password)
+                    connect(true)
                 }
-            }
+            },
+            getString(R.string.open_car_hotspot_settings) to { openCarWifiSettings() },
+        )
+        val builder = AlertDialog.Builder(this)
+        if (stopUnavailableReason != null) {
+            // Why the first choice is gone has to stay on screen; a toast is missed too easily.
+            builder.setCustomTitle(TextView(builder.context).apply {
+                setTextAppearance(android.R.style.TextAppearance_DeviceDefault_DialogWindowTitle)
+                text = getString(stopUnavailableReason)
+                setPadding(dp(24), dp(20), dp(24), dp(4))
+            })
+        } else {
+            builder.setTitle(getString(R.string.car_hotspot_blocks_title))
+        }
+        builder.setItems(choices.map { it.first }.toTypedArray()) { _, which -> choices[which].second() }
             .setNegativeButton(getString(R.string.cancel), null).show()
+    }
+
+    /** The connection screen sends the user here when only this choice gets the attempt further. */
+    private fun offerCarHotspotChoiceIfAsked(): Boolean {
+        val asked = intent.getStringExtra(EXTRA_CAR_HOTSPOT_CHOICE) ?: return false
+        intent.removeExtra(EXTRA_CAR_HOTSPOT_CHOICE)
+        handler.post {
+            if (isFinishing || isDestroyed) return@post
+            carHotspotBlocksAppHotspotDialog(
+                R.string.car_hotspot_stop_failed.takeIf { asked == CAR_HOTSPOT_CHOICE_WITHOUT_STOP })
+        }
+        return true
     }
 
     /** Needs the system's "modify settings" grant; the choice takes effect once that is given. */
@@ -1094,11 +1115,10 @@ class DiPlayActivity : ComponentActivity() {
         toast(getString(R.string.car_hotspot_stop_grant_hint))
     }
 
-    /** Without the grant that choice cannot work: say so and offer the other ones again. */
+    /** Without the grant that choice cannot work: say so and offer the other ones. */
     private fun carHotspotStopNotGranted() {
         CarHotspotSettings.setStopForAppHotspot(this, false)
-        toast(getString(R.string.car_hotspot_stop_not_granted))
-        carHotspotBlocksAppHotspotDialog()
+        carHotspotBlocksAppHotspotDialog(R.string.car_hotspot_stop_not_granted)
     }
 
     /** False on head units that ship without the "modify system settings" screen. */
@@ -3065,6 +3085,10 @@ class DiPlayActivity : ComponentActivity() {
         private val WARNING = Color.rgb(255, 196, 128)
         private val GOOD = Color.rgb(134, 214, 160)
         const val EXTRA_AUTO_CONNECT = "auto_connect"
+        /** Set by the connection screen when a running car hotspot stopped the attempt. */
+        const val EXTRA_CAR_HOTSPOT_CHOICE = "car_hotspot_choice"
+        const val CAR_HOTSPOT_CHOICE_ALL = "all"
+        const val CAR_HOTSPOT_CHOICE_WITHOUT_STOP = "without_stop"
     }
 }
 
