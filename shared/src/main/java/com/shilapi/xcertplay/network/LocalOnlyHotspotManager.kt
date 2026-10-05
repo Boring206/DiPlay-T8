@@ -358,9 +358,13 @@ class LocalOnlyHotspotManager(
             override fun onFailed(reason: Int) {
                 synchronized(stateLock) {
                     if (startAttempt === attempt && attempt.failure == null) {
-                        attempt.failure = IOException(
-                            "LocalOnlyHotspot failed: ${failureReason(reason)}",
-                        )
+                        val message = "LocalOnlyHotspot failed: ${failureReason(reason)}"
+                        // Another hotspot is running: retrying cannot help until the user changes that.
+                        attempt.failure = if (reason == WifiManager.LocalOnlyHotspotCallback.ERROR_INCOMPATIBLE_MODE) {
+                            WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, message)
+                        } else {
+                            IOException(message)
+                        }
                         stateLock.notifyAll()
                     }
                 }

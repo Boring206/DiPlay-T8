@@ -670,10 +670,15 @@
     <string name="app_hotspot_hint">DiPlay\'s own hotspot · Keep Bluetooth and your iPhone\'s Wi-Fi on.</string>
     <string name="check_location_off">Location is off. Android only lets an app open its own hotspot while location is on.</string>
     <string name="check_open_location_settings">Open location settings</string>
-    <string name="check_app_hotspot_conflict">The car\'s own hotspot is on. Turn it off so DiPlay can open its hotspot, or switch to the car hotspot mode.</string>
+    <string name="check_app_hotspot_conflict">The car\'s own hotspot is on. Turn it off so DiPlay can open its hotspot, or save the car hotspot\'s name and password in Connection setup.</string>
     <string name="app_hotspot_failed">DiPlay could not open its own hotspot on this head unit. Check that location is on and the car\'s hotspot is off, or choose the car hotspot in Connection setup.</string>
     <string name="hands_free_title">Connect automatically from now on?</string>
     <string name="hands_free_message_bluetooth">CarPlay has worked on this head unit. DiPlay can open and connect by itself whenever your iPhone connects to the car\'s Bluetooth. You can change this in Settings.</string>
     <string name="hands_free_message">CarPlay has worked on this head unit. DiPlay can connect by itself whenever it is opened. You can change this in Settings.</string>
     <string name="hands_free_accept">Connect automatically</string>
+    <string name="app_hotspot_blocked">The car\'s own hotspot is on, so DiPlay cannot open its hotspot. Turn the car hotspot off and retry, or save its name and password in Connection setup so DiPlay can use it.</string>
+    <string name="car_hotspot_blocks_title">The car hotspot is on</string>
+    <string name="car_hotspot_blocks_message">DiPlay\'s own hotspot cannot run while the car\'s hotspot is on. Either turn the car hotspot off, or enter its name and password once so DiPlay uses it whenever it is on.</string>
+    <string name="car_hotspot_blocks_use_it">Enter name and password</string>
+    <string name="check_app_hotspot_uses_car">The car\'s own hotspot is on; DiPlay will use it for this connection.</string>
 </resources>

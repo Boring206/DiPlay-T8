@@ -14,6 +14,7 @@ object CarHotspotStatus {
     private const val ACTION_WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
     private const val EXTRA_WIFI_AP_STATE = "wifi_state"
     private const val EXTRA_WIFI_AP_MODE = "wifi_ap_mode"
+    private const val AP_MODE_LOCAL_ONLY = 2
 
     /**
      * True/false from the Wi-Fi AP state, or null when the firmware hides it (then callers must
@@ -28,6 +29,18 @@ object CarHotspotStatus {
             enabled = { wifi?.let { WifiManager::class.java.getMethod("isWifiApEnabled").invoke(it) as? Boolean } },
             sticky = { app.registerReceiver(null, IntentFilter(ACTION_WIFI_AP_STATE_CHANGED)) },
         )
+    }
+
+    /**
+     * True while the car's own hotspot runs. The AP state alone is also "on" for an app-owned
+     * local-only hotspot, and the platform refuses to start one of those beside this one.
+     */
+    fun tetheredOn(context: Context): Boolean {
+        if (isEnabled(context) != true) return false
+        val sticky = runCatching {
+            context.applicationContext.registerReceiver(null, IntentFilter(ACTION_WIFI_AP_STATE_CHANGED))
+        }.getOrNull()
+        return sticky?.getIntExtra(EXTRA_WIFI_AP_MODE, -1) != AP_MODE_LOCAL_ONLY
     }
 
     internal fun stateEnabled(state: Int?): Boolean? = state?.takeIf { it in 10..14 }?.let { it == 13 }

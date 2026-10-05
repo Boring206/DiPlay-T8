@@ -4,7 +4,6 @@ import android.app.ActivityManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.media.MediaCodecList
 import android.net.wifi.SupplicantState
 import android.net.wifi.WifiManager
@@ -14,6 +13,7 @@ import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotStatus
 import com.shilapi.xcertplay.network.CarHotspotTethering
+import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.io.File
 import java.net.NetworkInterface
@@ -89,7 +89,11 @@ internal object HeadUnitCheck {
             // The platform refuses an app-owned hotspot while location is off or tethering is on.
             if (!locationOn(context)) items += Item(Level.BLOCKED, context.getString(R.string.check_location_off), Action.LOCATION_SETTINGS)
             if (tetheredHotspotOn(context)) {
-                items += Item(Level.BLOCKED, context.getString(R.string.check_app_hotspot_conflict), Action.HOTSPOT_SETTINGS)
+                items += if (carHotspotSaved(context)) {
+                    Item(Level.INFO, context.getString(R.string.check_app_hotspot_uses_car))
+                } else {
+                    Item(Level.BLOCKED, context.getString(R.string.check_app_hotspot_conflict), Action.CONNECTION_SETUP)
+                }
             }
         }
         items += when (runCatching { wifi.is5GHzBandSupported }.getOrNull()) {
@@ -100,14 +104,14 @@ internal object HeadUnitCheck {
         return items
     }
 
-    /** The AP state alone is also "on" while DiPlay's own hotspot runs; only tethering conflicts. */
-    private fun tetheredHotspotOn(context: Context): Boolean {
-        if (CarPlayBackgroundSession.hasSession() || CarHotspotStatus.isEnabled(context) != true) return false
-        val sticky = runCatching {
-            context.applicationContext.registerReceiver(null, IntentFilter(ACTION_WIFI_AP_STATE_CHANGED))
-        }.getOrNull()
-        return sticky?.getIntExtra(EXTRA_WIFI_AP_MODE, -1) != AP_MODE_LOCAL_ONLY
-    }
+    /** While DiPlay holds a session the running AP is its own, whatever the firmware reports. */
+    private fun tetheredHotspotOn(context: Context): Boolean =
+        !CarPlayBackgroundSession.hasSession() && CarHotspotStatus.tetheredOn(context)
+
+    fun carHotspotSaved(context: Context): Boolean = ManualHotspotValidation.error(
+        AirPlayPersistence.loadManualHotspotSsid(context).orEmpty(),
+        AirPlayPersistence.loadManualHotspotPassphrase(context).orEmpty(),
+    ) == null
 
     @Suppress("DEPRECATION")
     private fun locationOn(context: Context): Boolean = runCatching {
@@ -194,7 +198,4 @@ internal object HeadUnitCheck {
 
     // 172.20.10.1 as DhcpInfo's little-endian int.
     private const val IOS_HOTSPOT_GATEWAY = 0x010A14AC
-    private const val ACTION_WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
-    private const val EXTRA_WIFI_AP_MODE = "wifi_ap_mode"
-    private const val AP_MODE_LOCAL_ONLY = 2
 }
