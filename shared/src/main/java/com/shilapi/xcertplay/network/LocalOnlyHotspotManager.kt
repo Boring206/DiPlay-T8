@@ -233,7 +233,13 @@ class LocalOnlyHotspotManager(
             }
         }
         // Main-loop callback delivery survives cancellation to close late reservations.
-        wifiManager.startLocalOnlyHotspot(callback, main)
+        try {
+            wifiManager.startLocalOnlyHotspot(callback, main)
+        } catch (refused: SecurityException) {
+            // Location off or a missing permission: only the user can change that.
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+                "LocalOnlyHotspot refused: ${refused.message}")
+        }
         return null
     }
 
@@ -358,13 +364,9 @@ class LocalOnlyHotspotManager(
             override fun onFailed(reason: Int) {
                 synchronized(stateLock) {
                     if (startAttempt === attempt && attempt.failure == null) {
-                        val message = "LocalOnlyHotspot failed: ${failureReason(reason)}"
-                        // Another hotspot is running: retrying cannot help until the user changes that.
-                        attempt.failure = if (reason == WifiManager.LocalOnlyHotspotCallback.ERROR_INCOMPATIBLE_MODE) {
-                            WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, message)
-                        } else {
-                            IOException(message)
-                        }
+                        attempt.failure = IOException(
+                            "LocalOnlyHotspot failed: ${failureReason(reason)}",
+                        )
                         stateLock.notifyAll()
                     }
                 }
@@ -676,18 +678,17 @@ class LocalOnlyHotspotManager(
         if (preferIpv4) {
             Collections.list(inetAddresses).firstOrNull { it is Inet4Address && it.isSiteLocalAddress }?.let { return it }
         }
-        var ipv4: InetAddress? = null
-        for (address in Collections.list(inetAddresses)) {
+        val addresses = Collections.list(inetAddresses)
+        val ipv4 = addresses.firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+        for (address in addresses) {
             if (address is Inet6Address && address.isLinkLocalAddress) {
-                if (address.scopeId == index) return address
-                try {
-                    return Inet6Address.getByAddress(null, address.address, this)
+                val scoped = if (address.scopeId == index) address else try {
+                    Inet6Address.getByAddress(null, address.address, this)
                 } catch (_: UnknownHostException) {
                     continue
                 }
-            }
-            if (address is Inet4Address && !address.isLoopbackAddress && ipv4 == null) {
-                ipv4 = address
+                // Android 8/9 cannot answer on a hotspot's link-local address; see linkLocalRoutable.
+                if (ipv4 == null || linkLocalRoutable(scoped)) return scoped
             }
         }
         return ipv4

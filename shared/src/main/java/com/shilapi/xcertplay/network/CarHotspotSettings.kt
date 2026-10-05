@@ -12,6 +12,16 @@ object CarHotspotSettings {
     fun setEnabled(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean("auto_enable", enabled).apply()
 
+    /** The user's standing request to turn the car hotspot off when an app-owned one is needed. */
+    fun stopForAppHotspot(context: Context): Boolean = prefs(context).getBoolean("stop_for_app_hotspot", false)
+
+    fun setStopForAppHotspot(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean("stop_for_app_hotspot", enabled).apply()
+
+    /** True when that request can be carried out now. */
+    fun mayStopForAppHotspot(context: Context): Boolean =
+        stopForAppHotspot(context) && CarHotspotTethering.permitted(context)
+
     // Visibility is independent of the saved choice: ADB is only needed to grant permission.
     fun visible(bydAvailable: Boolean, access: LocalAdb.Access): Boolean =
         bydAvailable && (access == LocalAdb.Access.READY || access == LocalAdb.Access.NOT_APPROVED)

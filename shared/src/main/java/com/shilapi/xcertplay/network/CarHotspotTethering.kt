@@ -27,6 +27,52 @@ object CarHotspotTethering {
 
     fun permitted(context: Context): Boolean = Settings.System.canWrite(context)
 
+    /**
+     * Turns the car's own hotspot off so an app-owned one can start, and waits until the platform
+     * reports it off. Blocking. Only on the user's standing request, and only with the same grant
+     * that [enable] needs; the hotspot is not turned back on afterwards.
+     */
+    fun disable(context: Context, isCancelled: () -> Boolean, timeoutMillis: Long, log: (String) -> Unit): Boolean {
+        if (!permitted(context)) return false
+        val stopped = runCatching {
+            val service = ConnectivityManager::class.java.getDeclaredField("mService")
+                .apply { isAccessible = true }
+                .get(context.getSystemService(ConnectivityManager::class.java))
+                ?: throw NoSuchMethodException("Connectivity service unavailable")
+            // Android 8 added the caller's package; Android 7 takes the type alone.
+            runCatching {
+                service.javaClass.getMethod("stopTethering", Int::class.javaPrimitiveType, String::class.java)
+                    .invoke(service, TETHERING_WIFI, context.packageName)
+            }.recoverCatching { failure ->
+                if (failure !is NoSuchMethodException) throw failure
+                service.javaClass.getMethod("stopTethering", Int::class.javaPrimitiveType).invoke(service, TETHERING_WIFI)
+            }.getOrThrow()
+        }
+        if (stopped.isFailure) {
+            log("car hotspot stop failed: ${stopped.exceptionOrNull()?.let { it.cause ?: it }?.javaClass?.simpleName}")
+            return false
+        }
+        // A hotspot caught while still starting reports "not on" at once and then comes up, so
+        // wait for the access point to be fully off and to stay off across several samples.
+        val deadline = System.nanoTime() + timeoutMillis * 1_000_000L
+        var settled = 0
+        while (settled < STOP_SETTLE_SAMPLES) {
+            if (isCancelled() || System.nanoTime() >= deadline) return false
+            try {
+                Thread.sleep(250L)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+            settled = if (CarHotspotStatus.settledOff(context)) settled + 1 else 0
+        }
+        return true
+    }
+
+    private const val STOP_SETTLE_SAMPLES = 4
+
+    private const val TETHERING_WIFI = 0
+
     /** Blocking; serialize startup and connection requests, checking cancellation after acquiring the lock. */
     fun enable(
         context: Context,

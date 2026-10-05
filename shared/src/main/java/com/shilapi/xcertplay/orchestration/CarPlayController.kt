@@ -2035,10 +2035,28 @@ class CarPlayController(
         } else {
             config.wirelessHotspotMode
         }
+        var carHotspotOn = requestedMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
+            com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(appContext)
+        if (carHotspotOn && com.shilapi.xcertplay.network.CarHotspotSettings.mayStopForAppHotspot(appContext)) {
+            val allowed = com.shilapi.xcertplay.network.CarHotspotStopBudget.shared.take(System.nanoTime() / 1_000_000)
+            if (!allowed) debugLog("generation=$generation car hotspot keeps coming back on: not turning it off again")
+            val stopped = allowed && com.shilapi.xcertplay.network.CarHotspotTethering.disable(
+                appContext,
+                isCancelled = { isStaleWirelessRun(generation) },
+                timeoutMillis = CAR_HOTSPOT_STOP_TIMEOUT_MILLIS,
+                log = { debugLog("generation=$generation $it") },
+            )
+            debugLog("generation=$generation car hotspot is on: turning it off for the app-owned hotspot stopped=$stopped")
+            if (stopped) {
+                carHotspotOn = false
+            } else if (!isStaleWirelessRun(generation)) {
+                // It does not work on this unit: let the user choose again rather than fail the same way.
+                com.shilapi.xcertplay.network.CarHotspotSettings.setStopForAppHotspot(appContext, false)
+            }
+        }
         val hotspotMode = com.shilapi.xcertplay.network.resolveHotspotMode(
             requested = requestedMode,
-            carHotspotOn = requestedMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
-                com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(appContext),
+            carHotspotOn = carHotspotOn,
             carHotspotSaved = ManualHotspotValidation.error(
                 config.manualHotspotSsid.orEmpty(), config.manualHotspotPassphrase.orEmpty()) == null,
         ) ?: throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
@@ -2596,6 +2614,7 @@ class CarPlayController(
         private const val IAP2_IPHONE_UUID = "00000000-deca-fade-deca-deafdecacafe"
         private const val HOTSPOT_START_TIMEOUT_MILLIS = 60_000L
         private const val LOCAL_HOTSPOT_START_TIMEOUT_MILLIS = 20_000L
+        private const val CAR_HOTSPOT_STOP_TIMEOUT_MILLIS = 10_000L
         private const val WIFI_P2P_START_TIMEOUT_MILLIS = 20_000L
         private const val PAIR_TIMEOUT_MILLIS = 5 * 60_000L
         private const val VPN_CONNECT_TIMEOUT_MILLIS = 10_000L

@@ -86,7 +86,7 @@ class ManualHotspotManager(
             sample = {
                 interfaces.sample().also { snapshot ->
                     val messages = mutableListOf<String>()
-                    selectHotspotInterface(snapshot, preferIpv4, messages::add)
+                    selectHotspotInterface(snapshot, preferIpv4, ::linkLocalRoutable, messages::add)
                     if (messages != lastSampleLog) {
                         messages.forEach(onDiagnostic)
                         lastSampleLog = messages
@@ -97,6 +97,7 @@ class ManualHotspotManager(
             pause = { millis -> synchronized(waitLock) { if (!closed && !isCancelled()) waitLock.wait(millis) } },
             log = {},
             preferIpv4 = preferIpv4,
+            linkLocalUsable = ::linkLocalRoutable,
         ).await(timeoutMillis)
         confirmed = selected
         onDiagnostic("hotspot interface confirmed iface=${selected.name} index=${selected.index} atNs=${System.nanoTime()}")
@@ -181,7 +182,7 @@ class ManualHotspotManager(
         val expected = confirmed ?: throw WirelessStartupException(
             WirelessStartupFailure.HOTSPOT_NOT_READY, "Hotspot network is not ready",
         )
-        val current = selectHotspotInterface(interfaces.sample(), preferIpv4, onDiagnostic)
+        val current = selectHotspotInterface(interfaces.sample(), preferIpv4, ::linkLocalRoutable, onDiagnostic)
         if (closed || isCancelled() || current == null || !expected.sameAddress(current)) {
             throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_NOT_READY,
                 "Hotspot interface or address changed before publication")

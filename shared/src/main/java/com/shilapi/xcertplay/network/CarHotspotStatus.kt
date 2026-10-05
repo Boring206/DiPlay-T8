@@ -15,6 +15,8 @@ object CarHotspotStatus {
     private const val EXTRA_WIFI_AP_STATE = "wifi_state"
     private const val EXTRA_WIFI_AP_MODE = "wifi_ap_mode"
     private const val AP_MODE_LOCAL_ONLY = 2
+    private const val WIFI_AP_STATE_DISABLED = 11
+    private const val WIFI_AP_STATE_FAILED = 14
 
     /**
      * True/false from the Wi-Fi AP state, or null when the firmware hides it (then callers must
@@ -42,6 +44,24 @@ object CarHotspotStatus {
         }.getOrNull()
         return sticky?.getIntExtra(EXTRA_WIFI_AP_MODE, -1) != AP_MODE_LOCAL_ONLY
     }
+
+    /**
+     * True once no access point is running or changing state. "Not enabled" is not enough for
+     * that: an AP that is still starting or stopping blocks an app-owned hotspot just the same.
+     */
+    fun settledOff(context: Context): Boolean {
+        val app = context.applicationContext
+        val wifi = app.getSystemService(WifiManager::class.java)
+        val state = runCatching {
+            wifi?.let { WifiManager::class.java.getMethod("getWifiApState").invoke(it) as? Int }
+        }.getOrNull() ?: runCatching {
+            app.registerReceiver(null, IntentFilter(ACTION_WIFI_AP_STATE_CHANGED))?.getIntExtra(EXTRA_WIFI_AP_STATE, -1)
+        }.getOrNull()
+        return if (state != null && state in 10..14) settledOffState(state) else isEnabled(context) != true
+    }
+
+    /** A failed access point is as gone as a disabled one; some drivers report a stop that way. */
+    internal fun settledOffState(state: Int): Boolean = state == WIFI_AP_STATE_DISABLED || state == WIFI_AP_STATE_FAILED
 
     internal fun stateEnabled(state: Int?): Boolean? = state?.takeIf { it in 10..14 }?.let { it == 13 }
 

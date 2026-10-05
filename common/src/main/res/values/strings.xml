@@ -678,7 +678,12 @@
     <string name="hands_free_accept">Connect automatically</string>
     <string name="app_hotspot_blocked">The car\'s own hotspot is on, so DiPlay cannot open its hotspot. Turn the car hotspot off and retry, or save its name and password in Connection setup so DiPlay can use it.</string>
     <string name="car_hotspot_blocks_title">The car hotspot is on</string>
-    <string name="car_hotspot_blocks_message">DiPlay\'s own hotspot cannot run while the car\'s hotspot is on. Either turn the car hotspot off, or enter its name and password once so DiPlay uses it whenever it is on.</string>
-    <string name="car_hotspot_blocks_use_it">Enter name and password</string>
     <string name="check_app_hotspot_uses_car">The car\'s own hotspot is on; DiPlay will use it for this connection.</string>
+    <string name="car_hotspot_choice_stop">Let DiPlay turn the car hotspot off (nothing to type)</string>
+    <string name="car_hotspot_choice_use">Enter the car hotspot\'s name and password and use it</string>
+    <string name="car_hotspot_stop_grant_hint">Allow DiPlay to modify system settings, then go back.</string>
+    <string name="car_hotspot_stop_not_granted">DiPlay was not allowed to modify system settings, so it cannot turn the car hotspot off itself. Pick one of the other ways.</string>
+    <string name="check_app_hotspot_stops_car">The car\'s own hotspot is on; DiPlay will turn it off when connecting.</string>
+    <string name="auto_stop_car_hotspot_title">Turn the car hotspot off when connecting</string>
+    <string name="auto_stop_car_hotspot_description">When the car\'s own hotspot is on, DiPlay turns it off and opens its own, so no name or password has to be typed. Needs permission to modify system settings. The car hotspot is not turned back on afterwards.</string>
 </resources>
