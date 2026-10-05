@@ -2028,13 +2028,23 @@ class CarPlayController(
 
     private fun startWirelessHotspot(generation: Int): WirelessHotspotInfo {
         val readyDeadline = System.nanoTime() + WirelessStartupPolicy.HOTSPOT_READY_MILLIS * 1_000_000
-        val hotspotMode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+        val requestedMode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             config.wirelessHotspotMode == WirelessHotspotMode.WIFI_P2P
         ) {
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
         } else {
             config.wirelessHotspotMode
         }
+        val hotspotMode = com.shilapi.xcertplay.network.resolveHotspotMode(
+            requested = requestedMode,
+            carHotspotOn = requestedMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
+                com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(appContext),
+            carHotspotSaved = ManualHotspotValidation.error(
+                config.manualHotspotSsid.orEmpty(), config.manualHotspotPassphrase.orEmpty()) == null,
+        ) ?: throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+            "The car hotspot is on, so DiPlay cannot open its own. Turn the car hotspot off, " +
+                "or save its name and password in Connection setup.")
+        if (hotspotMode != requestedMode) debugLog("generation=$generation car hotspot is on: using it instead of an app-owned hotspot")
         if (com.shilapi.xcertplay.network.CarHotspotSettings.shouldEnable(
                 appContext, config.transport == CarPlayTransport.WIRELESS, hotspotMode,
             )

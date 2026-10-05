@@ -1045,6 +1045,20 @@ class DiPlayActivity : ComponentActivity() {
         else -> R.string.hotspot_control_failed
     })
 
+    /** The platform refuses an app-owned hotspot beside the car's own: let the user pick which one stays. */
+    private fun carHotspotBlocksAppHotspotDialog() {
+        AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_blocks_title))
+            .setMessage(getString(R.string.car_hotspot_blocks_message))
+            .setPositiveButton(getString(R.string.car_hotspot_blocks_use_it)) { _, _ ->
+                askHotspotCredentials { ssid, password ->
+                    saveHotspotCredentials(ssid, password)
+                    connect(true)
+                }
+            }
+            .setNeutralButton(getString(R.string.open_car_hotspot_settings)) { _, _ -> openCarWifiSettings() }
+            .setNegativeButton(getString(R.string.cancel), null).show()
+    }
+
     private fun carHotspotOffDialog() {
         AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_is_off))
             .setMessage(getString(R.string.msg_car_hotspot_connect, AirPlayPersistence.loadManualHotspotSsid(this)))
@@ -2567,6 +2581,9 @@ class DiPlayActivity : ComponentActivity() {
             return
         }
         if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
+        if (wireless && AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
+            !HeadUnitCheck.carHotspotSaved(this) && com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(this)
+        ) { carHotspotBlocksAppHotspotDialog(); return }
         if (wireless && DiPlayPreferences.phoneAddress(this) == null) {
             // One paired iPhone leaves nothing to choose.
             val only = singlePairedIphone()
