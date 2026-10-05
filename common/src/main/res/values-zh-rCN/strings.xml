@@ -678,7 +678,12 @@
     <string name="hands_free_accept">自动连接</string>
     <string name="app_hotspot_blocked">车机自带的热点正开着，所以 DiPlay 无法自建热点。请关闭车机热点后重试；或到“连接设置”保存车机热点的名称和密码，让 DiPlay 直接使用它。</string>
     <string name="car_hotspot_blocks_title">车机热点目前开着</string>
-    <string name="car_hotspot_blocks_message">车机热点开着时，DiPlay 无法自建热点。你可以关闭车机热点；或者输入一次车机热点的名称和密码，之后只要车机热点开着，DiPlay 就直接使用它。</string>
-    <string name="car_hotspot_blocks_use_it">输入名称和密码</string>
     <string name="check_app_hotspot_uses_car">车机自带的热点正开着，DiPlay 这次会直接使用它连接。</string>
+    <string name="car_hotspot_choice_stop">让 DiPlay 自动关闭车机热点（不用输入任何东西）</string>
+    <string name="car_hotspot_choice_use">输入车机热点的名称和密码，直接使用它</string>
+    <string name="car_hotspot_stop_grant_hint">请允许 DiPlay 修改系统设置，然后按返回。</string>
+    <string name="car_hotspot_stop_not_granted">DiPlay 没有取得“修改系统设置”的权限，无法自动关闭车机热点。请改用其他方式。</string>
+    <string name="check_app_hotspot_stops_car">车机自带的热点正开着，连接时 DiPlay 会先把它关闭。</string>
+    <string name="auto_stop_car_hotspot_title">连接时自动关闭车机热点</string>
+    <string name="auto_stop_car_hotspot_description">车机自带的热点开着时，由 DiPlay 关闭它并自建热点，不必输入名称和密码。需要允许修改系统设置。之后不会自动重新开启车机热点。</string>
 </resources>

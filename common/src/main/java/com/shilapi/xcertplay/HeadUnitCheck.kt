@@ -89,7 +89,9 @@ internal object HeadUnitCheck {
             // The platform refuses an app-owned hotspot while location is off or tethering is on.
             if (!locationOn(context)) items += Item(Level.BLOCKED, context.getString(R.string.check_location_off), Action.LOCATION_SETTINGS)
             if (tetheredHotspotOn(context)) {
-                items += if (carHotspotSaved(context)) {
+                items += if (CarHotspotSettings.mayStopForAppHotspot(context)) {
+                    Item(Level.INFO, context.getString(R.string.check_app_hotspot_stops_car))
+                } else if (carHotspotSaved(context)) {
                     Item(Level.INFO, context.getString(R.string.check_app_hotspot_uses_car))
                 } else {
                     Item(Level.BLOCKED, context.getString(R.string.check_app_hotspot_conflict), Action.CONNECTION_SETUP)

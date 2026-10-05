@@ -36,6 +36,11 @@ class CarHotspotStatusTest {
         assertEquals(false, CarHotspotStatus.read({ 11 }, { null }, { fail("Do not read stale broadcast"); sticky(13) }))
     }
 
+    @Test fun onlyAnAccessPointThatIsGoneCountsAsSettledOff() {
+        // 10 disabling, 11 disabled, 12 enabling, 13 enabled, 14 failed.
+        assertEquals(listOf(11, 14), (10..14).filter { CarHotspotStatus.settledOffState(it) })
+    }
+
     @Test fun absentManagerStillAllowsStickyStateButAbsentExtraDoesNotInventOff() {
         assertEquals(true, CarHotspotStatus.read({ null }, { null }, { sticky(13) }))
         assertNull(CarHotspotStatus.read({ null }, { null }, { sticky(null) }))

@@ -74,6 +74,7 @@ class DiPlayActivity : ComponentActivity() {
     private var pendingWireless = false
     private var initialLaunch = true
     private var pendingHotspotPermission = false
+    private var pendingCarHotspotStop = false
     private var freshStart = false
     private var notificationTransport = true
     private var exportInProgress = false
@@ -238,6 +239,12 @@ class DiPlayActivity : ComponentActivity() {
         if (pendingHotspotPermission) {
             pendingHotspotPermission = false
             if (CarHotspotTethering.permitted(this)) CarHotspotSettings.setEnabled(this, true)
+        }
+        if (pendingCarHotspotStop) {
+            pendingCarHotspotStop = false
+            // Back from the grant screen: carry on with the connection the user asked for.
+            if (CarHotspotTethering.permitted(this)) handler.post { connect(true) }
+            else carHotspotStopNotGranted()
         }
         offerHandsFreeOnce()
         // Back from the car settings: refresh the car hotspot reminder on the home page.
@@ -542,6 +549,18 @@ class DiPlayActivity : ComponentActivity() {
                     toggle(card, getString(R.string.auto_connect_on_bluetooth_title),
                         getString(R.string.auto_connect_on_bluetooth_description),
                         DiPlayPreferences.autoConnectOnBluetooth(this)) { DiPlayPreferences.saveAutoConnectOnBluetooth(this, it) }
+                }
+                if (AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
+                    var stopCarHotspot: Switch? = null
+                    stopCarHotspot = toggle(card, getString(R.string.auto_stop_car_hotspot_title), getString(R.string.auto_stop_car_hotspot_description),
+                        CarHotspotSettings.mayStopForAppHotspot(this)) { wanted ->
+                        CarHotspotSettings.setStopForAppHotspot(this, wanted)
+                        if (wanted && !CarHotspotTethering.permitted(this) && !openModifySettingsGrant()) {
+                            toast(getString(R.string.car_hotspot_stop_not_granted))
+                            // Unchecking clears the choice again.
+                            stopCarHotspot?.isChecked = false
+                        }
+                    }
                 }
                 if (AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL) {
                     toggle(card, getString(R.string.auto_car_hotspot_title), getString(R.string.auto_car_hotspot_plain_description),
@@ -1047,17 +1066,45 @@ class DiPlayActivity : ComponentActivity() {
 
     /** The platform refuses an app-owned hotspot beside the car's own: let the user pick which one stays. */
     private fun carHotspotBlocksAppHotspotDialog() {
+        val choices = arrayOf(
+            getString(R.string.car_hotspot_choice_stop),
+            getString(R.string.car_hotspot_choice_use),
+            getString(R.string.open_car_hotspot_settings),
+        )
         AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_blocks_title))
-            .setMessage(getString(R.string.car_hotspot_blocks_message))
-            .setPositiveButton(getString(R.string.car_hotspot_blocks_use_it)) { _, _ ->
-                askHotspotCredentials { ssid, password ->
-                    saveHotspotCredentials(ssid, password)
-                    connect(true)
+            .setItems(choices) { _, which ->
+                when (which) {
+                    0 -> letDiPlayStopCarHotspot()
+                    1 -> askHotspotCredentials { ssid, password ->
+                        saveHotspotCredentials(ssid, password)
+                        connect(true)
+                    }
+                    else -> openCarWifiSettings()
                 }
             }
-            .setNeutralButton(getString(R.string.open_car_hotspot_settings)) { _, _ -> openCarWifiSettings() }
             .setNegativeButton(getString(R.string.cancel), null).show()
     }
+
+    /** Needs the system's "modify settings" grant; the choice takes effect once that is given. */
+    private fun letDiPlayStopCarHotspot() {
+        CarHotspotSettings.setStopForAppHotspot(this, true)
+        if (CarHotspotTethering.permitted(this)) { connect(true); return }
+        if (!openModifySettingsGrant()) { carHotspotStopNotGranted(); return }
+        pendingCarHotspotStop = true
+        toast(getString(R.string.car_hotspot_stop_grant_hint))
+    }
+
+    /** Without the grant that choice cannot work: say so and offer the other ones again. */
+    private fun carHotspotStopNotGranted() {
+        CarHotspotSettings.setStopForAppHotspot(this, false)
+        toast(getString(R.string.car_hotspot_stop_not_granted))
+        carHotspotBlocksAppHotspotDialog()
+    }
+
+    /** False on head units that ship without the "modify system settings" screen. */
+    private fun openModifySettingsGrant(): Boolean = runCatching {
+        startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+    }.isSuccess
 
     private fun carHotspotOffDialog() {
         AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_is_off))
@@ -1348,6 +1395,8 @@ class DiPlayActivity : ComponentActivity() {
                 password.transformationMethod = if (checked) null else android.text.method.PasswordTransformationMethod.getInstance()
                 password.setSelection(password.text.length)
             }
+            // A hotspot password is no secret inside the car, and nothing can check it for typos.
+            isChecked = true
         })
         val error = label("", 14, WARNING)
         error.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -2584,7 +2633,8 @@ class DiPlayActivity : ComponentActivity() {
         }
         if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
         if (wireless && AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT &&
-            !HeadUnitCheck.carHotspotSaved(this) && com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(this)
+            !HeadUnitCheck.carHotspotSaved(this) && !CarHotspotSettings.mayStopForAppHotspot(this) &&
+            com.shilapi.xcertplay.network.CarHotspotStatus.tetheredOn(this)
         ) { carHotspotBlocksAppHotspotDialog(); return }
         if (wireless && DiPlayPreferences.phoneAddress(this) == null) {
             // One paired iPhone leaves nothing to choose.

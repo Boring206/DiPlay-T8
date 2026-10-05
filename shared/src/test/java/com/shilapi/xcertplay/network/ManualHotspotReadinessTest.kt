@@ -36,6 +36,12 @@ class ManualHotspotReadinessTest {
         assertEquals(1_500L, now)
     }
 
+    @Test fun hotspotThatCannotAnswerOnLinkLocalIsOfferedOverIpv4() {
+        val both = snapshot(iface(addresses = listOf(ipv6, ipv4)), ap = setOf("wlan0"))
+        assertTrue(selectHotspotInterface(both) {}?.address is Inet6Address)
+        assertEquals(ipv4, selectHotspotInterface(both, linkLocalUsable = { false }) {}?.address)
+    }
+
     @Test fun platformOwnershipAllowsVendorBridgeAndEthernet() {
         for (name in listOf("eth0", "br0", "vendor_radio")) {
             assertEquals(name, select(snapshot(iface(name), ap = setOf(name)))?.name)

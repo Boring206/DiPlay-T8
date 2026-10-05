@@ -41,4 +41,13 @@ class WirelessHostAddressTest {
     }
 
     private fun ip(value: String) = InetAddress.getByName(value)
+
+    @Test fun unanswerableLinkLocalYieldsToIpv4ButNotToNothing() {
+        // Android 8/9 hotspot interfaces receive on fe80:: and cannot reply.
+        val ipv4 = ip("192.168.43.1")
+        val linkLocal = ip("fe80::1234")
+        assertEquals(ipv4, wirelessHostAddress(listOf(linkLocal, ipv4), 3) { false })
+        assertTrue(wirelessHostAddress(listOf(linkLocal, ipv4), 3) { true } is Inet6Address)
+        assertTrue(wirelessHostAddress(listOf(linkLocal), 3) { false } is Inet6Address)
+    }
 }

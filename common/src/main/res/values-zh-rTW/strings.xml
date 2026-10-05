@@ -678,7 +678,12 @@
     <string name="hands_free_accept">自動連線</string>
     <string name="app_hotspot_blocked">車機自帶的熱點正開著，所以 DiPlay 無法自建熱點。請關閉車機熱點後重試；或到“連線設定”儲存車機熱點的名稱和密碼，讓 DiPlay 直接使用它。</string>
     <string name="car_hotspot_blocks_title">車機熱點目前開著</string>
-    <string name="car_hotspot_blocks_message">車機熱點開著時，DiPlay 無法自建熱點。你可以關閉車機熱點；或者輸入一次車機熱點的名稱和密碼，之後只要車機熱點開著，DiPlay 就直接使用它。</string>
-    <string name="car_hotspot_blocks_use_it">輸入名稱和密碼</string>
     <string name="check_app_hotspot_uses_car">車機自帶的熱點正開著，DiPlay 這次會直接使用它連線。</string>
+    <string name="car_hotspot_choice_stop">讓 DiPlay 自動關閉車機熱點（不用輸入任何東西）</string>
+    <string name="car_hotspot_choice_use">輸入車機熱點的名稱和密碼，直接使用它</string>
+    <string name="car_hotspot_stop_grant_hint">請允許 DiPlay 修改系統設定，然後按返回。</string>
+    <string name="car_hotspot_stop_not_granted">DiPlay 沒有取得“修改系統設定”的權限，無法自動關閉車機熱點。請改用其他方式。</string>
+    <string name="check_app_hotspot_stops_car">車機自帶的熱點正開著，連線時 DiPlay 會先把它關閉。</string>
+    <string name="auto_stop_car_hotspot_title">連線時自動關閉車機熱點</string>
+    <string name="auto_stop_car_hotspot_description">車機自帶的熱點開著時，由 DiPlay 關閉它並自建熱點，不必輸入名稱和密碼。需要允許修改系統設定。之後不會自動重新開啟車機熱點。</string>
 </resources>
