@@ -4,6 +4,14 @@ package com.shilapi.xcertplay.network
 internal object LocalOnlyHotspotInterfacePolicy {
     data class Candidate(val name: String, val ipv4: Set<String>, val bssid: String?)
 
+    /**
+     * Interfaces that cannot be the AP because they carry another network. Where the station was
+     * switched off for the AP, the AP may take over the station's interface name, so only what is
+     * an upstream now still counts.
+     */
+    fun upstreams(previous: Set<String>, current: Set<String>, stationSwitchedOff: Boolean): Set<String> =
+        if (stationSwitchedOff) current else previous + current
+
     fun select(
         candidates: List<Candidate>,
         previousAddresses: Set<String>,

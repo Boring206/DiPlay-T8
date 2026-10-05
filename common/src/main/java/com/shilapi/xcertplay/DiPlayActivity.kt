@@ -239,6 +239,7 @@ class DiPlayActivity : ComponentActivity() {
             pendingHotspotPermission = false
             if (CarHotspotTethering.permitted(this)) CarHotspotSettings.setEnabled(this, true)
         }
+        offerHandsFreeOnce()
         // Back from the car settings: refresh the car hotspot reminder on the home page.
         if (!initialLaunch && !adbSwitchChangePending && !pausedForAdbSwitchChange &&
             (page == "home" || page == "settings" || page == "connection")) render()
@@ -2589,6 +2590,22 @@ class DiPlayActivity : ComponentActivity() {
     private fun openProjection() {
         startActivity(Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
+    /** Asked once, and only after CarPlay has actually shown a picture on this head unit. */
+    private fun offerHandsFreeOnce() {
+        if (!DiPlayPreferences.carPlayWorked(this) || DiPlayPreferences.handsFreeOffered(this)) return
+        DiPlayPreferences.markHandsFreeOffered(this)
+        if (DiPlayPreferences.autoConnect(this) && DiPlayPreferences.autoConnectOnBluetooth(this)) return
+        // Android 10+ blocks a background receiver from opening the screen without the overlay grant.
+        val bluetoothTrigger = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || Settings.canDrawOverlays(this)
+        AlertDialog.Builder(this).setTitle(getString(R.string.hands_free_title))
+            .setMessage(getString(if (bluetoothTrigger) R.string.hands_free_message_bluetooth else R.string.hands_free_message))
+            .setPositiveButton(getString(R.string.hands_free_accept)) { _, _ ->
+                DiPlayPreferences.saveAutoConnect(this, true)
+                if (bluetoothTrigger) DiPlayPreferences.saveAutoConnectOnBluetooth(this, true)
+                if (page == "settings") render()
+            }.setNegativeButton(getString(R.string.later), null).show()
+    }
+
     private fun singlePairedIphone(): android.bluetooth.BluetoothDevice? {
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return null
         val adapter = getSystemService(BluetoothManager::class.java)?.adapter?.takeIf { it.isEnabled } ?: return null
@@ -2794,9 +2811,13 @@ class DiPlayActivity : ComponentActivity() {
             typeface = Typeface.MONOSPACE
             setTextIsSelectable(true)
         })
-        AlertDialog.Builder(this).setTitle(getString(R.string.view_diagnostic_report))
-            .setView(ScrollView(this).apply { addView(body) })
+        val scroll = ScrollView(this).apply { addView(body) }
+        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.view_diagnostic_report))
+            .setView(scroll)
             .setPositiveButton(getString(R.string.close), null).show()
+        // Head units photograph the report: use the whole screen and open at the newest lines.
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
     }
     private fun permissionHelp(title: String, body: String) {
         AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton(getString(R.string.app_settings)) { _, _ ->

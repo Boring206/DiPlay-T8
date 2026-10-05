@@ -672,4 +672,8 @@
     <string name="check_open_location_settings">Open location settings</string>
     <string name="check_app_hotspot_conflict">The car\'s own hotspot is on. Turn it off so DiPlay can open its hotspot, or switch to the car hotspot mode.</string>
     <string name="app_hotspot_failed">DiPlay could not open its own hotspot on this head unit. Check that location is on and the car\'s hotspot is off, or choose the car hotspot in Connection setup.</string>
+    <string name="hands_free_title">Connect automatically from now on?</string>
+    <string name="hands_free_message_bluetooth">CarPlay has worked on this head unit. DiPlay can open and connect by itself whenever your iPhone connects to the car\'s Bluetooth. You can change this in Settings.</string>
+    <string name="hands_free_message">CarPlay has worked on this head unit. DiPlay can connect by itself whenever it is opened. You can change this in Settings.</string>
+    <string name="hands_free_accept">Connect automatically</string>
 </resources>

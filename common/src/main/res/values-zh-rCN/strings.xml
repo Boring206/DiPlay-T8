@@ -672,4 +672,8 @@
     <string name="check_open_location_settings">打开定位设置</string>
     <string name="check_app_hotspot_conflict">车机自带的热点正开着。请先关闭它，DiPlay 才能自建热点；或者改用车载热点方式。</string>
     <string name="app_hotspot_failed">DiPlay 无法在这台车机上自建热点。请确认定位已开启、车机自带热点已关闭；或到“连接设置”改用“车载热点”。</string>
+    <string name="hands_free_title">以后自动连接？</string>
+    <string name="hands_free_message_bluetooth">CarPlay 已在这台车机上成功连接。以后只要 iPhone 连上车机蓝牙，DiPlay 就可以自动打开并连接。之后可在“设置”中更改。</string>
+    <string name="hands_free_message">CarPlay 已在这台车机上成功连接。以后只要打开 DiPlay 就可以自动连接。之后可在“设置”中更改。</string>
+    <string name="hands_free_accept">自动连接</string>
 </resources>

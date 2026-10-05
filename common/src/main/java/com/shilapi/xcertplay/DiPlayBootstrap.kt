@@ -78,6 +78,14 @@ internal object DiPlayPreferences {
     fun saveAutoConnectOnBluetooth(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean("auto_connect_on_bluetooth", value).apply()
     }
+    fun carPlayWorked(context: Context) = prefs(context).getBoolean("carplay_worked", false)
+    fun markCarPlayWorked(context: Context) {
+        if (!carPlayWorked(context)) prefs(context).edit().putBoolean("carplay_worked", true).apply()
+    }
+    fun handsFreeOffered(context: Context) = prefs(context).getBoolean("hands_free_offered", false)
+    fun markHandsFreeOffered(context: Context) {
+        prefs(context).edit().putBoolean("hands_free_offered", true).apply()
+    }
     fun phoneName(context: Context): String = prefs(context).getString("phone_name", null) ?: "Your iPhone"
     fun savePhone(context: Context, address: String, name: String) {
         prefs(context).edit().putString("phone_address", address).putString("phone_name", name).apply()

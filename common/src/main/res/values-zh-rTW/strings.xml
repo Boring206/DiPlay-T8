@@ -672,4 +672,8 @@
     <string name="check_open_location_settings">開啟定位設定</string>
     <string name="check_app_hotspot_conflict">車機自帶的熱點正開著。請先關閉它，DiPlay 才能自建熱點；或者改用車載熱點方式。</string>
     <string name="app_hotspot_failed">DiPlay 無法在這台車機上自建熱點。請確認定位已開啟、車機自帶熱點已關閉；或到“連線設定”改用“車載熱點”。</string>
+    <string name="hands_free_title">以後自動連線？</string>
+    <string name="hands_free_message_bluetooth">CarPlay 已在這台車機上成功連線。以後只要 iPhone 連上車機藍牙，DiPlay 就可以自動開啟並連線。之後可在“設定”中更改。</string>
+    <string name="hands_free_message">CarPlay 已在這台車機上成功連線。以後只要開啟 DiPlay 就可以自動連線。之後可在“設定”中更改。</string>
+    <string name="hands_free_accept">自動連線</string>
 </resources>
