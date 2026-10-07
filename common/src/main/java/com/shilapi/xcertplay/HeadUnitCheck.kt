@@ -255,14 +255,17 @@ internal object HeadUnitCheck {
                 "/system/lib/hw", "/vendor/lib/hw", "/system/lib", "/vendor/lib", "/system/etc/bluetooth",
                 "/system/etc/firmware", "/vendor/etc/firmware", "/vendor/firmware", "/system/vendor/modules", "/vendor/modules",
             ).mapNotNull { directory ->
-                File(directory).list()?.filter { radio.containsMatchIn(it) && !it.startsWith("libc") }
+                // Every "libt…" holds the letters "bt": judge a library by its name after "lib".
+                File(directory).list()?.filter { radio.containsMatchIn(it.removePrefix("lib")) }
                     ?.takeIf { it.isNotEmpty() }?.let { "$directory: ${it.take(14).joinToString(",")}" }
             }.joinToString(" | ").take(640).ifEmpty { "nothing readable" }
         }
         probe("Radio properties") {
             val wanted = Regex("(?i)bluetooth|\\.bt|bt\\.|wifi|wlan|module|ro\\.board|ro\\.hardware|ro\\.product\\.(model|device|name)")
             Runtime.getRuntime().exec("getprop").inputStream.bufferedReader().useLines { lines ->
-                lines.filter { wanted.containsMatchIn(it.substringBefore("]:")) }.take(40)
+                // Bluetooth ones first: the line is cut where the report's limit falls.
+                lines.filter { wanted.containsMatchIn(it.substringBefore("]:")) }.toList()
+                    .sortedBy { line -> if (Regex("(?i)bluetooth|bt").containsMatchIn(line.substringBefore("]:"))) 0 else 1 }
                     .joinToString(" ") { it.replace(" ", "") }.take(640)
             }
         }
