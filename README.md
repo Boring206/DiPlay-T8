@@ -51,6 +51,10 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 - **設定 → 診斷 → 檢視報告**，不需要儲存空間就能看。
 - 車機和電腦或手機在同一個 Wi-Fi 時，用瀏覽器開 `http://<車機 IP>:8765/` 可以讀到同一份報告，內含最近 8 次連線紀錄。報告只在 App 開著時提供，並已遮蔽位址。
 
+### 回報你的車機
+
+能用或不能用都很有幫助，同型車機的人可以少走冤枉路。請到 [Issues](https://github.com/Boring206/DiPlay-T8/issues/new/choose) 選「車機回報」，填上車機型號、畫面停在哪句話，並貼上診斷報告的前半段。這是個人維護的專案，不保證能回覆或修正。
+
 ### 和原版的差異
 
 - 可在 Android 8.1 編譯與執行。
@@ -106,6 +110,10 @@ The head unit needs no internet for CarPlay: it opens a Wi-Fi network without in
 The connecting screen names the cause: no Android Bluetooth, Bluetooth that reports connections which are not real, Bluetooth off or unpaired, an iPhone that does not answer, the car's own hotspot in the way, or the unit still joined to the iPhone's Personal Hotspot. Each comes with the next step where there is one.
 
 **Settings → Diagnostics → View report** needs no storage. With the head unit and another device on the same Wi-Fi, `http://<head unit IP>:8765/` serves the same redacted report, including the last eight connection logs, while the app is open.
+
+### Report your head unit
+
+A report helps whether it worked or not: owners of the same unit learn what to expect. Open [an issue](https://github.com/Boring206/DiPlay-T8/issues/new/choose), choose "Head unit report", and give the model, what the screen said and the first part of the diagnostic report. This is maintained by one person in spare time; an answer or a fix is not promised.
 
 ### What differs from upstream
 

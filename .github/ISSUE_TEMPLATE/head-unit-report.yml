@@ -1,0 +1,60 @@
+name: 車機回報 / Head unit report
+description: 你的車機能不能用、卡在哪裡。Whether it works on your head unit, and where it stops.
+title: '[車機 / Head unit] '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        請在停車時測試。這裡是公開的：貼上報告前請先看過一遍，不要貼密碼。
+        Test while parked. Reports here are public: read a report through before pasting it, and never post passwords.
+  - type: input
+    id: version
+    attributes:
+      label: DiPlay T8 版本 / version
+      description: 首頁右下角，或報告的第一行。Shown at the bottom right of the home page and on the report's first line.
+      placeholder: 0.2.12-t8.6
+    validations: {required: true}
+  - type: input
+    id: unit
+    attributes:
+      label: 車機 / Head unit
+      description: 品牌、型號或平台，以及 Android 版本。Brand, model or platform, and the Android version.
+      placeholder: 'Allwinner T8 (sun8iw6p1), Android 8.1.0'
+    validations: {required: true}
+  - type: dropdown
+    id: result
+    attributes:
+      label: 結果 / Result
+      options:
+        - 成功進入 CarPlay / CarPlay started
+        - 連不上 / Could not connect
+        - 連上後有問題（畫面、聲音、斷線）/ Connected, with picture, sound or dropout problems
+        - 其他 / Other
+    validations: {required: true}
+  - type: dropdown
+    id: vendor-bluetooth
+    attributes:
+      label: 車機打電話、聽音樂是不是用廠商另一個「藍牙」App 配對？ / Are calls and music paired in a separate "Bluetooth" app from the maker?
+      options: ['是 / Yes', '不是，用系統藍牙設定 / No, in the system Bluetooth settings', '不確定 / Not sure']
+    validations: {required: true}
+  - type: textarea
+    id: message
+    attributes:
+      label: 畫面停在哪句話 / What the screen said
+      description: 連線畫面上方的訊息，以及下方「排查用的詳細資訊」那幾行。The message on the connecting screen and the detail lines under it.
+    validations: {required: true}
+  - type: input
+    id: phone
+    attributes:
+      label: iPhone 型號與 iOS 版本 / iPhone model and iOS version
+    validations: {required: false}
+  - type: textarea
+    id: report
+    attributes:
+      label: 診斷報告 / Diagnostic report
+      description: |
+        設定 → 診斷 → 檢視報告。至少貼上開頭到「Installed apps」為止的部分；位址已自動遮蔽。
+        Settings → Diagnostics → View report. Paste at least the part from the top down to "Installed apps"; addresses are redacted automatically.
+        車機和電腦在同一個 Wi-Fi 時，可以用瀏覽器開 http://<車機 IP>:8765/ 複製。With the head unit and a computer on the same Wi-Fi, http://<head unit IP>:8765/ serves it.
+      render: text
+    validations: {required: false}

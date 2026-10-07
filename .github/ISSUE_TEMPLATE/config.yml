@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Installation and connection help
-    url: https://github.com/shihabal3amri/DiPlay/blob/main/docs/INSTALL.md
-    about: Read setup and troubleshooting steps first.
+  - name: 安裝與畫面訊息對照 / Install steps and what each message means
+    url: https://github.com/Boring206/DiPlay-T8#%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87
+    about: 回報前請先看 README。Please read the README first.
+  - name: Android 9 以上的車機 / Head units on Android 9 or newer
+    url: https://github.com/shihabal3amri/DiPlay
+    about: 請使用原版 DiPlay，並在那裡回報。Use upstream DiPlay and report there.
