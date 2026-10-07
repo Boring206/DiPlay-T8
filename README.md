@@ -15,14 +15,14 @@
 | 需要 | 說明 |
 |---|---|
 | Android 8.1 | 8.0 以下不能安裝。 |
-| **真的** Android 系統藍牙 | 最常見的失敗原因。很多副廠車機的電話和音樂走廠商自己的藍牙模組，Android 這邊只是外殼，App 連不到 iPhone。這種車機**無法**使用無線 CarPlay，App 會在連線時判定並顯示出來。 |
+| **真的** Android 系統藍牙 | 最常見的失敗原因。很多副廠車機的電話和音樂走廠商自己的藍牙模組，Android 這邊只是外殼，App 連不到 iPhone。這種車機**無法**使用無線 CarPlay，App 會在連線時判定並顯示出來。**事先判斷的方法：**如果平常用車機打電話、聽音樂，是要進車機另一個「藍牙」App 去配對和操作，多半就是這種。 |
 | 能開熱點的 Wi-Fi | 只有 2.4 GHz 也可以，但畫面和聲音可能較卡。 |
 | iPhone | 需支援無線 CarPlay。 |
 
 ### 目前狀態
 
 - 在 Android 8.1 模擬器上用系統的熱點功能加一支模擬手機測過：覆蓋更新、熱點的兩種模式、服務廣播、連線埠、各種失敗情況的提示。
-- 在一台實車（Allwinner T8／`sun8iw6p1`／Android 8.1.0）上：熱點成功啟動，但該車機的藍牙在 4–17 毫秒內就回報「已連線」，iPhone 從未回應，所以無法使用。
+- 在一台實車（Allwinner T8／`sun8iw6p1`／Android 8.1.0）上：熱點成功啟動，但該車機的藍牙在 4–17 毫秒內就回報「已連線」，iPhone 從未回應，所以無法使用。那台車機的電話和音樂正是透過廠商另一個「藍牙」App 配對和操作的。
 - **還沒有人回報在 Android 8.1 實機上完整進入 CarPlay。** 請把它當成實驗品。
 
 ### 安裝
@@ -82,14 +82,14 @@ ANDROID_KEYSTORE_PATH=... ANDROID_KEY_ALIAS=... ANDROID_KEYSTORE_PASSWORD=... AN
 | Needed | Notes |
 |---|---|
 | Android 8.1 | Will not install on 8.0 or older. |
-| A **real** Android Bluetooth stack | The usual reason for failure. Many aftermarket units route calls and music through the maker's own Bluetooth module and leave Android an adapter that pairs and "connects" without reaching the phone. Wireless CarPlay **cannot** work there; the app tests for this while connecting and says so. |
+| A **real** Android Bluetooth stack | The usual reason for failure. Many aftermarket units route calls and music through the maker's own Bluetooth module and leave Android an adapter that pairs and "connects" without reaching the phone. Wireless CarPlay **cannot** work there; the app tests for this while connecting and says so. **A way to tell beforehand:** if calls and music on your unit are paired and operated in a separate "Bluetooth" app from the maker, it is most likely this kind. |
 | Wi-Fi that can run a hotspot | 2.4 GHz only is accepted; picture and sound may stutter. |
 | An iPhone | With wireless CarPlay. |
 
 ### Status
 
 - Tested on an Android 8.1 emulator with real tethering and a simulated phone: in-place update, both hotspot modes, service discovery, the listener port, and the message for each failure.
-- On one real unit (Allwinner T8, `sun8iw6p1`, Android 8.1.0) the hotspot came up, but its Bluetooth reported RFCOMM "connected" within 4–17 ms and the iPhone never answered, so it cannot be used there.
+- On one real unit (Allwinner T8, `sun8iw6p1`, Android 8.1.0) the hotspot came up, but its Bluetooth reported RFCOMM "connected" within 4–17 ms and the iPhone never answered, so it cannot be used there. On that unit calls and music are indeed paired and operated in the maker's own "Bluetooth" app.
 - **Nobody has reported a complete CarPlay session on Android 8.1 hardware yet.** Treat it as experimental.
 
 ### Install
