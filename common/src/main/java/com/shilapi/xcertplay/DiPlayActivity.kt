@@ -198,7 +198,7 @@ class DiPlayActivity : ComponentActivity() {
         super.onNewIntent(intent); setIntent(intent)
         page = intent.getStringExtra("page") ?: "home"; render()
         if (!offerCarHotspotChoiceIfAsked() && intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false) && setupError == null &&
-            !CarPlayBackgroundSession.hasSession()) handler.post { connect(true) }
+            !CarPlayBackgroundSession.hasSession() && !autoConnectHeldForPhoneHotspot()) handler.post { connect(true) }
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
@@ -256,7 +256,8 @@ class DiPlayActivity : ComponentActivity() {
             startCarHotspotOnLaunch()
             val phoneArrived = freshStart && intent.getBooleanExtra(EXTRA_AUTO_CONNECT, false)
             if (!offerCarHotspotChoiceIfAsked() && setupError == null && !CarPlayBackgroundSession.hasSession() &&
-                (DiPlayPreferences.autoConnect(this) || phoneArrived) && intent.getStringExtra("page") == null) {
+                (DiPlayPreferences.autoConnect(this) || phoneArrived) && intent.getStringExtra("page") == null &&
+                !autoConnectHeldForPhoneHotspot()) {
                 handler.post { connect(phoneArrived || AirPlayPersistence.loadWirelessEnabled(this)) }
             }
         }
@@ -1092,6 +1093,17 @@ class DiPlayActivity : ComponentActivity() {
         }
         builder.setItems(choices.map { it.first }.toTypedArray()) { _, which -> choices[which].second() }
             .setNegativeButton(getString(R.string.cancel), null).show()
+    }
+
+    /**
+     * Connecting replaces the head unit's Wi-Fi link with a hotspot. While that link is an iPhone's
+     * Personal Hotspot someone joined it on purpose, to download an update or read the report, so
+     * only a tap on Connect may take it away.
+     */
+    private fun autoConnectHeldForPhoneHotspot(): Boolean {
+        if (!HeadUnitCheck.joinedPhoneHotspot(this)) return false
+        toast(getString(R.string.auto_connect_held_for_phone_hotspot))
+        return true
     }
 
     /** The connection screen sends the user here when only this choice gets the attempt further. */

@@ -59,6 +59,7 @@ import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothLocalAddress
+import com.shilapi.xcertplay.transport.BluetoothReadiness
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
 import com.shilapi.xcertplay.transport.Ch341DeviceMatcher
 import com.shilapi.xcertplay.transport.Ch341I2cTransport
@@ -1110,6 +1111,7 @@ class CarPlayController(
             firstTcpWatchdog = watchdog
             val mfi = mfiSession?.client
                 ?: throw IOException("MFi coprocessor client is unavailable")
+            val (adapter, device) = prepareBluetooth(generation) ?: return
             val hotspotInfo = startWirelessHotspot(generation)
             if (isStaleWirelessRun(generation)) {
                 return
@@ -1150,7 +1152,8 @@ class CarPlayController(
                 sample = {
                     "${WirelessInterfaceDiagnostics.snapshot(hotspotInfo.interfaceName)} " +
                         "${startedHotspot?.connectionDiagnosticSnapshot() ?: "association=unknown"} " +
-                        (startedBonjour?.diagnosticSnapshot() ?: "bonjour=not_started") + "\n" +
+                        (startedBonjour?.diagnosticSnapshot() ?: "bonjour=not_started") +
+                        (bluetoothStream?.let { " rfcommRx=${it.bytesReceived} rfcommTx=${it.bytesSent}" } ?: "") + "\n" +
                         receiveDiagnostics.snapshot()
                 },
                 log = { message -> if (!isStaleWirelessRun(generation)) debugLog(message) },
@@ -1168,10 +1171,8 @@ class CarPlayController(
             )
             onStatus(CarPlayStatus.WaitingForPairedIphone)
 
-            val adapter = bluetoothAdapter
-                ?: throw IOException("Bluetooth adapter is unavailable")
+            // Switched off while the hotspot came up: the next attempt switches it on again.
             if (!adapter.isEnabled) throw IOException("Bluetooth is not enabled")
-            val device = selectWirelessBluetoothDevice(adapter)
             val hostBluetoothMac = accessoryBluetoothMac(adapter)
             debugLog(
                 "wireless selected Bluetooth target name=${device.name ?: "unknown"} " +
@@ -1261,9 +1262,11 @@ class CarPlayController(
                 runCatching { if (adapter.isDiscovering) adapter.cancelDiscovery() }
             }
             val bluetoothStarted = System.nanoTime()
+            val bluetoothConnectMillis: Long
             try {
                 connectBluetoothSocket(socket, device.address)
-                connectionDiagnostic("Bluetooth connect completed elapsedMs=${elapsedMillis(bluetoothStarted)}")
+                bluetoothConnectMillis = elapsedMillis(bluetoothStarted)
+                connectionDiagnostic("Bluetooth connect completed elapsedMs=$bluetoothConnectMillis")
             } catch (error: Throwable) {
                 connectionDiagnostic(
                     "Bluetooth connect failed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
@@ -1280,6 +1283,7 @@ class CarPlayController(
                 if (isStaleWirelessRun(generation)) return
                 BluetoothRfcommDuplexStream(socket).also { bluetoothStream = it }
             }
+            watchForUnrealBluetooth(generation, device, stream, bluetoothConnectMillis)
             val channel = Iap2Session.openWireless(
                 stream,
                 traceContext = "wireless-rfcomm",
@@ -2202,6 +2206,78 @@ class CarPlayController(
         )
     }
 
+    /**
+     * Bluetooth comes before the hotspot: starting an access point takes the head unit's Wi-Fi away
+     * from whatever it was connected to, which helps nobody while the iPhone cannot be reached.
+     * Null when the run was superseded meanwhile.
+     */
+    private fun prepareBluetooth(generation: Int): Pair<BluetoothAdapter, BluetoothDevice>? {
+        val adapter = bluetoothAdapter ?: throw WirelessStartupException(
+            WirelessStartupFailure.BLUETOOTH_NOT_READY, "Bluetooth adapter is unavailable")
+        val wasOff = !adapter.isEnabled
+        @Suppress("DEPRECATION")
+        val on = BluetoothReadiness.ensureOn(
+            isOn = { adapter.isEnabled },
+            // Android 12 put this behind a permission DiPlay does not hold; Android 13 removed it.
+            switchOn = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) ({ adapter.enable() }) else null,
+            isCancelled = { isStaleWirelessRun(generation) },
+            timeoutMillis = BLUETOOTH_SWITCH_ON_TIMEOUT_MILLIS,
+        )
+        if (isStaleWirelessRun(generation)) return null
+        if (wasOff) debugLog("generation=$generation Bluetooth was off: switching it on on=$on")
+        if (!on) throw WirelessStartupException(WirelessStartupFailure.BLUETOOTH_NOT_READY, "Bluetooth is not enabled")
+        val device = try {
+            selectWirelessBluetoothDevice(adapter)
+        } catch (unpaired: IOException) {
+            throw WirelessStartupException(WirelessStartupFailure.BLUETOOTH_NOT_READY, unpaired.message ?: "No paired iPhone")
+        }
+        return adapter to device
+    }
+
+    /**
+     * Some head units answer every RFCOMM connect with success at once and then carry no byte:
+     * their Android Bluetooth fronts a vendor module. Waiting minutes for iAP2 there tells the
+     * driver nothing, so after a silent spell the claim is put to a service no phone offers.
+     */
+    private fun watchForUnrealBluetooth(
+        generation: Int,
+        device: BluetoothDevice,
+        stream: BluetoothRfcommDuplexStream,
+        connectMillis: Long,
+    ) {
+        if (!BluetoothReadiness.looksUnreal(connectMillis, 0L)) return
+        Thread({
+            try {
+                Thread.sleep(BLUETOOTH_SILENCE_MILLIS)
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
+            if (isStaleWirelessRun(generation) || !BluetoothReadiness.looksUnreal(connectMillis, stream.bytesReceived)) return@Thread
+            val started = System.nanoTime()
+            val control = runCatching {
+                device.createRfcommSocketToServiceRecord(UUID.randomUUID()).use { connectBluetoothSocket(it, device.address) }
+            }
+            val controlMillis = elapsedMillis(started)
+            val unreal = control.isSuccess && controlMillis < BluetoothReadiness.INSTANT_CONNECT_MILLIS
+            debugLog(
+                "Bluetooth check: connected in ${connectMillis}ms, then rx=${stream.bytesReceived} tx=${stream.bytesSent} " +
+                    "after ${BLUETOOTH_SILENCE_MILLIS}ms; connect to a service no phone offers " +
+                    (if (control.isSuccess) "succeeded" else "failed (${control.exceptionOrNull()?.javaClass?.simpleName})") +
+                    " in ${controlMillis}ms unreal=$unreal",
+            )
+            if (!unreal || isStaleWirelessRun(generation)) return@Thread
+            fail(
+                WirelessStartupException(
+                    WirelessStartupFailure.BLUETOOTH_NOT_READY,
+                    "Android Bluetooth on this head unit reports connections that are not real: " +
+                        "a connection to a service no phone offers also succeeded in ${controlMillis}ms",
+                ),
+                generation,
+            )
+            closeWirelessStack(generation = generation)
+        }, "diplay-bluetooth-check").apply { isDaemon = true; start() }
+    }
+
     private fun connectBluetoothSocket(socket: BluetoothSocket, address: String) {
         val result = AtomicReference<Throwable?>()
         val connected = CountDownLatch(1)
@@ -2632,6 +2708,8 @@ class CarPlayController(
         private const val DEVICE_AVAILABILITY_POLL_INTERVAL_MILLIS = 2_000L
         private const val WIRELESS_HANDOFF_TIMEOUT_MILLIS = 45_000L
         private const val RFCOMM_CONNECT_TIMEOUT_MILLIS = 15_000L
+        private const val BLUETOOTH_SWITCH_ON_TIMEOUT_MILLIS = 12_000L
+        private const val BLUETOOTH_SILENCE_MILLIS = 12_000L
         private const val MAXIMUM_REENUMERATION_ATTEMPTS = 2
         private const val EXECUTOR_CLOSE_TIMEOUT_MILLIS = 2_000L
         private const val ADAPTER_ADDRESS_PLACEHOLDER = "02:00:00:00:00:00"

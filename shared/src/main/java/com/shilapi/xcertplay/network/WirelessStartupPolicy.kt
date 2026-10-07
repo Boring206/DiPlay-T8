@@ -27,6 +27,14 @@ fun resolveHotspotMode(
     else -> null
 }
 
-enum class WirelessStartupFailure { HOTSPOT_NOT_READY, FIRST_TCP_TIMEOUT, HOTSPOT_CONFIGURATION }
+enum class WirelessStartupFailure {
+    HOTSPOT_NOT_READY, FIRST_TCP_TIMEOUT, HOTSPOT_CONFIGURATION,
+
+    /** The head unit's Bluetooth is off, unpaired or not usable by apps. */
+    BLUETOOTH_NOT_READY;
+
+    /** False when only the user can change what went wrong, so retrying by itself cannot help. */
+    val retryable: Boolean get() = this != HOTSPOT_CONFIGURATION && this != BLUETOOTH_NOT_READY
+}
 
 class WirelessStartupException(val reason: WirelessStartupFailure, message: String) : IOException(message)
