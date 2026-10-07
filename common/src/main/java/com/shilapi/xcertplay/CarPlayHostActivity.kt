@@ -122,9 +122,11 @@ class CarPlayHostActivity : ComponentActivity() {
     private var manualHotspotPreferIpv4 = false
     private var startupRetryStopped = false
     private var startupRetryButton: Button? = null
-    // Null while that button retries. Otherwise it opens the home page's car hotspot choice,
-    // without the "let DiPlay turn it off" option when that is what just failed.
-    private var carHotspotChoiceAfterStopFailed: Boolean? = null
+    // What that button does once retrying by itself cannot help: it leads to the one place where
+    // the cause can be changed.
+    private enum class StoppedAction { RETRY, CAR_HOTSPOT_CHOICE, CAR_HOTSPOT_CHOICE_WITHOUT_STOP, BLUETOOTH_SETTINGS }
+    private var stoppedAction = StoppedAction.RETRY
+    private var returningFromBluetoothSettings = false
     private var startupFailureGeneration = -1
     private lateinit var airPlayIdentity: AirPlayIdentity
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
@@ -718,6 +720,10 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (returningFromBluetoothSettings) {
+            returningFromBluetoothSettings = false
+            retryStoppedStartup()
+        }
         val savedNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         val savedThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         val savedDelay = AirPlayPersistence.loadAmbientDelaySeconds(this)
@@ -1259,18 +1265,25 @@ class CarPlayHostActivity : ComponentActivity() {
             setOnClickListener {
                 if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
                     shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
-                carHotspotChoiceAfterStopFailed?.let { stopFailed ->
-                    startActivity(Intent(this@CarPlayHostActivity, DiPlayActivity::class.java)
-                        .putExtra(DiPlayActivity.EXTRA_CAR_HOTSPOT_CHOICE,
-                            if (stopFailed) DiPlayActivity.CAR_HOTSPOT_CHOICE_WITHOUT_STOP else DiPlayActivity.CAR_HOTSPOT_CHOICE_ALL)
-                        .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
-                    return@setOnClickListener
+                when (stoppedAction) {
+                    StoppedAction.CAR_HOTSPOT_CHOICE, StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP ->
+                        startActivity(Intent(this@CarPlayHostActivity, DiPlayActivity::class.java)
+                            .putExtra(DiPlayActivity.EXTRA_CAR_HOTSPOT_CHOICE,
+                                if (stoppedAction == StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP) {
+                                    DiPlayActivity.CAR_HOTSPOT_CHOICE_WITHOUT_STOP
+                                } else {
+                                    DiPlayActivity.CAR_HOTSPOT_CHOICE_ALL
+                                })
+                            .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+                    // Coming back from that screen retries by itself; see onResume.
+                    StoppedAction.BLUETOOTH_SETTINGS ->
+                        if (runCatching { startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) }.isSuccess) {
+                            returningFromBluetoothSettings = true
+                        } else {
+                            retryStoppedStartup()
+                        }
+                    StoppedAction.RETRY -> retryStoppedStartup()
                 }
-                startupRetryBudget.manualRetry()
-                startupRetryStopped = false
-                reconnectAttempts = 0
-                visibility = View.GONE
-                restartCarPlay(getString(R.string.connecting_to_your_iphone))
             }
             startupRetryButton = this
         }
@@ -4079,27 +4092,39 @@ class CarPlayHostActivity : ComponentActivity() {
         startCarPlay(size)
     }
 
+    private fun retryStoppedStartup() {
+        if (!CarPlayBackgroundSession.isOwner(this) || shuttingDown.get() || menuOpen || handshakeResetInProgress) return
+        startupRetryBudget.manualRetry()
+        startupRetryStopped = false
+        reconnectAttempts = 0
+        startupRetryButton?.visibility = View.GONE
+        restartCarPlay(getString(R.string.connecting_to_your_iphone))
+    }
+
     private fun reconnectAfterLoss(reason: String, startupFailure: WirelessStartupFailure? = null) {
         if (!CarPlayBackgroundSession.isOwner(this)) return
         if (menuOpen) recoveryPendingAfterMenu = true
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || startupRetryStopped) return
         if (reconnectScheduled) return
-        val startupDelay = if (startupFailure != null && startupFailure != WirelessStartupFailure.HOTSPOT_CONFIGURATION)
+        val startupDelay = if (startupFailure != null && startupFailure.retryable)
             startupRetryBudget.nextDelayMillis() else null
         if (startupFailure != null && startupDelay == null) {
             startupRetryStopped = true
-            // Retrying cannot get past a running car hotspot; only the choice on the home page can.
-            carHotspotChoiceAfterStopFailed = when (friendlyStage(reason)) {
-                getString(R.string.app_hotspot_stop_failed) -> true
-                getString(R.string.app_hotspot_blocked) -> false
-                else -> null
+            stoppedAction = when (friendlyStage(reason)) {
+                getString(R.string.app_hotspot_stop_failed) -> StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP
+                getString(R.string.app_hotspot_blocked) -> StoppedAction.CAR_HOTSPOT_CHOICE
+                getString(R.string.bt_off_blocked), getString(R.string.bt_phone_not_paired) -> StoppedAction.BLUETOOTH_SETTINGS
+                else -> StoppedAction.RETRY
             }
             startupRetryButton?.apply {
-                text = getString(if (carHotspotChoiceAfterStopFailed != null) R.string.car_hotspot_choose
-                    else R.string.retry_carplay_connection)
+                text = getString(when (stoppedAction) {
+                    StoppedAction.CAR_HOTSPOT_CHOICE, StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP -> R.string.car_hotspot_choose
+                    StoppedAction.BLUETOOTH_SETTINGS -> R.string.open_bluetooth_settings
+                    StoppedAction.RETRY -> R.string.retry_carplay_connection
+                })
                 visibility = View.VISIBLE
             }
-            setConnectionStage(if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) reason
+            setConnectionStage(if (!startupFailure.retryable) reason
                 else "$reason\n${getString(R.string.wireless_startup_retries_exhausted)}")
             appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
             return
@@ -4144,7 +4169,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val size = activeDisplaySize ?: return
         startupRetryBudget.disconnected()
         startupRetryButton?.visibility = View.GONE
-        carHotspotChoiceAfterStopFailed = null
+        stoppedAction = StoppedAction.RETRY
         appendLog(reason)
         activeScreenStreamTypes.clear()
         ClusterActivityOutput.setStreamActive(false)
@@ -4487,6 +4512,12 @@ class CarPlayHostActivity : ComponentActivity() {
         message.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         message.contains("Allow precise Location", true) -> getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p)
         message.contains("Allow Nearby devices", true) -> getString(R.string.allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per)
+        message.contains("connections that are not real", true) -> getString(R.string.bt_not_real)
+        message.contains("Bluetooth adapter is unavailable", true) -> getString(R.string.check_bt_missing)
+        message.contains("Bluetooth is not enabled", true) -> getString(R.string.bt_off_blocked)
+        message.contains("no longer paired", true) || message.contains("pair one iPhone", true) -> getString(R.string.bt_phone_not_paired)
+        message.contains("Multiple", true) && message.contains("iPhones", true) -> getString(R.string.bt_phone_ambiguous)
+        message.contains("iAP2 control session readiness", true) -> getString(R.string.iphone_silent_on_bluetooth)
         message.contains("could not turn the car hotspot off", true) -> getString(R.string.app_hotspot_stop_failed)
         message.contains("car hotspot is on", true) -> getString(R.string.app_hotspot_blocked)
         // The car hotspot came on mid-attempt; the next attempt sees it and deals with it.

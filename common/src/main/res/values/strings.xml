@@ -649,7 +649,7 @@
     <string name="check_hotspot_on">The car hotspot is on.</string>
     <string name="check_hotspot_off">The car hotspot is off. Turn it on before connecting.</string>
     <string name="check_hotspot_unknown">DiPlay cannot read the hotspot state here. Make sure the car hotspot is on.</string>
-    <string name="check_joined_phone_hotspot">The car is connected to an iPhone Personal Hotspot. Turn Personal Hotspot off: for CarPlay the iPhone has to join the car\'s hotspot instead.</string>
+    <string name="check_joined_phone_hotspot">The car is connected to an iPhone Personal Hotspot, so DiPlay does not connect by itself. For CarPlay, turn Personal Hotspot off on the iPhone and tap Connect phone.</string>
     <string name="check_wifi_5ghz">Wi-Fi supports 5 GHz.</string>
     <string name="check_wifi_24ghz">Wi-Fi supports 2.4 GHz only. CarPlay can connect, but video and sound may stutter.</string>
     <string name="check_wifi_band_unknown">DiPlay cannot read which Wi-Fi bands this head unit supports.</string>
@@ -685,6 +685,14 @@
     <string name="car_hotspot_stop_not_granted">DiPlay was not allowed to modify system settings, so it cannot turn the car hotspot off itself. Pick one of the other ways.</string>
     <string name="car_hotspot_choose">Choose what to do</string>
     <string name="car_hotspot_stop_failed">DiPlay could not turn the car hotspot off. Pick one of the other ways.</string>
+    <string name="auto_connect_held_for_phone_hotspot">The car is on the iPhone\'s Personal Hotspot, so DiPlay did not connect by itself. Tap Connect phone when you want CarPlay.</string>
+    <string name="bt_not_real">This head unit\'s Android Bluetooth reports a connection, but nothing reaches the iPhone: even a connection to a service that does not exist succeeds. Bluetooth here is handled by the maker\'s own module, which apps cannot use, so wireless CarPlay cannot work on this unit.</string>
+    <string name="iphone_silent_on_bluetooth">Bluetooth connected, but the iPhone did not answer. Check the iPhone for a pairing or CarPlay prompt, and that CarPlay is allowed in Settings › General › CarPlay.</string>
+    <string name="bt_phone_ambiguous">More than one iPhone is paired and DiPlay cannot tell which to use. Go back to DiPlay and tap Choose iPhone.</string>
+    <string name="bt_phone_not_paired">The head unit\'s Android Bluetooth is not paired with your iPhone. Tap Open Bluetooth settings below, pair the iPhone there, then come back.</string>
+    <string name="bt_off_blocked">The head unit\'s Bluetooth is off and DiPlay could not switch it on. Tap Open Bluetooth settings below, turn Bluetooth on, then come back.</string>
+    <string name="open_bluetooth_settings">Open Bluetooth settings</string>
+    <string name="check_bt_off_auto">Android Bluetooth is off. DiPlay switches it on when connecting.</string>
     <string name="app_hotspot_interrupted">The car\'s own hotspot got in the way of DiPlay\'s hotspot. Retrying…</string>
     <string name="app_hotspot_stop_failed">DiPlay could not turn the car\'s own hotspot off, so it cannot open its own. Tap Choose what to do below to use another way.</string>
     <string name="check_app_hotspot_stops_car">The car\'s own hotspot is on; DiPlay will turn it off when connecting.</string>

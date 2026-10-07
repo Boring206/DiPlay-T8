@@ -649,7 +649,7 @@
     <string name="check_hotspot_on">車機熱點已開啟。</string>
     <string name="check_hotspot_off">車機熱點未開啟，請先開啟再連線。</string>
     <string name="check_hotspot_unknown">DiPlay 無法讀取這台車機的熱點狀態，請確認車機熱點已開啟。</string>
-    <string name="check_joined_phone_hotspot">車機目前連線著 iPhone 的個人熱點。請關閉 iPhone 個人熱點：使用 CarPlay 時必須由 iPhone 加入車機的熱點。</string>
+    <string name="check_joined_phone_hotspot">車機目前連線著 iPhone 的個人熱點，所以 DiPlay 不會自動連線。要用 CarPlay 時，請先在 iPhone 關閉個人熱點，再按“連線手機”。</string>
     <string name="check_wifi_5ghz">Wi-Fi 支援 5 GHz。</string>
     <string name="check_wifi_24ghz">Wi-Fi 僅支援 2.4 GHz。CarPlay 可以連線，但畫面和聲音可能卡頓。</string>
     <string name="check_wifi_band_unknown">DiPlay 無法讀取這台車機支援的 Wi-Fi 頻段。</string>
@@ -685,6 +685,14 @@
     <string name="car_hotspot_stop_not_granted">DiPlay 沒有取得“修改系統設定”的權限，無法自動關閉車機熱點。請改用其他方式。</string>
     <string name="car_hotspot_choose">選擇處理方式</string>
     <string name="car_hotspot_stop_failed">DiPlay 無法關閉車機熱點。請改用其他方式。</string>
+    <string name="auto_connect_held_for_phone_hotspot">車機正連著 iPhone 的個人熱點，所以 DiPlay 沒有自動連線。要用 CarPlay 時請按“連線手機”。</string>
+    <string name="bt_not_real">這台車機的系統藍牙回報“已連線”，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這台車機的藍牙由廠商自己的模組處理，應用無法使用，所以無法在這台車機上使用無線 CarPlay。</string>
+    <string name="iphone_silent_on_bluetooth">藍牙連上了，但 iPhone 沒有回應。請看 iPhone 是否彈出配對或 CarPlay 的詢問，並確認 iPhone 的“設定 › 通用 › CarPlay”沒有關閉。</string>
+    <string name="bt_phone_ambiguous">車機配對了不止一部 iPhone，DiPlay 不知道要連哪一部。請返回 DiPlay 首頁按“選擇 iPhone”。</string>
+    <string name="bt_phone_not_paired">車機的系統藍牙還沒有和 iPhone 配對。請按下面的“開啟藍牙設定”，在那裡和 iPhone 配對，再返回這裡。</string>
+    <string name="bt_off_blocked">車機的藍牙是關閉的，DiPlay 無法自動開啟它。請按下面的“開啟藍牙設定”開啟藍牙，再返回這裡。</string>
+    <string name="open_bluetooth_settings">開啟藍牙設定</string>
+    <string name="check_bt_off_auto">系統藍牙目前是關閉的，連線時 DiPlay 會自動開啟它。</string>
     <string name="app_hotspot_interrupted">車機自帶的熱點擋住了 DiPlay 的熱點，正在重試…</string>
     <string name="app_hotspot_stop_failed">DiPlay 無法關閉車機自帶的熱點，所以不能自建熱點。請按下面的“選擇處理方式”改用其他方式。</string>
     <string name="check_app_hotspot_stops_car">車機自帶的熱點正開著，連線時 DiPlay 會先把它關閉。</string>

@@ -25,6 +25,12 @@ class BluetoothRfcommDuplexStream(
     private var socketCloseStarted = false
     private var failure: IOException? = null
 
+    /** Totals for diagnostics: a link that connects and then carries nothing is not a real one. */
+    @Volatile var bytesReceived = 0L
+        private set
+    @Volatile var bytesSent = 0L
+        private set
+
     private val reader = Thread(::readLoop, "xcertplay-bluetooth-rfcomm-reader").apply {
         isDaemon = true
     }
@@ -42,6 +48,7 @@ class BluetoothRfcommDuplexStream(
             try {
                 output.write(data)
                 output.flush()
+                bytesSent += data.size
             } catch (io: IOException) {
                 fail(io)
                 throw io
@@ -133,6 +140,7 @@ class BluetoothRfcommDuplexStream(
 
                     0 -> Unit
                     else -> synchronized(lock) {
+                        bytesReceived += count
                         if (closed) return
                         pending.addLast(if (count == buffer.size) buffer else buffer.copyOf(count))
                         pendingBytes += count

@@ -37,7 +37,11 @@ internal object HeadUnitCheck {
         val adapter = runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter }.getOrNull()
             ?: return listOf(Item(Level.BLOCKED, context.getString(R.string.check_bt_missing)))
         if (runCatching { adapter.isEnabled }.getOrDefault(false).not()) {
-            return listOf(Item(Level.BLOCKED, context.getString(R.string.check_bt_off), Action.BLUETOOTH_SETTINGS))
+            // Up to Android 11 DiPlay switches Bluetooth on itself when connecting.
+            return listOf(
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) Item(Level.INFO, context.getString(R.string.check_bt_off_auto))
+                else Item(Level.BLOCKED, context.getString(R.string.check_bt_off), Action.BLUETOOTH_SETTINGS),
+            )
         }
         val bonded = runCatching { adapter.bondedDevices.orEmpty().toList() }.getOrNull()
             ?: return listOf(Item(Level.WARNING, context.getString(R.string.check_bt_permission), Action.CHOOSE_PHONE))
@@ -122,6 +126,10 @@ internal object HeadUnitCheck {
         Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE) != Settings.Secure.LOCATION_MODE_OFF
     }.getOrDefault(true)
 
+    /** True while the head unit's Wi-Fi is a client of an iPhone's Personal Hotspot. */
+    fun joinedPhoneHotspot(context: Context): Boolean =
+        context.applicationContext.getSystemService(WifiManager::class.java)?.let(::joinedPhoneHotspot) ?: false
+
     /** iOS Personal Hotspot always hands out 172.20.10.0/28 with the phone at .1. */
     @Suppress("DEPRECATION")
     private fun joinedPhoneHotspot(wifi: WifiManager): Boolean = runCatching {
@@ -180,6 +188,7 @@ internal object HeadUnitCheck {
                 "bondedIPhones=${bonded.count { it.name?.contains("iPhone", true) == true }} " +
                 "phoneSelected=${DiPlayPreferences.phoneAddress(context) != null}"
         }
+        bluetoothHardwareLines(context, ::probe)
         probe("Interfaces") {
             Collections.list(NetworkInterface.getNetworkInterfaces()).filter { it.isUp && !it.isLoopback }
                 .joinToString { iface ->
@@ -198,6 +207,76 @@ internal object HeadUnitCheck {
                 .joinToString { info -> "${info.name}[${info.supportedTypes.joinToString("+") { it.substringAfter('/') }}]" }
         }
         return lines
+    }
+
+    /**
+     * What stands behind the Android Bluetooth API. Many aftermarket units keep calls and music on
+     * a vendor module with its own app, and leave Android an adapter that pairs and "connects"
+     * without reaching the phone; only the firmware's own files and services tell the two apart.
+     */
+    private fun bluetoothHardwareLines(context: Context, probe: (String, () -> Any?) -> Unit) {
+        val adapter = runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter }.getOrNull()
+        probe("Bluetooth adapter") {
+            adapter ?: return@probe "none"
+            // The first three bytes name the chip maker; the rest would identify the unit.
+            val maker = com.shilapi.xcertplay.transport.BluetoothLocalAddress.fromService(adapter)?.take(8)
+            "state=${adapter.state} scanMode=${adapter.scanMode} discovering=${adapter.isDiscovering} " +
+                "nameLength=${adapter.name?.length} addressPrefix=${maker ?: "hidden"}"
+        }
+        probe("Bluetooth devices") {
+            adapter ?: return@probe "none"
+            val selected = DiPlayPreferences.phoneAddress(context)
+            val iap2 = java.util.UUID.fromString("00000000-deca-fade-deca-deafdecacafe")
+            adapter.bondedDevices.orEmpty().joinToString("; ") { device ->
+                "bond=${device.bondState} type=${device.type} class=${device.bluetoothClass?.majorDeviceClass} " +
+                    "services=${device.uuids?.size ?: "none"} iap2=${device.uuids?.any { it.uuid == iap2 } ?: "unknown"} " +
+                    "iPhone=${device.name?.contains("iPhone", true)} selected=${device.address.equals(selected, true)}"
+            }.ifEmpty { "none bonded" }
+        }
+        probe("Bluetooth service") {
+            val packages = context.packageManager
+            val hosts = packages.queryIntentServices(Intent("android.bluetooth.IBluetooth"), 0)
+                .joinToString { "${it.serviceInfo.packageName}/${it.serviceInfo.name.substringAfterLast('.')}" }
+            val stock = runCatching { packages.getPackageInfo("com.android.bluetooth", 0) }.getOrNull()
+            "hosts=[$hosts] stockApp=${stock?.versionName ?: "absent"} " +
+                "stockLibs=${stock?.applicationInfo?.nativeLibraryDir?.let { File(it).list()?.joinToString() } ?: "none"}"
+        }
+        probe("Bluetooth kernel") {
+            val rfkill = File("/sys/class/rfkill").listFiles().orEmpty().joinToString { node ->
+                "${runCatching { File(node, "name").readText().trim() }.getOrDefault("?")}:" +
+                    runCatching { File(node, "type").readText().trim() }.getOrDefault("?")
+            }
+            "hci=[${File("/sys/class/bluetooth").list()?.joinToString() ?: "unreadable"}] rfkill=[$rfkill] " +
+                "wifiDriver=${runCatching { File("/sys/class/net/wlan0/device/driver").canonicalFile.name }.getOrDefault("?")}"
+        }
+        probe("Bluetooth files") {
+            val radio = Regex("(?i)bt|blue|rtl|8723|8189|8821|bcm|ap6|xr8|nvram|hcd")
+            listOf(
+                "/system/lib/hw", "/vendor/lib/hw", "/system/lib", "/vendor/lib", "/system/etc/bluetooth",
+                "/system/etc/firmware", "/vendor/etc/firmware", "/vendor/firmware", "/system/vendor/modules", "/vendor/modules",
+            ).mapNotNull { directory ->
+                File(directory).list()?.filter { radio.containsMatchIn(it) && !it.startsWith("libc") }
+                    ?.takeIf { it.isNotEmpty() }?.let { "$directory: ${it.take(14).joinToString(",")}" }
+            }.joinToString(" | ").take(640).ifEmpty { "nothing readable" }
+        }
+        probe("Radio properties") {
+            val wanted = Regex("(?i)bluetooth|\\.bt|bt\\.|wifi|wlan|module|ro\\.board|ro\\.hardware|ro\\.product\\.(model|device|name)")
+            Runtime.getRuntime().exec("getprop").inputStream.bufferedReader().useLines { lines ->
+                lines.filter { wanted.containsMatchIn(it.substringBefore("]:")) }.take(40)
+                    .joinToString(" ") { it.replace(" ", "") }.take(640)
+            }
+        }
+        probe("Kernel modules") {
+            File("/proc/modules").readLines().take(40).joinToString(",") { it.substringBefore(' ') }.ifEmpty { "none listed" }
+        }
+        // Vendor phone, Bluetooth and phone-mirroring apps show which stack the unit really uses.
+        val foreign = runCatching {
+            context.packageManager.getInstalledPackages(0).map { it.packageName }
+                .filterNot { it == "android" || it.startsWith("com.android.") || it.startsWith("com.google.") }.sorted()
+        }.getOrDefault(emptyList())
+        foreign.chunked(18).forEachIndexed { index, chunk ->
+            probe("Installed apps ${index + 1}") { chunk.joinToString(" ") }
+        }
     }
 
     // 172.20.10.1 as DhcpInfo's little-endian int.

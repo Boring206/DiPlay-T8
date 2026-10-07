@@ -649,7 +649,7 @@
     <string name="check_hotspot_on">车机热点已开启。</string>
     <string name="check_hotspot_off">车机热点未开启，请先开启再连接。</string>
     <string name="check_hotspot_unknown">DiPlay 无法读取这台车机的热点状态，请确认车机热点已开启。</string>
-    <string name="check_joined_phone_hotspot">车机目前连接着 iPhone 的个人热点。请关闭 iPhone 个人热点：使用 CarPlay 时必须由 iPhone 加入车机的热点。</string>
+    <string name="check_joined_phone_hotspot">车机目前连接着 iPhone 的个人热点，所以 DiPlay 不会自动连接。要用 CarPlay 时，请先在 iPhone 关闭个人热点，再按“连接手机”。</string>
     <string name="check_wifi_5ghz">Wi-Fi 支持 5 GHz。</string>
     <string name="check_wifi_24ghz">Wi-Fi 仅支持 2.4 GHz。CarPlay 可以连接，但画面和声音可能卡顿。</string>
     <string name="check_wifi_band_unknown">DiPlay 无法读取这台车机支持的 Wi-Fi 频段。</string>
@@ -685,6 +685,14 @@
     <string name="car_hotspot_stop_not_granted">DiPlay 没有取得“修改系统设置”的权限，无法自动关闭车机热点。请改用其他方式。</string>
     <string name="car_hotspot_choose">选择处理方式</string>
     <string name="car_hotspot_stop_failed">DiPlay 无法关闭车机热点。请改用其他方式。</string>
+    <string name="auto_connect_held_for_phone_hotspot">车机正连着 iPhone 的个人热点，所以 DiPlay 没有自动连接。要用 CarPlay 时请按“连接手机”。</string>
+    <string name="bt_not_real">这台车机的系统蓝牙回报“已连接”，但实际上没有连到 iPhone：连一个不存在的服务也回报成功。这台车机的蓝牙由厂商自己的模块处理，应用无法使用，所以无法在这台车机上使用无线 CarPlay。</string>
+    <string name="iphone_silent_on_bluetooth">蓝牙连上了，但 iPhone 没有回应。请看 iPhone 是否弹出配对或 CarPlay 的询问，并确认 iPhone 的“设置 › 通用 › CarPlay”没有关闭。</string>
+    <string name="bt_phone_ambiguous">车机配对了不止一部 iPhone，DiPlay 不知道要连哪一部。请返回 DiPlay 首页按“选择 iPhone”。</string>
+    <string name="bt_phone_not_paired">车机的系统蓝牙还没有和 iPhone 配对。请按下面的“打开蓝牙设置”，在那里和 iPhone 配对，再返回这里。</string>
+    <string name="bt_off_blocked">车机的蓝牙是关闭的，DiPlay 无法自动开启它。请按下面的“打开蓝牙设置”开启蓝牙，再返回这里。</string>
+    <string name="open_bluetooth_settings">打开蓝牙设置</string>
+    <string name="check_bt_off_auto">系统蓝牙目前是关闭的，连接时 DiPlay 会自动开启它。</string>
     <string name="app_hotspot_interrupted">车机自带的热点挡住了 DiPlay 的热点，正在重试…</string>
     <string name="app_hotspot_stop_failed">DiPlay 无法关闭车机自带的热点，所以不能自建热点。请按下面的“选择处理方式”改用其他方式。</string>
     <string name="check_app_hotspot_stops_car">车机自带的热点正开着，连接时 DiPlay 会先把它关闭。</string>
