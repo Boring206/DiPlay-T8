@@ -4,6 +4,9 @@
 >
 > **Unofficial fork** of [shihabal3amri/DiPlay](https://github.com/shihabal3amri/DiPlay) 0.2.12 with one purpose: when wireless CarPlay will not connect, it says why on screen, for example Bluetooth that apps cannot use, the car's own hotspot in the way, or an iPhone that does not answer. It installs on Android 8.1 and newer, beside the original app.
 
+**原版負責連上；DiPlay T8 負責在連不上的時候，告訴你為什麼。**
+**Upstream is for connecting. DiPlay T8 is for finding out why it will not.**
+
 **[下載 / Download](https://github.com/Boring206/DiPlay-T8/releases/latest)** · [繁體中文](#繁體中文) · [English](#english) · [車機平台整理 / Head unit platforms](docs/HEAD_UNITS.md)
 
 ![DiPlay T8 首頁：左邊連線，右邊是車機檢查的結論 / Home: connect on the left, the head unit verdict on the right](docs/images/home.png)
@@ -15,6 +18,14 @@
 | 確認可用 / Confirmed working | **0** |
 | 確認不可用 / Confirmed not working | **1**：Allwinner T8，TopWay 韌體 / TopWay firmware |
 | 其他 / Everything else | 未知，[歡迎回報](https://github.com/Boring206/DiPlay-T8/issues/new/choose) / unknown, [reports welcome](https://github.com/Boring206/DiPlay-T8/issues/new/choose) |
+
+### 操作示範 / Walkthrough
+
+![逐步操作示範 / Step-by-step walkthrough](docs/images/demo.gif)
+
+每一張都是 Android 8.1 模擬器上當時的實際畫面，約一分半鐘。同一份示範的影片檔在[發佈頁](https://github.com/Boring206/DiPlay-T8/releases/latest)（`DiPlay-T8-demo.mp4`）。模擬器沒有藍牙，所以**示範裡沒有 iPhone 進入 CarPlay 的畫面**；測了什麼、沒測什麼，見下面的「實際測過什麼」。
+
+Every picture is the real screen at that step on an Android 8.1 emulator; about a minute and a half. The same walkthrough as a video file is on the [release page](https://github.com/Boring206/DiPlay-T8/releases/latest) (`DiPlay-T8-demo.mp4`). The emulator has no Bluetooth, so **no iPhone entering CarPlay is shown**; see "What was actually exercised" below for what was and was not tested.
 
 ---
 
@@ -112,17 +123,48 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 能用或不能用都很有幫助，同型車機的人可以少走冤枉路；目前最缺的是「能用」的回報。請到 [Issues](https://github.com/Boring206/DiPlay-T8/issues/new/choose) 選「車機回報」。最省事的做法是拍一張首頁的照片：結論、原因、車機型號和版本都在同一個畫面上。這是個人維護的專案，維護者自己的車機就是那台不能用的，不保證能回覆或修正。
 
-### 和原版 0.2.12 的差異
+### 和原版比，這個版本還剩什麼
 
-原版後來自己也加入了其中幾項（可裝在 Android 7.1 以上、繁體中文、熱點優先用 IPv4）。
+對照的是原版在 2026-10-09 的原始碼（0.2.15 之後的 `main`）。原版後來自己也加了 Android 7.1 以上的支援、繁體中文和熱點優先用 IPv4，那幾項已經不算差異。
 
-- 首頁的車機檢查：一個結論加上逐項原因，並記住上一次連線測出的藍牙結果。
-- 連線畫面寫出確切的原因和紀錄；判定「藍牙連線是假的」的車機。
-- 先準備藍牙再啟動熱點；Android 11 以下會自動開啟藍牙。
-- Android 8／9 提供 App 自建熱點（不用輸入名稱和密碼），並在只有一個 Wi-Fi 天線的車機上正確找到熱點介面。
-- 車機自帶的熱點開著時提供三種處理方式，包含由 App 自動關閉它。
-- 同一個 Wi-Fi 上可讀的診斷報告。
-- 安裝檔不含 CarPlay 認證資料；套件名稱為 `com.shihab.diplay.t8`。
+| | 原版 DiPlay | DiPlay T8 |
+|---|---|---|
+| 最低 Android 版本 | 7.1 | 8.1 |
+| 連線前的車機檢查，給一個結論 | 沒有 | 有 |
+| 判定「藍牙回報的連線是假的」並記住 | 沒有（只把藍牙狀態寫進紀錄） | 有 |
+| 先查藍牙，再動車機的 Wi-Fi | 先開熱點，再查藍牙 | 有；藍牙關著時還會自動開啟（Android 11 以下） |
+| Android 8／9 不用輸入名稱密碼的自建熱點 | 沒有（要輸入車機熱點的名稱密碼，或用現成的 Wi-Fi） | 有 |
+| 車機自帶的熱點開著時，由 App 處理 | 沒有 | 有，三種方式 |
+| 同一個 Wi-Fi 上用瀏覽器讀診斷報告 | 沒有 | 有 |
+| 安裝檔裡的 CarPlay 認證資料 | 內含 | 不含，從已安裝的原版複製 |
+| Android 8 的有線 USB | 已修正，尚未發佈 | 有已知問題 |
+| Android 9 以下的通話與 Siri 麥克風 | 已修正，尚未發佈 | 可能沒有聲音 |
+| 0.2.12 之後的介面改版、深淺色主題、更新檢查 | 有 | 沒有 |
+| 維護 | 很活躍，幾乎每天發佈 | 一個人，有空才做 |
+
+所以分工很單純：**要連上 CarPlay，用原版；原版連不上、想知道是車機不行還是設定沒弄好，加裝這個。**
+
+### 實際測過什麼
+
+1,240 項單元測試全數通過。下面是實際操作過的部分，都在 Android 8.1 模擬器上。
+
+| 功能 | 怎麼測的 | 結果 |
+|---|---|---|
+| 覆蓋安裝舊版、全新安裝 | 模擬器 | 通過 |
+| 從已安裝的原版 0.2.15 複製認證資料；裝好後回到 App 自動恢復 | 模擬器 | 通過 |
+| 首頁的車機檢查與結論 | 模擬器（沒有藍牙，所以是「無法使用」）；另外三種結論只有單元測試 | 通過 |
+| 沒有藍牙時按連線：直接說明，車機的 Wi-Fi 不被打斷 | 模擬器；連線前後 Wi-Fi 都維持連線 | 通過 |
+| 連線畫面的原因與下一步 | 模擬器（「沒有藍牙」這一種）；其他原因只有單元測試 | 通過 |
+| USB 模式的等待畫面 | 模擬器，沒有接 iPhone | 畫面正常；實際的有線連線沒有測 |
+| 診斷報告：App 內檢視、同一個 Wi-Fi 上讀取 | 模擬器 | 通過 |
+| App 自建熱點 | 模擬器、略過藍牙的測試版、一支模擬手機：加入熱點、取得 IP、用 mDNS 找到 CarPlay 服務、連上 7000 埠得到 `200 OK` | 通過 |
+| 車機熱點開著：由 App 關閉後自建熱點 | 同上 | 通過 |
+| 車機熱點開著：輸入名稱密碼直接使用 | 同上 | 通過 |
+| 寬螢幕、直向、小螢幕三種版面 | 模擬器 | 通過 |
+| 「藍牙連線是假的」的判定與記住結果、配對停在「配對中」的警告、自動開啟藍牙 | 只有單元測試，因為模擬器沒有藍牙 | **沒有在真的藍牙上跑過** |
+| iPhone 的畫面、聲音和觸控；有線連線；麥克風 | 沒有測 | **需要真的車機和 iPhone** |
+
+沒有合適的車機也可以幫忙補上最後兩列：任何 Android 8.1 以上、藍牙正常的舊手機或平板都可以當接收端，裝上原版和 DiPlay T8，用 iPhone 連連看，再把結果[回報](https://github.com/Boring206/DiPlay-T8/issues/new/choose)。
 
 ### 自行編譯
 
@@ -220,17 +262,48 @@ The screen names the cause: no Android Bluetooth, Bluetooth whose connections ar
 
 A report helps whether it worked or not: owners of the same unit learn what to expect, and reports of success are what is missing most. Open [an issue](https://github.com/Boring206/DiPlay-T8/issues/new/choose) and choose "Head unit report". The easiest way is a photo of the home page: verdict, reasons, unit and version are all on that one screen. One person maintains this in spare time, and their own head unit is the one that cannot run it; an answer or a fix is not promised.
 
-### What differs from upstream 0.2.12
+### What this build still has that upstream does not
 
-Upstream has since added some of this itself (Android 7.1 and newer, Traditional Chinese, IPv4 first on hotspots).
+Compared with upstream's source on 2026-10-09 (`main` after 0.2.15). Upstream has since added Android 7.1 support, Traditional Chinese and IPv4 first on hotspots itself, so those no longer count.
 
-- A head unit check on the home page: one verdict with the reasons under it, remembering what the last connection found out about Bluetooth.
-- Exact causes and log lines on the connecting screen, and a test for Bluetooth links that are not real.
-- Bluetooth is prepared before the hotspot and switched on by the app up to Android 11.
-- An app-owned hotspot on Android 8 and 9 (no name or password to type), found correctly on single-radio head units.
-- Three ways forward when the car's own hotspot is on, including letting the app turn it off.
-- A diagnostic report readable from the same Wi-Fi.
-- An APK without the CarPlay identity; package `com.shihab.diplay.t8`.
+| | Upstream DiPlay | DiPlay T8 |
+|---|---|---|
+| Minimum Android | 7.1 | 8.1 |
+| A head unit check before connecting, with one verdict | no | yes |
+| A test for Bluetooth connections that are not real, remembered afterwards | no (Bluetooth state goes to the log only) | yes |
+| Bluetooth checked before the unit's Wi-Fi is touched | hotspot first, Bluetooth after | yes, and Bluetooth is switched on by the app up to Android 11 |
+| An app-owned hotspot on Android 8 and 9, nothing to type | no (type the car hotspot's name and password, or use an existing Wi-Fi) | yes |
+| Handling the car's own hotspot when it is on | no | yes, three ways |
+| The diagnostic report in a browser on the same Wi-Fi | no | yes |
+| CarPlay identity inside the APK | bundled | not bundled; copied from the installed original |
+| Wired USB on Android 8 | fixed, not released yet | known fault |
+| Microphone for calls and Siri below Android 10 | fixed, not released yet | may be silent |
+| The interface redesign, light and dark themes and update check after 0.2.12 | yes | no |
+| Maintenance | very active, a release almost daily | one person, in spare time |
+
+So the split is simple: **to get CarPlay running, use upstream; when upstream will not connect and you want to know whether it is the unit or a setting, add this one.**
+
+### What was actually exercised
+
+All 1,240 unit tests pass. The rows below were done by hand, all on an Android 8.1 emulator.
+
+| Feature | How | Result |
+|---|---|---|
+| Update over an older version; clean install | emulator | pass |
+| Copying the identity from an installed upstream 0.2.15; recovery on return after installing it | emulator | pass |
+| The head unit check and its verdict | emulator (no Bluetooth, so "cannot"); the other three verdicts by unit tests only | pass |
+| Connect with no Bluetooth: an explanation, and the unit's Wi-Fi is left alone | emulator; Wi-Fi stayed connected before and after | pass |
+| Cause and next step on the connecting screen | emulator (the "no Bluetooth" cause); other causes by unit tests only | pass |
+| The waiting screen of USB mode | emulator, no iPhone attached | screen correct; a real wired connection was not tested |
+| The report: in the app, and from the same Wi-Fi | emulator | pass |
+| The app-owned hotspot | emulator, a test build that skips Bluetooth, and a simulated phone: joined, got an address, found the CarPlay service by mDNS, got `200 OK` from port 7000 | pass |
+| Car hotspot on: the app turns it off and opens its own | same | pass |
+| Car hotspot on: its name and password typed, used as it is | same | pass |
+| Wide, portrait and small-screen layouts | emulator | pass |
+| The "connections that are not real" test and its memory, the warning for a bond stuck in "bonding", switching Bluetooth on | unit tests only: the emulator has no Bluetooth | **never run on real Bluetooth** |
+| Picture, sound and touch from an iPhone; the cable; the microphone | not tested | **needs a real head unit and an iPhone** |
+
+You can help fill the last two rows without a suitable head unit: any old Android 8.1+ phone or tablet with ordinary Bluetooth can act as the receiver. Install upstream and DiPlay T8 on it, connect an iPhone, and [report](https://github.com/Boring206/DiPlay-T8/issues/new/choose) what happened.
 
 ### Build
 
