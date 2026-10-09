@@ -3,6 +3,6 @@ contact_links:
   - name: 安裝與畫面訊息對照 / Install steps and what each message means
     url: https://github.com/Boring206/DiPlay-T8#%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87
     about: 回報前請先看 README。Please read the README first.
-  - name: Android 9 以上的車機 / Head units on Android 9 or newer
+  - name: 原版 DiPlay 的問題 / Problems with upstream DiPlay
     url: https://github.com/shihabal3amri/DiPlay
-    about: 請使用原版 DiPlay，並在那裡回報。Use upstream DiPlay and report there.
+    about: 原版從 0.2.15 起支援 Android 7.1 以上；它的問題請在那裡回報。Upstream supports Android 7.1 and newer since 0.2.15; report its problems there.
