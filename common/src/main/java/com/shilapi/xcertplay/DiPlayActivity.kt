@@ -2802,7 +2802,15 @@ class DiPlayActivity : ComponentActivity() {
             bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT); return
         }
         val adapter = getSystemService(BluetoothManager::class.java)?.adapter
-        if (adapter == null || !adapter.isEnabled) {
+        if (adapter == null) {
+            // Nothing here can be switched on: asking for Bluetooth would contradict the check on
+            // this very page, and its button would lead to a settings screen with nothing to pair.
+            pendingWireless = false
+            AlertDialog.Builder(this).setTitle(getString(R.string.verdict_cannot_title))
+                .setMessage(getString(R.string.check_bt_missing))
+                .setPositiveButton(getString(R.string.got_it), null).show(); return
+        }
+        if (!adapter.isEnabled) {
             AlertDialog.Builder(this).setTitle(getString(R.string.turn_on_bluetooth))
                 .setMessage(getString(R.string.enable_the_car_s_bluetooth_and_pair_your_iphone_first))
                 .setPositiveButton(getString(R.string.open_bluetooth)) { _, _ -> openSystem(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }

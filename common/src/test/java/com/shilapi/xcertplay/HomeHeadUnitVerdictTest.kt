@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay
 
+import android.app.AlertDialog
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
@@ -22,6 +23,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAlertDialog
+import org.robolectric.shadows.ShadowBluetoothAdapter
 import org.robolectric.util.ReflectionHelpers
 
 /** The home screen of a 1024x600 head unit: what a stranger sees right after installing. */
@@ -197,6 +200,32 @@ class HomeHeadUnitVerdictTest {
         // "Connect with USB" would end the session that is running.
         assertTrue(filled(button(R.string.open_carplay)))
         assertFalse(filled(button(R.string.connect_with_usb)))
+    }
+
+    // The first thing a new owner of such a unit does is tap the big button.
+    @Test fun aUnitWithoutAndroidBluetoothIsNotAskedToSwitchBluetoothOn() {
+        ShadowBluetoothAdapter.setIsBluetoothSupported(false)
+        try {
+            open()
+            assertEquals(listOf(text(R.string.verdict_cannot_title)), verdictShown())
+            assertTrue(text(R.string.check_bt_missing) in texts())
+
+            for (title in listOf(R.string.connect_anyway, R.string.choose_iphone)) {
+                button(title).performClick()
+                shadowOf(Looper.getMainLooper()).idle()
+                val dialog = ShadowAlertDialog.getLatestAlertDialog()
+                val words = shadowOf(dialog)
+                assertEquals(text(R.string.verdict_cannot_title), words.title.toString())
+                assertEquals(text(R.string.check_bt_missing), words.message.toString())
+                // No button that leads to a Bluetooth settings screen with nothing to pair.
+                assertEquals(text(R.string.got_it), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
+                assertNotEquals(View.VISIBLE, dialog.getButton(AlertDialog.BUTTON_NEGATIVE).visibility)
+                dialog.dismiss()
+            }
+            assertNull(generateSequence { shadowOf(activity).nextStartedActivity }.firstOrNull())
+        } finally {
+            ShadowBluetoothAdapter.setIsBluetoothSupported(true)
+        }
     }
 
     @Test fun aBondThatNeverFinishedIsFlaggedBeforeAnyConnection() {
