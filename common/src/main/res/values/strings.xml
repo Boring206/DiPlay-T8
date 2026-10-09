@@ -34,7 +34,7 @@
     <string name="clipboard_usage_access">DiPlay Usage Access</string>
     <string name="report_clip_label">Diagnostic report</string>
     <string name="share_diagnostic_report">Share diagnostic report</string>
-    <string name="setup_error_auth">CarPlay authentication was not found. This build does not carry it: install the original DiPlay on this head unit, then open DiPlay T8 again and it will copy it from there.</string>
+    <string name="setup_error_auth">CarPlay authentication was not found. This build does not carry it: install the original DiPlay (0.2.15 or newer) or DiPlay-Legacy on this head unit, then open DiPlay T8 again and it will copy it from there.</string>
     <string name="hotspot_state_stopped">stopped</string>
     <string name="hotspot_state_off">off</string>
     <string name="hotspot_wireless_prefix">Wireless hotspot:\u0020</string>
@@ -640,7 +640,7 @@
     <string name="check_bt_missing">This head unit has no Android Bluetooth that apps can use. Wireless CarPlay cannot work on it.</string>
     <string name="check_bt_off">Android Bluetooth is off. Turn it on in the system Bluetooth settings.</string>
     <string name="check_bt_permission">DiPlay is not allowed to read paired Bluetooth devices yet.</string>
-    <string name="check_bt_on">Android Bluetooth is available.</string>
+    <string name="check_bt_on">Android Bluetooth is switched on.</string>
     <string name="check_phone_none">No phone is paired with Android Bluetooth. Pair your iPhone in the system Bluetooth settings; pairing only in the car maker\'s phone app is not enough.</string>
     <string name="check_phone_ok">Paired iPhone: %1$s</string>
     <string name="check_phone_choose">%1$d paired devices, none named iPhone. Choose which one is your iPhone.</string>
@@ -698,4 +698,21 @@
     <string name="check_app_hotspot_stops_car">The car\'s own hotspot is on; DiPlay will turn it off when connecting.</string>
     <string name="auto_stop_car_hotspot_title">Turn the car hotspot off when connecting</string>
     <string name="auto_stop_car_hotspot_description">When the car\'s own hotspot is on, DiPlay turns it off and opens its own, so no name or password has to be typed. Needs permission to modify system settings. The car hotspot is not turned back on afterwards.</string>
+    <string name="verdict_cannot_title">This head unit cannot use wireless CarPlay</string>
+    <string name="verdict_cannot_body">The reason is listed below. It is a limit of the head unit itself; no setting changes it. If the unit has a USB data port, try Connect with USB.</string>
+    <string name="verdict_action_title">Not ready to connect yet</string>
+    <string name="verdict_action_body">Deal with the marked items below, then tap Connect phone.</string>
+    <string name="verdict_ready_title">Ready to try</string>
+    <string name="verdict_ready_body">Everything that can be checked in advance passed. Whether this unit\'s Bluetooth really reaches an iPhone only shows when you connect.</string>
+    <string name="verdict_worked_title">Wireless CarPlay works on this head unit</string>
+    <string name="verdict_worked_body">It has connected here before.</string>
+    <string name="check_bt_unreal">An earlier connection test showed that this unit\'s Android Bluetooth reports connections that are not real. Bluetooth here is run by the maker\'s own module, which apps cannot use.</string>
+    <string name="stopped_hardware_limit">This is a limit of the head unit itself, so trying again will not help.\nIf the unit has a USB data port, go back and try Connect with USB.</string>
+    <string name="project_page" translatable="false">github.com/Boring206/DiPlay-T8</string>
+    <string name="verdict_cannot_body_android8">The reason is listed below. It is a limit of the head unit itself; no setting changes it. A USB cable is the only other way, but this version\'s USB connection has a known fault on Android 8. Other builds are listed at %1$s.</string>
+    <string name="stopped_hardware_limit_android8">This is a limit of the head unit itself, so trying again will not help.\nA USB cable is the only other way, but this version\'s USB connection has a known fault on Android 8. Other builds are listed at %1$s.</string>
+    <string name="check_phone_bond_incomplete">Pairing with %1$s never finished on the Android side. Remove it in the system Bluetooth settings and pair again. If it never finishes, this unit\'s Android Bluetooth most likely cannot reach a phone.</string>
+    <string name="status_wireless_ruled_out">Wireless is ruled out on this unit</string>
+    <string name="connect_anyway">Try wireless anyway</string>
+    <string name="check_phone_selected_gone">The iPhone chosen in DiPlay (%1$s) is no longer paired with Android Bluetooth. Choose your iPhone again.</string>
 </resources>

@@ -14,7 +14,7 @@ from opencc import OpenCC
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common", "src", "main", "res")
 # Taiwan usage that the phrase table leaves in its mainland or variant form.
 FIXES = [("藍芽", "藍牙"), ("影片解碼器", "視訊解碼器"), ("臺", "台"),
-         ("可供應用使用", "可供 App 使用"), ("電話應用裡", "電話 App 裡"),
+         ("可供應用使用", "可供 App 使用"), ("電話應用裡", "電話 App 裡"), ("，應用無法使用", "，App 無法使用"), ("獲準", "獲准"),
          ("許可權", "權限"), ("移動資料", "行動數據"), ("資料線", "傳輸線"), ("分屏", "分割畫面"),
          ("畫中畫", "子母畫面"), ("高階", "進階"), ("流量套餐", "上網方案"),
          ("USB 資料介面", "USB 資料連接埠"), ("USB 介面", "USB 連接埠"), ("高效影片", "高效率視訊")]

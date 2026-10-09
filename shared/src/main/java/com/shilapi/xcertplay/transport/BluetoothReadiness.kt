@@ -33,6 +33,9 @@ object BluetoothReadiness {
     fun looksUnreal(connectMillis: Long, bytesReceived: Long): Boolean =
         connectMillis < INSTANT_CONNECT_MILLIS && bytesReceived == 0L
 
+    /** The words of the failure that says so; whoever shows or stores the finding matches on them. */
+    const val UNREAL_MARK = "connections that are not real"
+
     const val INSTANT_CONNECT_MILLIS = 100L
     private const val POLL_MILLIS = 250L
 }

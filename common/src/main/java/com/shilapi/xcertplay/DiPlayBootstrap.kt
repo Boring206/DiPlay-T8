@@ -82,6 +82,23 @@ internal object DiPlayPreferences {
     fun markCarPlayWorked(context: Context) {
         if (!carPlayWorked(context)) prefs(context).edit().putBoolean("carplay_worked", true).apply()
     }
+    // Builds before t8.7 kept no such mark; the address family order is only ever saved by a
+    // wireless session that showed a picture, so its presence says the same.
+    fun wirelessWorked(context: Context) = prefs(context).run {
+        getBoolean("wireless_worked", false) || contains("hotspot_prefers_ipv4")
+    }
+    fun markWirelessWorked(context: Context) {
+        if (!wirelessWorked(context)) prefs(context).edit().putBoolean("wireless_worked", true).apply()
+    }
+    /**
+     * True after a connection attempt found that this unit's Android Bluetooth "connects" to
+     * services no phone offers. Kept so the home screen says so before anyone tries again; cleared
+     * as soon as a phone really answers over Bluetooth.
+     */
+    fun bluetoothUnreal(context: Context) = prefs(context).getBoolean("bluetooth_unreal", false)
+    fun saveBluetoothUnreal(context: Context, value: Boolean) {
+        if (bluetoothUnreal(context) != value) prefs(context).edit().putBoolean("bluetooth_unreal", value).apply()
+    }
     /**
      * The address family order that last led to a working wireless session. Until one has, Android
      * 8 and 9 start with IPv4: they never route a tethered hotspot's link-local prefix, and route
