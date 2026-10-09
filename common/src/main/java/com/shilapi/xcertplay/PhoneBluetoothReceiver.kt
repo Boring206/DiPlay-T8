@@ -14,6 +14,8 @@ class PhoneBluetoothReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
         if (!DiPlayPreferences.autoConnectOnBluetooth(context) || CarPlayBackgroundSession.hasSession()) return
+        // Not for a unit whose Bluetooth was found to reach no phone: see DiPlayActivity.autoConnectHeld.
+        if (DiPlayPreferences.bluetoothUnreal(context)) return
         @Suppress("DEPRECATION")
         val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
         if (!device.address.equals(DiPlayPreferences.phoneAddress(context), ignoreCase = true)) return

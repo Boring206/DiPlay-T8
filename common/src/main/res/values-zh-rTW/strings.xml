@@ -34,7 +34,7 @@
     <string name="clipboard_usage_access">DiPlay 使用情況訪問權限</string>
     <string name="report_clip_label">診斷報告</string>
     <string name="share_diagnostic_report">分享診斷報告</string>
-    <string name="setup_error_auth">找不到 CarPlay 認證。這個版本本身不含認證：請先在這台車機上安裝原版 DiPlay，再重新開啟 DiPlay T8，它會自動從原版複製過來。</string>
+    <string name="setup_error_auth">找不到 CarPlay 認證。這個版本本身不含認證：請先在這台車機上安裝原版 DiPlay（0.2.15 或更新）或 DiPlay-Legacy，再重新開啟 DiPlay T8，它會自動從原版複製過來。</string>
     <string name="hotspot_state_stopped">已停止</string>
     <string name="hotspot_state_off">已關閉</string>
     <string name="hotspot_wireless_prefix">無線熱點：</string>
@@ -639,8 +639,8 @@
     <string name="check_title">車機相容性檢查</string>
     <string name="check_bt_missing">這台車機沒有可供 App 使用的 Android 系統藍牙，無法使用無線 CarPlay。</string>
     <string name="check_bt_off">系統藍牙未開啟，請在系統藍牙設定中開啟。</string>
-    <string name="check_bt_permission">DiPlay 尚未獲準讀取已配對的藍牙裝置。</string>
-    <string name="check_bt_on">系統藍牙可用。</string>
+    <string name="check_bt_permission">DiPlay 尚未獲准讀取已配對的藍牙裝置。</string>
+    <string name="check_bt_on">系統藍牙已開啟。</string>
     <string name="check_phone_none">系統藍牙沒有配對任何手機。請在系統藍牙設定中配對 iPhone；只在車機自帶的電話 App 裡配對是不夠的。</string>
     <string name="check_phone_ok">已配對 iPhone：%1$s</string>
     <string name="check_phone_choose">已配對 %1$d 台裝置，但沒有名稱含 iPhone 的。請選擇哪一台是你的 iPhone。</string>
@@ -686,7 +686,7 @@
     <string name="car_hotspot_choose">選擇處理方式</string>
     <string name="car_hotspot_stop_failed">DiPlay 無法關閉車機熱點。請改用其他方式。</string>
     <string name="auto_connect_held_for_phone_hotspot">車機正連著 iPhone 的個人熱點，所以 DiPlay 沒有自動連線。要用 CarPlay 時請按“連線手機”。</string>
-    <string name="bt_not_real">這台車機的系統藍牙回報“已連線”，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這台車機的藍牙由廠商自己的模組處理，應用無法使用，所以無法在這台車機上使用無線 CarPlay。</string>
+    <string name="bt_not_real">這台車機的系統藍牙回報“已連線”，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這台車機的藍牙由廠商自己的模組處理，App 無法使用，所以無法在這台車機上使用無線 CarPlay。</string>
     <string name="iphone_silent_on_bluetooth">藍牙連上了，但 iPhone 沒有回應。請看 iPhone 是否彈出配對或 CarPlay 的詢問，並確認 iPhone 的“設定 › 通用 › CarPlay”沒有關閉。</string>
     <string name="bt_phone_ambiguous">車機配對了不止一部 iPhone，DiPlay 不知道要連哪一部。請返回 DiPlay 首頁按“選擇 iPhone”。</string>
     <string name="bt_phone_not_paired">車機的系統藍牙還沒有和 iPhone 配對。請按下面的“開啟藍牙設定”，在那裡和 iPhone 配對，再返回這裡。</string>
@@ -698,4 +698,20 @@
     <string name="check_app_hotspot_stops_car">車機自帶的熱點正開著，連線時 DiPlay 會先把它關閉。</string>
     <string name="auto_stop_car_hotspot_title">連線時自動關閉車機熱點</string>
     <string name="auto_stop_car_hotspot_description">車機自帶的熱點開著時，由 DiPlay 關閉它並自建熱點，不必輸入名稱和密碼。需要允許修改系統設定。之後不會自動重新開啟車機熱點。</string>
+    <string name="verdict_cannot_title">這台車機無法使用無線 CarPlay</string>
+    <string name="verdict_cannot_body">原因列在下方。這是車機本身的限制，改任何設定都沒有用。車機若有可傳輸資料的 USB 連接埠，可以試試“透過 USB 連線”。</string>
+    <string name="verdict_action_title">還不能連線</string>
+    <string name="verdict_action_body">先處理下方標出的事項，再按“連線手機”。</string>
+    <string name="verdict_ready_title">可以試試看</string>
+    <string name="verdict_ready_body">能事先檢查的都沒有問題。車機的藍牙是否真的連得到 iPhone，要實際連線一次才知道。</string>
+    <string name="verdict_worked_title">這台車機可以使用無線 CarPlay</string>
+    <string name="verdict_worked_body">之前已經在這台車機上成功連線過。</string>
+    <string name="check_bt_unreal">先前連線時發現：這台車機的系統藍牙會回報並不存在的連線。這裡的藍牙由廠商自己的模組處理，App 無法使用。</string>
+    <string name="stopped_hardware_limit">這是車機本身的限制，再試也不會成功。\n車機若有可傳輸資料的 USB 連接埠，可以返回後試試“透過 USB 連線”。</string>
+    <string name="verdict_cannot_body_android8">原因列在下方。這是車機本身的限制，改設定沒有用。用傳輸線連線是唯一的另一條路，但這個版本的有線連線在 Android 8 上有已知問題。其他版本見 %1$s。</string>
+    <string name="stopped_hardware_limit_android8">這是車機本身的限制，再試也不會成功。\n用傳輸線連線是唯一的另一條路，但這個版本的有線連線在 Android 8 上有已知問題。其他版本見 %1$s。</string>
+    <string name="check_phone_bond_incomplete">和 %1$s 的配對在系統藍牙這邊一直沒有完成。請到系統藍牙設定移除它再重新配對；如果始終無法完成，這台車機的系統藍牙多半連不到手機。</string>
+    <string name="status_wireless_ruled_out">這台車機無法使用無線連線</string>
+    <string name="connect_anyway">仍要試無線連線</string>
+    <string name="check_phone_selected_gone">在 DiPlay 裡選擇的 iPhone（%1$s）已經不在系統藍牙的配對列表裡。請重新選擇你的 iPhone。</string>
 </resources>

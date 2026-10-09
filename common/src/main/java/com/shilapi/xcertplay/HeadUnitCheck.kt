@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.app.ActivityManager
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
@@ -29,13 +30,40 @@ internal object HeadUnitCheck {
     enum class Action {
         BLUETOOTH_SETTINGS, HOTSPOT_SETTINGS, LOCATION_SETTINGS, CONNECTION_SETUP, CHOOSE_PHONE, CAR_HOTSPOT_CHOICE,
     }
-    data class Item(val level: Level, val text: String, val action: Action? = null)
+    /** [permanent] marks what no setting changes: the unit lacks something wireless CarPlay needs. */
+    data class Item(val level: Level, val text: String, val action: Action? = null, val permanent: Boolean = false)
 
-    fun run(context: Context): List<Item> = bluetooth(context) + wifi(context) + listOf(decoder(context))
+    /** The one answer the check leads with; the items below it say why. */
+    enum class Verdict { WORKED, READY, NEEDS_ACTION, CANNOT }
+
+    fun run(context: Context): List<Item> = decisive(bluetooth(context) + wifi(context) + listOf(decoder(context)))
+
+    /**
+     * Beside a finding no setting changes, an instruction to change a setting would only send the
+     * reader on an errand: "the reason is listed below" has to point at one reason.
+     */
+    fun decisive(items: List<Item>): List<Item> =
+        if (items.none { it.permanent }) items
+        else items.filter { it.permanent || it.level == Level.OK || it.level == Level.INFO }
+
+    /**
+     * READY is no promise: whether the unit's Bluetooth reaches a phone only shows in a connection,
+     * so only a wireless session that really ran counts as WORKED.
+     */
+    fun verdict(items: List<Item>, wirelessWorked: Boolean): Verdict = when {
+        items.any { it.permanent } -> Verdict.CANNOT
+        items.any { it.level == Level.BLOCKED || it.level == Level.WARNING } -> Verdict.NEEDS_ACTION
+        wirelessWorked -> Verdict.WORKED
+        else -> Verdict.READY
+    }
 
     private fun bluetooth(context: Context): List<Item> {
         val adapter = runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter }.getOrNull()
-            ?: return listOf(Item(Level.BLOCKED, context.getString(R.string.check_bt_missing)))
+            ?: return listOf(Item(Level.BLOCKED, context.getString(R.string.check_bt_missing), permanent = true))
+        // An earlier attempt already showed what this adapter is worth; pairing again changes nothing.
+        if (DiPlayPreferences.bluetoothUnreal(context)) {
+            return listOf(Item(Level.BLOCKED, context.getString(R.string.check_bt_unreal), permanent = true))
+        }
         if (runCatching { adapter.isEnabled }.getOrDefault(false).not()) {
             // Up to Android 11 DiPlay switches Bluetooth on itself when connecting.
             return listOf(
@@ -50,21 +78,31 @@ internal object HeadUnitCheck {
             return listOf(on, Item(Level.BLOCKED, context.getString(R.string.check_phone_none), Action.BLUETOOTH_SETTINGS))
         }
         val selected = DiPlayPreferences.phoneAddress(context)
-        val phone = bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
+        val chosen = bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
+        // A connection only ever goes to the chosen iPhone; another paired one does not stand in for it.
+        if (selected != null && chosen == null) {
+            return listOf(on, Item(Level.WARNING,
+                context.getString(R.string.check_phone_selected_gone, DiPlayPreferences.phoneName(context)), Action.CHOOSE_PHONE))
+        }
+        val phone = chosen
             ?: bonded.firstOrNull { runCatching { it.name }.getOrNull()?.contains("iPhone", ignoreCase = true) == true }
+        val phoneName = phone?.let { runCatching { it.name }.getOrNull() } ?: "iPhone"
         return listOf(
             on,
-            if (phone != null) {
-                Item(Level.OK, context.getString(R.string.check_phone_ok, runCatching { phone.name }.getOrNull() ?: "iPhone"))
-            } else {
-                Item(Level.WARNING, context.getString(R.string.check_phone_choose, bonded.size), Action.CHOOSE_PHONE)
+            when {
+                phone == null -> Item(Level.WARNING, context.getString(R.string.check_phone_choose, bonded.size), Action.CHOOSE_PHONE)
+                // The one unit known not to work listed its iPhone as paired while the bond never
+                // left "bonding": the first sign, before any connection, that nothing reaches the phone.
+                runCatching { phone.bondState }.getOrNull() != BluetoothDevice.BOND_BONDED ->
+                    Item(Level.WARNING, context.getString(R.string.check_phone_bond_incomplete, phoneName), Action.BLUETOOTH_SETTINGS)
+                else -> Item(Level.OK, context.getString(R.string.check_phone_ok, phoneName))
             },
         )
     }
 
     private fun wifi(context: Context): List<Item> {
         val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
-            ?: return listOf(Item(Level.BLOCKED, context.getString(R.string.check_wifi_missing)))
+            ?: return listOf(Item(Level.BLOCKED, context.getString(R.string.check_wifi_missing), permanent = true))
         val items = mutableListOf<Item>()
         if (AirPlayPersistence.loadWirelessHotspotMode(context) == WirelessHotspotMode.MANUAL) {
             val savedSsid = AirPlayPersistence.loadManualHotspotSsid(context)
@@ -144,6 +182,7 @@ internal object HeadUnitCheck {
             .any { info -> !info.isEncoder && info.supportedTypes.any { it.equals("video/avc", ignoreCase = true) } }
             .also { avcDecoderFound = it }
         if (found) Item(Level.OK, context.getString(R.string.check_decoder_ok))
+        // Not "permanent": that word here means wireless alone is ruled out, and this stops a cable too.
         else Item(Level.BLOCKED, context.getString(R.string.check_decoder_missing))
     }.getOrElse { Item(Level.INFO, context.getString(R.string.check_decoder_unknown)) }
 
@@ -153,6 +192,12 @@ internal object HeadUnitCheck {
         fun probe(label: String, read: () -> Any?) {
             lines += "$label: " + runCatching { read()?.toString() ?: "unavailable" }
                 .getOrElse { "failed (${it.javaClass.simpleName})" }
+        }
+        // What the home screen concluded, and the two remembered results it concluded it from.
+        probe("Head unit check") {
+            "verdict=${verdict(run(context), DiPlayPreferences.wirelessWorked(context))} " +
+                "bluetoothUnreal=${DiPlayPreferences.bluetoothUnreal(context)} " +
+                "wirelessWorked=${DiPlayPreferences.wirelessWorked(context)} carPlayWorked=${DiPlayPreferences.carPlayWorked(context)}"
         }
         probe("ABIs") { Build.SUPPORTED_ABIS.joinToString() }
         probe("Processor") {
@@ -281,6 +326,16 @@ internal object HeadUnitCheck {
             probe("Installed apps ${index + 1}") { chunk.joinToString(" ") }
         }
     }
+
+    /**
+     * The Android version as the system itself reports it. Settings screens on aftermarket units
+     * often show a newer one than is installed, and the API level is what decides which builds run.
+     */
+    fun deviceLine(): String = listOf(
+        "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+        "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        Build.HARDWARE,
+    ).filter { it.isNotBlank() }.joinToString(" · ")
 
     // 172.20.10.1 as DhcpInfo's little-endian int.
     private const val IOS_HOTSPOT_GATEWAY = 0x010A14AC

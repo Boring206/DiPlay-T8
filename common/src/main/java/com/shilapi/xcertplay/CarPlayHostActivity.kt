@@ -88,6 +88,7 @@ import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.orchestration.isManualHotspotChannelCompatible
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
 import com.shilapi.xcertplay.transport.Iap2LocationProvider
+import com.shilapi.xcertplay.transport.BluetoothReadiness
 import com.shilapi.xcertplay.transport.IphoneUsbMatcher
 import com.shilapi.xcertplay.transport.UsbDeviceId
 import com.shilapi.xcertplay.transport.VehicleSpeedLocationProvider
@@ -121,6 +122,11 @@ class CarPlayHostActivity : ComponentActivity() {
     // Starts from the order that worked last time, so a drive does not begin with the wrong one.
     private var manualHotspotPreferIpv4 = false
     private var startupRetryStopped = false
+        set(value) {
+            field = value
+            // The home screen must not call a stopped attempt "connecting".
+            if (CarPlayBackgroundSession.isOwner(this)) CarPlayBackgroundSession.stopped = value
+        }
     private var startupRetryButton: Button? = null
     // What that button does once retrying by itself cannot help: it leads to the one place where
     // the cause can be changed.
@@ -283,6 +289,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var statusScrollView: ScrollView? = null
     private var stageStatusView: TextView? = null
     private var connectionDetailView: TextView? = null
+    private var instructionsView: TextView? = null
     private val connectionDetailLines = mutableListOf<String>()
     private var resolutionValueView: TextView? = null
     private var resolutionPreviewView: TextView? = null
@@ -1231,7 +1238,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         panel.addView(icon, LinearLayout.LayoutParams(dp(88), dp(88)))
         val title = TextView(this).apply {
-            text = getString(R.string.diplay)
+            // The launcher label: beside the original app, this screen has to say which one it is.
+            text = applicationInfo.loadLabel(packageManager)
             setTextColor(Color.rgb(241, 245, 252))
             gravity = Gravity.CENTER
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -1244,15 +1252,24 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         panel.addView(stage)
         val instructions = TextView(this).apply {
-            text = if (wirelessEnabled) getString(R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow)
-                else getString(R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an)
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(168, 182, 202))
         }
         panel.addView(instructions)
+        instructionsView = instructions
+        showInstructions(stopped = false)
+        // Every button that is not the way back shares the outlined look of the home screen's.
+        fun outlined() = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), GradientDrawable().apply {
+            setColor(Color.rgb(21, 30, 44))
+            cornerRadius = dp(20).toFloat()
+            setStroke(dp(1), Color.rgb(42, 56, 75))
+        }, null)
         val recovery = Button(this).apply {
             text = getString(R.string.reset_carplay_wi_fi)
             isAllCaps = false
+            setTextColor(Color.rgb(241, 245, 252))
+            background = outlined()
+            stateListAnimator = null
             visibility = View.GONE
             setOnClickListener { showDiPlayHome("wireless-recovery") }
             wifiRecoveryButton = this
@@ -1261,6 +1278,9 @@ class CarPlayHostActivity : ComponentActivity() {
         val retry = Button(this).apply {
             text = getString(R.string.retry_carplay_connection)
             isAllCaps = false
+            setTextColor(Color.rgb(241, 245, 252))
+            background = outlined()
+            stateListAnimator = null
             visibility = View.GONE
             setOnClickListener {
                 if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
@@ -1296,6 +1316,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 setColor(Color.rgb(166, 200, 255))
                 cornerRadius = dp(20).toFloat()
             }
+            stateListAnimator = null
             setOnClickListener { showDiPlayHome() }
         }
         panel.addView(back, LinearLayout.LayoutParams(dp(300), dp(64)))
@@ -3638,7 +3659,10 @@ class CarPlayHostActivity : ComponentActivity() {
                     if (controllerGeneration != restartGeneration || activeAirPlaySession !== session || shuttingDown.get()) return@runOnUiThread
                     if (!startupRetryBudget.firstFrame(session, android.os.SystemClock.elapsedRealtime())) return@runOnUiThread
                     DiPlayPreferences.markCarPlayWorked(this@CarPlayHostActivity)
-                    if (wirelessEnabled) DiPlayPreferences.saveHotspotPrefersIpv4(this@CarPlayHostActivity, manualHotspotPreferIpv4)
+                    if (wirelessEnabled) {
+                        DiPlayPreferences.markWirelessWorked(this@CarPlayHostActivity)
+                        DiPlayPreferences.saveHotspotPrefersIpv4(this@CarPlayHostActivity, manualHotspotPreferIpv4)
+                    }
                     mainHandler.postDelayed({
                         if (controllerGeneration == restartGeneration && activeAirPlaySession === session &&
                             !shuttingDown.get() && CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) &&
@@ -3716,6 +3740,13 @@ class CarPlayHostActivity : ComponentActivity() {
         controllerGeneration: Int,
     ): (CarPlayStatus) -> Unit = report@{ status ->
         if (controllerGeneration != restartGeneration) return@report
+        // The home screen's head unit check repeats this finding before anyone tries again.
+        if (status is CarPlayStatus.Failed && status.message.contains(BluetoothReadiness.UNREAL_MARK, true)) {
+            DiPlayPreferences.saveBluetoothUnreal(this, true)
+        } else if (status == CarPlayStatus.WirelessActive) {
+            // The phone answered over Bluetooth, whatever an earlier attempt concluded.
+            DiPlayPreferences.saveBluetoothUnreal(this, false)
+        }
         if (menuOpen) {
             if (status is CarPlayStatus.Failed) failurePendingAfterMenu = status
             return@report
@@ -4092,6 +4123,30 @@ class CarPlayHostActivity : ComponentActivity() {
         startCarPlay(size)
     }
 
+    /**
+     * The line under the stage. While an attempt runs it asks for the phone to be near; once the
+     * attempt has stopped, that request would contradict a cause the phone has no part in.
+     */
+    private fun showInstructions(stopped: Boolean, hardwareLimit: Boolean = false) {
+        val view = instructionsView ?: return
+        val text = when {
+            // Sending someone to a cable only helps where this build's wired path is sound.
+            hardwareLimit -> if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                getString(R.string.stopped_hardware_limit_android8, getString(R.string.project_page))
+            } else {
+                getString(R.string.stopped_hardware_limit)
+            }
+            // The stage itself names the screen to go to; a second instruction would compete with it.
+            stopped && stoppedAction != StoppedAction.RETRY -> null
+            wirelessEnabled -> getString(R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow)
+            else -> getString(R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an)
+        }
+        view.text = text
+        view.visibility = if (text == null) View.GONE else View.VISIBLE
+        // The line's own padding is what keeps the stage off the buttons; without it the stage carries the gap.
+        stageStatusView?.setPadding(0, 0, 0, if (text == null) dp(20) else 0)
+    }
+
     private fun retryStoppedStartup() {
         if (!CarPlayBackgroundSession.isOwner(this) || shuttingDown.get() || menuOpen || handshakeResetInProgress) return
         startupRetryBudget.manualRetry()
@@ -4116,14 +4171,19 @@ class CarPlayHostActivity : ComponentActivity() {
                 getString(R.string.bt_off_blocked), getString(R.string.bt_phone_not_paired) -> StoppedAction.BLUETOOTH_SETTINGS
                 else -> StoppedAction.RETRY
             }
+            val hardwareLimit = friendlyStage(reason).let {
+                it == getString(R.string.check_bt_missing) || it == getString(R.string.bt_not_real)
+            }
             startupRetryButton?.apply {
                 text = getString(when (stoppedAction) {
                     StoppedAction.CAR_HOTSPOT_CHOICE, StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP -> R.string.car_hotspot_choose
                     StoppedAction.BLUETOOTH_SETTINGS -> R.string.open_bluetooth_settings
-                    StoppedAction.RETRY -> R.string.retry_carplay_connection
+                    // Under "trying again will not help" the button is a way to test once more, not the next step.
+                    StoppedAction.RETRY -> if (hardwareLimit) R.string.connect_anyway else R.string.retry_carplay_connection
                 })
                 visibility = View.VISIBLE
             }
+            showInstructions(stopped = true, hardwareLimit = hardwareLimit)
             setConnectionStage(if (!startupFailure.retryable) reason
                 else "$reason\n${getString(R.string.wireless_startup_retries_exhausted)}")
             appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
@@ -4170,6 +4230,7 @@ class CarPlayHostActivity : ComponentActivity() {
         startupRetryBudget.disconnected()
         startupRetryButton?.visibility = View.GONE
         stoppedAction = StoppedAction.RETRY
+        showInstructions(stopped = false)
         appendLog(reason)
         activeScreenStreamTypes.clear()
         ClusterActivityOutput.setStreamActive(false)
@@ -4512,7 +4573,7 @@ class CarPlayHostActivity : ComponentActivity() {
         message.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         message.contains("Allow precise Location", true) -> getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p)
         message.contains("Allow Nearby devices", true) -> getString(R.string.allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per)
-        message.contains("connections that are not real", true) -> getString(R.string.bt_not_real)
+        message.contains(BluetoothReadiness.UNREAL_MARK, true) -> getString(R.string.bt_not_real)
         message.contains("Bluetooth adapter is unavailable", true) -> getString(R.string.check_bt_missing)
         message.contains("Bluetooth is not enabled", true) -> getString(R.string.bt_off_blocked)
         message.contains("no longer paired", true) || message.contains("pair one iPhone", true) -> getString(R.string.bt_phone_not_paired)
@@ -4694,6 +4755,8 @@ internal data class CarPlaySessionDisplay(
 /** Process-local hand-off for keeping the CarPlay session alive while no Activity is visible. */
 internal object CarPlayBackgroundSession {
     @Volatile var active = false
+    /** True while the owner's attempt has stopped by itself and waits for the user. */
+    @Volatile var stopped = false
     private var stopAction: (((() -> Unit)) -> Unit)? = null
     private var stopping = false
     private var owner: Any? = null
@@ -4745,6 +4808,7 @@ internal object CarPlayBackgroundSession {
         owner: Any, display: CarPlaySessionDisplay, stop: (() -> Unit) -> Unit) {
         this.stopAction = stop
         this.owner = owner
+        this.stopped = false
         this.controller = controller
         this.sink = sink
         this.width = width
@@ -4757,7 +4821,7 @@ internal object CarPlayBackgroundSession {
         if (expected != null && controller !== expected) return
         controller = null
         sink = null
-        if (!keepOwner) { stopAction = null; owner = null }
+        if (!keepOwner) { stopAction = null; owner = null; stopped = false }
         active = false
         width = 0
         height = 0

@@ -2269,7 +2269,7 @@ class CarPlayController(
             fail(
                 WirelessStartupException(
                     WirelessStartupFailure.BLUETOOTH_NOT_READY,
-                    "Android Bluetooth on this head unit reports connections that are not real: " +
+                    "Android Bluetooth on this head unit reports ${BluetoothReadiness.UNREAL_MARK}: " +
                         "a connection to a service no phone offers also succeeded in ${controlMillis}ms",
                 ),
                 generation,
