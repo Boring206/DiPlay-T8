@@ -11,16 +11,25 @@ body:
     id: version
     attributes:
       label: DiPlay T8 版本 / version
-      description: 首頁右下角，或報告的第一行。Shown at the bottom right of the home page and on the report's first line.
-      placeholder: 0.2.12-t8.6
+      description: 首頁左下角，或報告的第一行。Shown at the bottom left of the home page and on the report's first line.
+      placeholder: 0.2.12-t8.7
     validations: {required: true}
   - type: input
     id: unit
     attributes:
       label: 車機 / Head unit
-      description: 品牌、型號或平台，以及 Android 版本。Brand, model or platform, and the Android version.
-      placeholder: 'Allwinner T8 (sun8iw6p1), Android 8.1.0'
+      description: |
+        照抄首頁「車機相容性檢查」卡片上、結論下面那一行小字（t8.7 起），再加上品牌或賣場名稱。設定頁顯示的 Android 版本常常不是真的，以那一行的 API 數字為準。
+        Copy the small line under the verdict on the home page's "Head unit check" card (t8.7 and later) and add the brand or shop name. The Android version on a unit's settings page is often not the real one; go by the API number on that line.
+      placeholder: 'Allwinner T8 · Android 8.1.0 (API 27) · sun8iw6p1'
     validations: {required: true}
+  - type: input
+    id: firmware
+    attributes:
+      label: 車機「關於」頁的系統版本與 MCU 版本 / System and MCU version from the unit's About page
+      description: 同一個品牌會賣好幾種主機板，這兩行才分得出是哪一種。One brand sells several boards; these two lines tell them apart.
+      placeholder: 'V9.3.1_20190906.113920_TW2-FD-AHD / T8.3.19-231-14-A4C101-190802'
+    validations: {required: false}
   - type: dropdown
     id: result
     attributes:
@@ -41,8 +50,17 @@ body:
     id: message
     attributes:
       label: 畫面停在哪句話 / What the screen said
-      description: 連線畫面上方的訊息，以及下方「排查用的詳細資訊」那幾行。The message on the connecting screen and the detail lines under it.
+      description: |
+        首頁檢查卡片的結論，或連線畫面上方的訊息和下方「排查用的詳細資訊」那幾行。拍照貼上來也可以。
+        The verdict on the home page's check card, or the message on the connecting screen with the detail lines under it. A photo is fine.
     validations: {required: true}
+  - type: input
+    id: other-builds
+    attributes:
+      label: 其他版本試過嗎？/ Other builds tried?
+      description: 原版 DiPlay 或 DiPlay-Legacy 的版本與結果。Version and result of upstream DiPlay or DiPlay-Legacy on the same unit.
+      placeholder: '原版 0.2.15：一直停在「正在連線」 / upstream 0.2.15: stuck on "Connecting"'
+    validations: {required: false}
   - type: input
     id: phone
     attributes:
