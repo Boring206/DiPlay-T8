@@ -31,7 +31,7 @@ This document is about one question: can my head unit do wireless CarPlay. It is
 
 | 平台 | 怎麼認 | 藍牙 | 無線 CarPlay 的展望 |
 |---|---|---|---|
-| Allwinner T8，TopWay 韌體 | 系統版本 `V9.3.1_…_TW2-FD`（字尾也可能是 AKW1、KED、JP、ZHC），MCU `T8.3.19-…` 或 `T5.3.19-…` | 廠商模組 | **不行**（本專案作者的車機實測） |
+| Allwinner T8，TopWay 韌體 | 系統版本 `V9.3.1_…_TW2-FD`（字尾也可能是 AKW1、KED、JP、ZHC），MCU `T8.3.19-…` 或 `T5.3.19-…` | 廠商模組 | **不行**（本專案作者的車機實測，[紀錄](reports/allwinner-t8-topway-2026-10-10.md)） |
 | Allwinner「T8」或 T3-P1，STM32 MCU 加 IVT 藍牙（Bosion、Eunavi、Hizpo 等） | MCU 版本以 `STM32-` 開頭；系統版本像 `KC1D01F1-O01-…-IVT-…` | 廠商模組 | 多半不行 |
 | Allwinner T3L，TopWay 韌體 | 系統版本 `V8.1.1_…_TW2-X` 或 `_THEME1` | 廠商模組 | 多半不行 |
 | TopWay TS9（Spreadtrum SC9853i；Ownice K6、Isudar H53 等） | MCU `Ts9.4.3-…`，系統版本 `V11.1.x_…` | 廠商模組 | 多半不行 |
@@ -84,7 +84,7 @@ Each row is one report as written in the linked issue. "Build" matters: only the
 
 | Unit as reported | Real Android | Build | Result | Where it stops | Source |
 |---|---|---|---|---|---|
-| Allwinner T8 `sun8iw6p1`, TopWay firmware `V9.3.1_…_TW2-FD-AHD` | 8.1.0 (API 27) | DiPlay T8 t8.2 | Does not work | Bluetooth: "connected" within 4–17 ms, the iPhone never answers | this project's maintainer, 2026-10-07 |
+| Allwinner T8 `sun8iw6p1`, TopWay firmware `V9.3.1_…_TW2-FD-AHD` | 8.1.0 (API 27) | DiPlay T8 t8.8 | Does not work | Bluetooth: "connected" after 6 ms, nothing received in 12 s, and a connection to a service that does not exist also "succeeds" | [record of the test](reports/allwinner-t8-topway-2026-10-10.md), 2026-10-10 |
 | `sprd sp7731e_1h10_native`, aftermarket | 8.1.0 (API 27) | an unofficial build labelled 0.2.12 | Wireless works; wired does not | Wired: `USBMUX read failed` | [upstream #274](https://github.com/shihabal3amri/DiPlay/issues/274) |
 | "Quad-SL8141E", MCU `Ts7.4.6-…`, system `V12.1.1_…_THEME1` (TopWay TS7) | 8.1.0 | Android 7 port ([PR #22](https://github.com/shihabal3amri/DiPlay/pull/22)), then hiscatwang's ARMv7 build | Works; audio problems on the port | — | [upstream #315](https://github.com/shihabal3amri/DiPlay/issues/315) |
 | 2024 ORA Good Cat, Harman unit, Intel x86 | 8.1 | [hiscatwang/DiPlay](https://github.com/hiscatwang/DiPlay) | Works over the car hotspot, confirmed by that fork's owner | — | that fork's README |
