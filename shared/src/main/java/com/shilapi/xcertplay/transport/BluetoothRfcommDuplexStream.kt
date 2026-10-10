@@ -53,6 +53,9 @@ class BluetoothRfcommDuplexStream internal constructor(
     private var readCalls = 0L
     private var receivedBytes = 0L
 
+    /** Bytes the peer has delivered so far; zero for as long as nothing answers. */
+    val bytesReceived: Long get() = synchronized(lock) { receivedBytes }
+
     // Acquire both streams before starting any reader or iAP2 protocol thread. Android getters
     // have platform-nullability, and some vendor sockets return null after connect() succeeds.
     private val input = acquireStream(BluetoothRfcommStreamException.Operation.INPUT_STREAM, socket::inputStream)

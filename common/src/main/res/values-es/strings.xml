@@ -765,4 +765,5 @@
     <string name="settings_ambient_unavailable">La comprobación de solo lectura falló: falta autorización ADB existente o una interfaz compatible. No se guardaron ajustes. Configura el acceso por separado con el vehículo estacionado; esta función no activa ADB ni solicita autorización.</string>
     <string name="settings_ambient_album">Seguir la portada del álbum</string>
     <string name="settings_ambient_album_description">Usa el color de la portada o colores cercanos disponibles del vehículo. Las portadas grises, negras o ausentes usan los 31 colores; las mayormente blancas pueden usar blanco o blanco frío.</string>
+    <string name="bluetooth_connections_not_real">El Bluetooth de Android de esta unidad principal indica una conexión, pero nada llega al iPhone: incluso la conexión a un servicio que no existe tiene éxito. Aquí el Bluetooth lo gestiona un módulo propio del fabricante que las apps no pueden usar, por lo que CarPlay inalámbrico no puede funcionar en esta unidad principal. Prueba una conexión USB.</string>
 </resources>

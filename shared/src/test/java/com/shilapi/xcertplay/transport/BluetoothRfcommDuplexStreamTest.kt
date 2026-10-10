@@ -14,6 +14,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BluetoothRfcommDuplexStreamTest {
+    @Test fun bytesReceivedStaysZeroUntilThePeerDeliversSomething() {
+        val silent = BluetoothRfcommDuplexStream(FakeSocket(BlockingInput()))
+        assertNull(silent.recv(16, 50))
+        assertEquals(0L, silent.bytesReceived)
+        silent.close()
+
+        val answering = BluetoothRfcommDuplexStream(FakeSocket(ByteArrayInputStream(byteArrayOf(1, 2, 3))))
+        assertArrayEquals(byteArrayOf(1, 2, 3), answering.recv(16, 2_000))
+        assertEquals(3L, answering.bytesReceived)
+        answering.close()
+    }
+
     @Test fun missingInputFailsSynchronouslyWithoutReadingOrOpeningOutput() {
         val lines = CopyOnWriteArrayList<String>()
         val socket = FakeSocket(null)

@@ -825,4 +825,5 @@
     <string name="settings_ambient_unavailable">唯讀檢查失敗：缺少既有 ADB 授權或支援的燈光介面。未儲存燈光設定。請停車後另行設定存取；本功能不啟用 ADB，也不請求授權。</string>
     <string name="settings_ambient_album">跟隨專輯封面</string>
     <string name="settings_ambient_album_description">按封面取色並近似匹配原車可用色號。灰黑或無封面時使用全部31色；大面積白色封面可使用白色或冷白。</string>
+    <string name="bluetooth_connections_not_real">此車機的系統藍牙回報「已連線」，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這裡的藍牙由廠商自己的模組處理，App 無法使用，所以此車機無法使用無線 CarPlay。請嘗試使用 USB 連線。</string>
 </resources>
