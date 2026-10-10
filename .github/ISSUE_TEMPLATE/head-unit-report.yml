@@ -12,7 +12,7 @@ body:
     attributes:
       label: DiPlay T8 版本 / version
       description: 首頁左下角，或報告的第一行。Shown at the bottom left of the home page and on the report's first line.
-      placeholder: 0.2.12-t8.8
+      placeholder: 0.2.12-t8.9
     validations: {required: true}
   - type: input
     id: unit

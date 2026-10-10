@@ -16,7 +16,7 @@
 | 用這個版本的實機結果 / Results on real head units with this build | |
 |---|---|
 | 確認可用 / Confirmed working | **0** |
-| 確認不可用 / Confirmed not working | **1**：Allwinner T8，TopWay 韌體 / TopWay firmware |
+| 確認不可用 / Confirmed not working | **1**：Allwinner T8，TopWay 韌體。App 當場判定藍牙連線是假的，[實測紀錄](docs/reports/allwinner-t8-topway-2026-10-10.md) / Allwinner T8 with TopWay firmware; the app found its Bluetooth connections not real, [record of the test](docs/reports/allwinner-t8-topway-2026-10-10.md) |
 | 其他 / Everything else | 未知，[歡迎回報](https://github.com/Boring206/DiPlay-T8/issues/new/choose) / unknown, [reports welcome](https://github.com/Boring206/DiPlay-T8/issues/new/choose) |
 
 ### 操作示範 / Walkthrough
@@ -91,7 +91,9 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 | 可以試試看 | 事先能檢查的都沒有問題。藍牙是否真的連得到 iPhone，要連一次才知道。 |
 | 這台車機可以使用無線 CarPlay | 之前已經成功連上過。 |
 
-「藍牙回報的連線是假的」要三件事同時成立才會成立：連線在 0.1 秒內就回報成功、之後 12 秒 iPhone 沒有傳回任何資料，而且連一個不存在的服務也同樣立刻成功。判定之後首頁會一直顯示這個結論，App 也不再自動連線，因為每次連線都會先把車機的 Wi-Fi 佔走。按「仍要試無線連線」可以重測，只要 iPhone 有回應，結論就會撤銷。這項判定目前只有單元測試，還沒有實車紀錄。
+「藍牙回報的連線是假的」要三件事同時成立才會成立：連線在 0.1 秒內就回報成功、之後 12 秒 iPhone 沒有傳回任何資料，而且連一個不存在的服務也同樣立刻成功。判定之後首頁會一直顯示這個結論，App 也不再自動連線，因為每次連線都會先把車機的 Wi-Fi 佔走。按「仍要試無線連線」可以重測，只要 iPhone 有回應，結論就會撤銷。
+
+這項判定在一台實車上跑過（Allwinner T8，2026-10-10）：藍牙 6 毫秒就回報連上，之後 12 秒沒有收到任何資料，連一個不存在的服務也在 12 毫秒內「成功」。[完整紀錄在這裡](docs/reports/allwinner-t8-topway-2026-10-10.md)。還沒有在藍牙正常的車機上確認過它不會誤判。
 
 ### 連線畫面的訊息
 
@@ -105,6 +107,8 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 | 系統藍牙還沒有和 iPhone 配對 | 沒配對或配對失效 | 按「開啟藍牙設定」配對後返回 |
 | 藍牙連上了，但 iPhone 沒有回應 | iPhone 在等你確認，或關閉了 CarPlay；也可能是上面那種藍牙，只是沒被判定出來 | 看 iPhone 的提示；檢查 設定 › 一般 › CarPlay |
 | 車機自帶的熱點正開著 | 車機自己的熱點擋住 App 的熱點 | 按「選擇處理方式」 |
+| DiPlay 裡儲存的 Wi-Fi 名稱，不是車機現在連線的那個網路 | 選了「現有 Wi-Fi」，但名稱填的不是車機連著的那一個 | 按「開啟連線設定」改正，或改用其他連線方式 |
+| 車機現在沒有連線任何 Wi-Fi | 選了「現有 Wi-Fi」，但車機沒連上 | 先在系統設定連上，或改用其他連線方式 |
 | 車機目前連線著 iPhone 的個人熱點 | 這時不會自動連線 | 關閉個人熱點後按「連線手機」 |
 
 ### 已知限制
@@ -146,7 +150,7 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 ### 實際測過什麼
 
-1,240 項單元測試全數通過。下面是實際操作過的部分，都在 Android 8.1 模擬器上。
+1,243 項單元測試全數通過。下面是實際操作過的部分，除了標明實車的那一列，都在 Android 8.1 模擬器上。
 
 | 功能 | 怎麼測的 | 結果 |
 |---|---|---|
@@ -161,10 +165,11 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 | 車機熱點開著：由 App 關閉後自建熱點 | 同上 | 通過 |
 | 車機熱點開著：輸入名稱密碼直接使用 | 同上 | 通過 |
 | 寬螢幕、直向、小螢幕三種版面 | 模擬器 | 通過 |
-| 「藍牙連線是假的」的判定與記住結果、配對停在「配對中」的警告、自動開啟藍牙 | 只有單元測試，因為模擬器沒有藍牙 | **沒有在真的藍牙上跑過** |
+| 「藍牙連線是假的」的判定、判定後停止不再重試、首頁記住結果、自動開啟藍牙 | **實車**（Allwinner T8，t8.8，2026-10-10），[紀錄](docs/reports/allwinner-t8-topway-2026-10-10.md) | 通過。還沒有在藍牙正常的車機上確認不會誤判 |
+| 「現有 Wi-Fi」設定錯誤時說明原因並停下來 | 模擬器加略過藍牙的測試版；問題本身是在實車上發現的 | 通過 |
 | iPhone 的畫面、聲音和觸控；有線連線；麥克風 | 沒有測 | **需要真的車機和 iPhone** |
 
-沒有合適的車機也可以幫忙補上最後兩列：任何 Android 8.1 以上、藍牙正常的舊手機或平板都可以當接收端，裝上原版和 DiPlay T8，用 iPhone 連連看，再把結果[回報](https://github.com/Boring206/DiPlay-T8/issues/new/choose)。
+沒有合適的車機也可以幫忙補上最後一列：任何 Android 8.1 以上、藍牙正常的舊手機或平板都可以當接收端，裝上原版和 DiPlay T8，用 iPhone 連連看，再把結果[回報](https://github.com/Boring206/DiPlay-T8/issues/new/choose)。
 
 ### 自行編譯
 
@@ -241,11 +246,13 @@ The head unit needs no internet for CarPlay: it opens a Wi-Fi network without in
 | Ready to try | Everything that can be checked in advance passed. Whether Bluetooth really reaches the iPhone only shows in a connection. |
 | Wireless CarPlay works on this head unit | It has connected here before. |
 
-"Connections that are not real" needs three things at once: the connection reports success within 0.1 s, the iPhone then sends nothing for 12 s, and a connection to a service that does not exist succeeds just as fast. After that the home page keeps showing the verdict and the app stops connecting by itself, because every attempt takes the unit's Wi-Fi first. "Try wireless anyway" repeats the test, and one answer from the iPhone withdraws the verdict. This test has unit tests only so far; no run on a real unit is on record.
+"Connections that are not real" needs three things at once: the connection reports success within 0.1 s, the iPhone then sends nothing for 12 s, and a connection to a service that does not exist succeeds just as fast. After that the home page keeps showing the verdict and the app stops connecting by itself, because every attempt takes the unit's Wi-Fi first. "Try wireless anyway" repeats the test, and one answer from the iPhone withdraws the verdict.
+
+The test has run on one real unit (Allwinner T8, 2026-10-10): Bluetooth reported a connection after 6 ms, nothing arrived in the next 12 s, and a connection to a service that does not exist also "succeeded" after 12 ms. [The full record is here](docs/reports/allwinner-t8-topway-2026-10-10.md). It has not yet been run on a unit with working Bluetooth to confirm it never fires there.
 
 ### Messages on the connecting screen
 
-The screen names the cause: no Android Bluetooth, Bluetooth whose connections are not real, Bluetooth off or unpaired, an iPhone that does not answer, the car's own hotspot in the way, or the unit still joined to the iPhone's Personal Hotspot. Each comes with the next step where there is one. "Bluetooth connected, but the iPhone did not answer" can also be the not-real kind of Bluetooth that the test did not catch.
+The screen names the cause: no Android Bluetooth, Bluetooth whose connections are not real, Bluetooth off or unpaired, an iPhone that does not answer, the car's own hotspot in the way, the unit still joined to the iPhone's Personal Hotspot, or, with "Existing Wi-Fi" chosen, a saved Wi-Fi name that is not the network the unit is on. Each comes with the next step where there is one. "Bluetooth connected, but the iPhone did not answer" can also be the not-real kind of Bluetooth that the test did not catch.
 
 ### Known limits
 
@@ -285,7 +292,7 @@ So the split is simple: **to get CarPlay running, use upstream; when upstream wi
 
 ### What was actually exercised
 
-All 1,240 unit tests pass. The rows below were done by hand, all on an Android 8.1 emulator.
+All 1,243 unit tests pass. The rows below were done by hand, on an Android 8.1 emulator except for the row marked as a real unit.
 
 | Feature | How | Result |
 |---|---|---|
@@ -300,10 +307,11 @@ All 1,240 unit tests pass. The rows below were done by hand, all on an Android 8
 | Car hotspot on: the app turns it off and opens its own | same | pass |
 | Car hotspot on: its name and password typed, used as it is | same | pass |
 | Wide, portrait and small-screen layouts | emulator | pass |
-| The "connections that are not real" test and its memory, the warning for a bond stuck in "bonding", switching Bluetooth on | unit tests only: the emulator has no Bluetooth | **never run on real Bluetooth** |
+| The "connections that are not real" test, stopping without retries afterwards, the home page remembering it, switching Bluetooth on | **a real unit** (Allwinner T8, t8.8, 2026-10-10), [record](docs/reports/allwinner-t8-topway-2026-10-10.md) | pass. Not yet run on a unit with working Bluetooth to confirm it never fires there |
+| "Existing Wi-Fi" set up wrongly: the cause is named and the attempt stops | emulator with the test build that skips Bluetooth; the fault itself was found on the real unit | pass |
 | Picture, sound and touch from an iPhone; the cable; the microphone | not tested | **needs a real head unit and an iPhone** |
 
-You can help fill the last two rows without a suitable head unit: any old Android 8.1+ phone or tablet with ordinary Bluetooth can act as the receiver. Install upstream and DiPlay T8 on it, connect an iPhone, and [report](https://github.com/Boring206/DiPlay-T8/issues/new/choose) what happened.
+You can help fill the last row without a suitable head unit: any old Android 8.1+ phone or tablet with ordinary Bluetooth can act as the receiver. Install upstream and DiPlay T8 on it, connect an iPhone, and [report](https://github.com/Boring206/DiPlay-T8/issues/new/choose) what happened.
 
 ### Build
 
