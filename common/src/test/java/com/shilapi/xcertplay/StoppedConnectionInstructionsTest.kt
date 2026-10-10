@@ -109,6 +109,35 @@ class StoppedConnectionInstructionsTest {
         assertEquals(activity.getString(R.string.open_bluetooth_settings), retry.text.toString())
     }
 
+    // Seen on a real unit: 64 silent attempts in half an hour, the screen saying only "getting ready".
+    @Test fun aWifiNameThatDoesNotMatchStopsAtOnceAndLeadsToTheSetupPage() {
+        report(CarPlayStatus.Failed("Could not establish EXISTING_WIFI hotspot: Configured Wi-Fi does not match the " +
+            "connected network; check Wi-Fi settings and saved details", startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION))
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertEquals(activity.getString(R.string.open_connection_setup), retry.text.toString())
+        assertEquals(View.VISIBLE, retry.visibility)
+        assertNull(shown())
+        assertEquals(activity.getString(R.string.existing_wifi_mismatch), friendly(
+            "Failed: Could not establish EXISTING_WIFI hotspot: Configured Wi-Fi does not match the connected network; x"))
+    }
+
+    @Test fun aUnitNotOnAnyWifiIsToldSoWhileAFewMoreAttemptsAreMade() {
+        val failure = CarPlayStatus.Failed("Could not establish EXISTING_WIFI hotspot: Existing Wi-Fi is not connected or " +
+            "has no usable address. Connect both devices to the same Wi-Fi in system settings",
+            startupFailure = WirelessStartupFailure.HOTSPOT_NOT_READY)
+        report(failure)
+        assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        // The words on screen name the cause instead of "Hotspot network is not ready".
+        val described = ReflectionHelpers.callInstanceMethod<String>(activity, "describe",
+            from(CarPlayStatus::class.java, failure))
+        assertEquals(activity.getString(R.string.existing_wifi_not_connected), friendly(described))
+    }
+
+    private fun friendly(message: String) =
+        ReflectionHelpers.callInstanceMethod<String>(activity, "friendlyStage", from(String::class.java, message))
+
     @Test fun exhaustedRetriesStillAskForThePhone() {
         val timeout = CarPlayStatus.Failed("timeout", startupFailure = WirelessStartupFailure.FIRST_TCP_TIMEOUT)
         repeat(6) { generation ->

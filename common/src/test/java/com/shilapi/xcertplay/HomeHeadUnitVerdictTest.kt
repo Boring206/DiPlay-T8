@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.graphics.Color
+import android.net.wifi.SupplicantState
+import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -12,6 +14,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -25,6 +28,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowBluetoothAdapter
+import org.robolectric.shadows.ShadowWifiInfo
 import org.robolectric.util.ReflectionHelpers
 
 /** The home screen of a 1024x600 head unit: what a stranger sees right after installing. */
@@ -226,6 +230,40 @@ class HomeHeadUnitVerdictTest {
         } finally {
             ShadowBluetoothAdapter.setIsBluetoothSupported(true)
         }
+    }
+
+    private fun useExistingWifi(saved: String) {
+        AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.EXISTING_WIFI)
+        AirPlayPersistence.saveExistingWifiCredentials(context, saved, "password")
+    }
+    private fun joinWifi(name: String) {
+        val wifi = context.getSystemService(WifiManager::class.java)
+        val info = ShadowWifiInfo.newInstance()
+        shadowOf(info).setSSID(name) // the platform adds the quotation marks itself
+        shadowOf(info).setSupplicantState(SupplicantState.COMPLETED)
+        shadowOf(wifi).setConnectionInfo(info)
+    }
+
+    // On a real unit this mode failed at the Wi-Fi step for three days without a word on screen.
+    @Test fun existingWifiSaysWhatIsMissingBeforeAnyAttempt() {
+        pairIphone(); choosePhone()
+        useExistingWifi(saved = "")
+        open()
+        assertTrue(text(R.string.check_existing_wifi_not_saved) in texts())
+
+        useExistingWifi(saved = "Home")
+        render()
+        assertTrue(text(R.string.check_existing_wifi_not_connected, "Home") in texts())
+
+        joinWifi("Cafe")
+        render()
+        assertTrue(text(R.string.check_existing_wifi_mismatch, "Home", "Cafe") in texts())
+        assertTrue(text(R.string.open_connection_setup) in buttons())
+        assertEquals(listOf(text(R.string.verdict_action_title)), verdictShown())
+
+        joinWifi("Home")
+        render()
+        assertEquals(listOf(text(R.string.verdict_ready_title)), verdictShown())
     }
 
     @Test fun aBondThatNeverFinishedIsFlaggedBeforeAnyConnection() {

@@ -125,6 +125,7 @@ internal object HeadUnitCheck {
             }
         }
         val mode = AirPlayPersistence.loadWirelessHotspotMode(context)
+        if (mode == WirelessHotspotMode.EXISTING_WIFI) items += existingWifi(context, wifi)
         // The iPhone can either share its own hotspot or join the car's, never both.
         if ((mode == WirelessHotspotMode.MANUAL || mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) && joinedPhoneHotspot(wifi)) {
             items += Item(Level.BLOCKED, context.getString(R.string.check_joined_phone_hotspot))
@@ -148,6 +149,33 @@ internal object HeadUnitCheck {
             null -> Item(Level.INFO, context.getString(R.string.check_wifi_band_unknown))
         }
         return items
+    }
+
+    /**
+     * "Existing Wi-Fi" fails before Bluetooth is even tried unless the unit is on that Wi-Fi and
+     * DiPlay holds its exact name; each of these used to show only as an attempt that never ends.
+     */
+    @Suppress("DEPRECATION")
+    private fun existingWifi(context: Context, wifi: WifiManager): List<Item> {
+        val saved = AirPlayPersistence.loadExistingWifiSsid(context)
+        if (saved.isBlank()) {
+            return listOf(Item(Level.BLOCKED, context.getString(R.string.check_existing_wifi_not_saved), Action.CONNECTION_SETUP))
+        }
+        val info = runCatching { wifi.connectionInfo }.getOrNull()
+        if (info?.supplicantState != SupplicantState.COMPLETED) {
+            return listOf(Item(Level.BLOCKED, context.getString(R.string.check_existing_wifi_not_connected, saved), Action.CONNECTION_SETUP))
+        }
+        // The phone that shares the network cannot also be the one that joins it for CarPlay.
+        if (joinedPhoneHotspot(wifi)) {
+            return listOf(Item(Level.BLOCKED, context.getString(R.string.check_existing_wifi_is_phone_hotspot), Action.CONNECTION_SETUP))
+        }
+        // Without location access the name reads as unknown; then the connection itself decides.
+        val live = info.ssid?.removeSurrounding("\"")?.takeUnless { it.isBlank() || it == "<unknown ssid>" }
+        return if (live != null && live != saved) {
+            listOf(Item(Level.BLOCKED, context.getString(R.string.check_existing_wifi_mismatch, saved, live), Action.CONNECTION_SETUP))
+        } else {
+            emptyList()
+        }
     }
 
     /** While DiPlay holds a session the running AP is its own, whatever the firmware reports. */

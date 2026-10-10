@@ -17,7 +17,7 @@ android {
         applicationId = "com.shihab.diplay"
         minSdk = 27
         targetSdk = 37
-        versionCode = 38
+        versionCode = 39
         versionName = "0.2.12"
 
     }
@@ -45,7 +45,7 @@ android {
         release {
             // Side-by-side with the upstream-signed app: a differently signed build cannot update it.
             applicationIdSuffix = ".t8"
-            versionNameSuffix = "-t8.8"
+            versionNameSuffix = "-t8.9"
             optimization {
                 enable = false
             }

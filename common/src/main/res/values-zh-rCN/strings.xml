@@ -714,4 +714,10 @@
     <string name="status_wireless_ruled_out">这台车机无法使用无线连接</string>
     <string name="connect_anyway">仍要试无线连接</string>
     <string name="check_phone_selected_gone">在 DiPlay 里选择的 iPhone（%1$s）已经不在系统蓝牙的配对列表里。请重新选择你的 iPhone。</string>
+    <string name="existing_wifi_mismatch">DiPlay 里保存的 Wi-Fi 名称，不是车机现在连接的那个网络。请按下面的“打开连接设置”，填入车机和 iPhone 共用的那个 Wi-Fi 的准确名称和密码，或改用其他连接方式。</string>
+    <string name="existing_wifi_not_connected">车机现在没有连接任何 Wi-Fi。“现有 Wi-Fi”方式需要车机和 iPhone 连在同一个 Wi-Fi 上：请在系统的 Wi-Fi 设置里连接，或到“连接设置”改用其他连接方式。</string>
+    <string name="check_existing_wifi_not_saved">目前选的是“现有 Wi-Fi”，但它的名称和密码还没有保存到 DiPlay。</string>
+    <string name="check_existing_wifi_not_connected">目前选的是“现有 Wi-Fi”，但车机没有连接任何 Wi-Fi。请在系统的 Wi-Fi 设置里连接 %1$s，或改用其他连接方式。</string>
+    <string name="check_existing_wifi_mismatch">DiPlay 里保存的 Wi-Fi 名称（%1$s），不是车机现在连接的网络（%2$s）。</string>
+    <string name="check_existing_wifi_is_phone_hotspot">车机连接的是 iPhone 自己的个人热点。“现有 Wi-Fi”需要另一台路由器或随身 Wi-Fi，让车机和 iPhone 一起加入：iPhone 不能一边分享这个网络、一边加入它来跑 CarPlay。请改用其他连接方式。</string>
 </resources>
