@@ -130,7 +130,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var startupRetryButton: Button? = null
     // What that button does once retrying by itself cannot help: it leads to the one place where
     // the cause can be changed.
-    private enum class StoppedAction { RETRY, CAR_HOTSPOT_CHOICE, CAR_HOTSPOT_CHOICE_WITHOUT_STOP, BLUETOOTH_SETTINGS }
+    private enum class StoppedAction { RETRY, CAR_HOTSPOT_CHOICE, CAR_HOTSPOT_CHOICE_WITHOUT_STOP, BLUETOOTH_SETTINGS, CONNECTION_SETUP }
     private var stoppedAction = StoppedAction.RETRY
     private var returningFromBluetoothSettings = false
     private var startupFailureGeneration = -1
@@ -1296,6 +1296,9 @@ class CarPlayHostActivity : ComponentActivity() {
                                 })
                             .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
                     // Coming back from that screen retries by itself; see onResume.
+                    StoppedAction.CONNECTION_SETUP ->
+                        startActivity(Intent(this@CarPlayHostActivity, DiPlayActivity::class.java)
+                            .putExtra("page", "connection").addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
                     StoppedAction.BLUETOOTH_SETTINGS ->
                         if (runCatching { startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) }.isSuccess) {
                             returningFromBluetoothSettings = true
@@ -4169,6 +4172,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 getString(R.string.app_hotspot_stop_failed) -> StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP
                 getString(R.string.app_hotspot_blocked) -> StoppedAction.CAR_HOTSPOT_CHOICE
                 getString(R.string.bt_off_blocked), getString(R.string.bt_phone_not_paired) -> StoppedAction.BLUETOOTH_SETTINGS
+                getString(R.string.existing_wifi_mismatch), getString(R.string.existing_wifi_not_connected) -> StoppedAction.CONNECTION_SETUP
                 else -> StoppedAction.RETRY
             }
             val hardwareLimit = friendlyStage(reason).let {
@@ -4178,6 +4182,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 text = getString(when (stoppedAction) {
                     StoppedAction.CAR_HOTSPOT_CHOICE, StoppedAction.CAR_HOTSPOT_CHOICE_WITHOUT_STOP -> R.string.car_hotspot_choose
                     StoppedAction.BLUETOOTH_SETTINGS -> R.string.open_bluetooth_settings
+                    StoppedAction.CONNECTION_SETUP -> R.string.open_connection_setup
                     // Under "trying again will not help" the button is a way to test once more, not the next step.
                     StoppedAction.RETRY -> if (hardwareLimit) R.string.connect_anyway else R.string.retry_carplay_connection
                 })
@@ -4573,6 +4578,8 @@ class CarPlayHostActivity : ComponentActivity() {
         message.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         message.contains("Allow precise Location", true) -> getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p)
         message.contains("Allow Nearby devices", true) -> getString(R.string.allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per)
+        message.contains("does not match the connected network", true) -> getString(R.string.existing_wifi_mismatch)
+        message.contains("Existing Wi-Fi is not connected", true) -> getString(R.string.existing_wifi_not_connected)
         message.contains(BluetoothReadiness.UNREAL_MARK, true) -> getString(R.string.bt_not_real)
         message.contains("Bluetooth adapter is unavailable", true) -> getString(R.string.check_bt_missing)
         message.contains("Bluetooth is not enabled", true) -> getString(R.string.bt_off_blocked)
@@ -4696,7 +4703,12 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.RunningControl -> getString(R.string.carplay_control_running)
         CarPlayStatus.ControlEnded -> getString(R.string.carplay_control_window_ended)
         is CarPlayStatus.Failed -> when (startupFailure) {
-            WirelessStartupFailure.HOTSPOT_NOT_READY -> getString(R.string.hotspot_network_not_ready)
+            // "Not ready" says nothing to someone whose unit simply has not joined any Wi-Fi.
+            WirelessStartupFailure.HOTSPOT_NOT_READY -> if (message.contains("Existing Wi-Fi is not connected", true)) {
+                getString(R.string.status_failed, message)
+            } else {
+                getString(R.string.hotspot_network_not_ready)
+            }
             WirelessStartupFailure.FIRST_TCP_TIMEOUT -> getString(R.string.first_tcp_timeout)
             else -> getString(R.string.status_failed, message)
         }

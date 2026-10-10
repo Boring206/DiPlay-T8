@@ -90,7 +90,9 @@ class ExistingWifiManager(
                     ?: networkInfo ?: stationInfo
                 val liveSsid = readableSsid(info)
                 if (liveSsid != null && liveSsid != ssid) {
-                    throw IOException("Configured Wi-Fi does not match the connected network; check Wi-Fi settings and saved details")
+                    // Only the saved details or the joined network can change this; trying again cannot.
+                    throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+                        "Configured Wi-Fi does not match the connected network; check Wi-Fi settings and saved details")
                 }
                 val frequency = info?.frequency?.takeIf { it > 0 }
                 val channel = frequency?.let(::wifiFrequencyMhzToChannel) ?: 0
@@ -141,7 +143,9 @@ class ExistingWifiManager(
                     }, WirelessHotspotBackend.EXISTING_WIFI, hostAddresses = addresses, accessPointBssid = apBssid)
             }
             if ((System.nanoTime() - started) / 1_000_000 >= timeoutMillis) {
-                throw IOException("Existing Wi-Fi is not connected or has no usable address. Connect both devices to the same Wi-Fi in system settings")
+                // The network may still come into range, so a few more attempts are worth making.
+                throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_NOT_READY,
+                    "Existing Wi-Fi is not connected or has no usable address. Connect both devices to the same Wi-Fi in system settings")
             }
             Thread.sleep(200)
         }

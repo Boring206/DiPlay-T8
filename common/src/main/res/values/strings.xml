@@ -715,4 +715,10 @@
     <string name="status_wireless_ruled_out">Wireless is ruled out on this unit</string>
     <string name="connect_anyway">Try wireless anyway</string>
     <string name="check_phone_selected_gone">The iPhone chosen in DiPlay (%1$s) is no longer paired with Android Bluetooth. Choose your iPhone again.</string>
+    <string name="existing_wifi_mismatch">The Wi-Fi name saved in DiPlay is not the network this head unit is connected to. Tap Open connection setup below and enter the exact name and password of the Wi-Fi that the head unit and the iPhone share, or choose another way to connect.</string>
+    <string name="existing_wifi_not_connected">The head unit is not connected to any Wi-Fi. \"Existing Wi-Fi\" needs the head unit and the iPhone on the same Wi-Fi: connect the head unit in the system Wi-Fi settings, or choose another way in Connection setup.</string>
+    <string name="check_existing_wifi_not_saved">\"Existing Wi-Fi\" is chosen, but its name and password are not saved in DiPlay yet.</string>
+    <string name="check_existing_wifi_not_connected">\"Existing Wi-Fi\" is chosen, but the head unit is not connected to any Wi-Fi. Connect it to %1$s in the system Wi-Fi settings, or choose another way to connect.</string>
+    <string name="check_existing_wifi_mismatch">The Wi-Fi name saved in DiPlay (%1$s) is not the network the head unit is connected to (%2$s).</string>
+    <string name="check_existing_wifi_is_phone_hotspot">The head unit is on the iPhone\'s own Personal Hotspot. \"Existing Wi-Fi\" needs a separate router or portable Wi-Fi that both join: the iPhone cannot share a network and join it for CarPlay at the same time. Choose another way to connect.</string>
 </resources>
