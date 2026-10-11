@@ -35,6 +35,8 @@ Every picture is the real screen at that step on an Android 8.1 emulator; about 
 
 原版 DiPlay 從 0.2.15（2026-10-08）起可以裝在 Android 7.1 以上，更新也比這裡快。這個版本不是用來取代它的：它是原版一直停在「正在連線」、又看不出原因時，拿來找原因用的。
 
+**2026-10-11 更新：這裡的藍牙判定已經併入原版。** 原版從 [0.2.18](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.18) 起，遇到「Android 藍牙回報已連線、其實沒有連到手機」的車機，也會停下來說明原因並建議改用 USB（[#590](https://github.com/shihabal3amri/DiPlay/pull/590)，由這個專案提出）。所以請先裝原版 0.2.18 以上；原版仍然看不出原因時，再加裝這個版本，看更細的檢查卡片和報告。
+
 | 車機實際的 Android 版本 | 建議 |
 |---|---|
 | 7.1 以上 | 先裝[原版 DiPlay 的最新版](https://github.com/shihabal3amri/DiPlay/releases)。 |
@@ -189,6 +191,8 @@ ANDROID_KEYSTORE_PATH=... ANDROID_KEY_ALIAS=... ANDROID_KEYSTORE_PASSWORD=... AN
 ### Install upstream first; add this one when it will not connect
 
 Upstream DiPlay installs on Android 7.1 and newer since 0.2.15 (2026-10-08) and moves faster than this fork. This build does not replace it. It is for the case where upstream sits on "Connecting" and gives no reason.
+
+**Update, 2026-10-11: the Bluetooth check from this fork is now in upstream.** From [0.2.18](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.18), upstream also stops with the cause and suggests USB on head units whose Android Bluetooth reports a connection that reaches no phone ([#590](https://github.com/shihabal3amri/DiPlay/pull/590), contributed from this fork). So install upstream 0.2.18 or newer first, and add this build when upstream still gives no reason and you want the more detailed check card and report.
 
 | Real Android version of the head unit | What to install |
 |---|---|
