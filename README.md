@@ -115,7 +115,7 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 ### 已知限制
 
-- **有線 USB 在 Android 8 上有問題。** Android 9 以前，系統不接受一次讀取超過 16 KB 的 USB 資料，這個版本的有線連線會因此失敗。原版在 0.2.15 之後已經修正（[#478](https://github.com/shihabal3amri/DiPlay/pull/478)、[#495](https://github.com/shihabal3amri/DiPlay/pull/495)），截至 2026-10-09 還沒有發佈，也還沒有移植到這裡。Android 8 要用有線，請等原版 0.2.15 之後的版本，或試 DiPlay-Legacy-Android v0.2.19 以上。
+- **有線 USB 在 Android 8 上有問題。** Android 9 以前，系統不接受一次讀取超過 16 KB 的 USB 資料，這個版本的有線連線會因此失敗。原版從 0.2.16 起包含這項修正（[#478](https://github.com/shihabal3amri/DiPlay/pull/478)、[#495](https://github.com/shihabal3amri/DiPlay/pull/495)），這裡還沒有移植。Android 8 要用有線，請用原版 0.2.16 以上，或試 DiPlay-Legacy-Android v0.2.19 以上。
 - **通話和 Siri 的麥克風在 Android 9 以下可能沒有聲音**，因為系統通常沒有內建的 Opus 編碼器。原版同樣已修正（[#468](https://github.com/shihabal3amri/DiPlay/pull/468)）但尚未發佈，這裡還沒有。
 - 以 0.2.12 為基礎。原版之後的介面改版和其他修正都不在這裡。
 - 還沒有任何 Android 8.1 實機用這個版本完整進入 CarPlay。
@@ -260,7 +260,7 @@ The screen names the cause: no Android Bluetooth, Bluetooth whose connections ar
 
 ### Known limits
 
-- **Wired USB is faulty on Android 8.** Before Android 9 the system refuses USB reads larger than 16 KB, and this build's wired path asks for more. Upstream fixed it after 0.2.15 ([#478](https://github.com/shihabal3amri/DiPlay/pull/478), [#495](https://github.com/shihabal3amri/DiPlay/pull/495)); as of 2026-10-09 that is unreleased and not ported here. For a cable on Android 8, wait for the upstream release after 0.2.15 or try DiPlay-Legacy-Android v0.2.19 or newer.
+- **Wired USB is faulty on Android 8.** Before Android 9 the system refuses USB reads larger than 16 KB, and this build's wired path asks for more. Upstream carries the fix since 0.2.16 ([#478](https://github.com/shihabal3amri/DiPlay/pull/478), [#495](https://github.com/shihabal3amri/DiPlay/pull/495)); it is not ported here. For a cable on Android 8, use upstream 0.2.16 or newer, or try DiPlay-Legacy-Android v0.2.19 or newer.
 - **The microphone for calls and Siri may be silent below Android 10**, where the system usually has no Opus encoder. Upstream fixed that too ([#468](https://github.com/shihabal3amri/DiPlay/pull/468)), also unreleased; this build has not.
 - Based on 0.2.12. Upstream's later interface redesign and other fixes are not here.
 - No Android 8.1 unit has completed a CarPlay session with this build yet.
