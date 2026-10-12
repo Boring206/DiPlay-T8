@@ -59,7 +59,7 @@ body:
     attributes:
       label: 其他版本試過嗎？/ Other builds tried?
       description: 原版 DiPlay 或 DiPlay-Legacy 的版本與結果。Version and result of upstream DiPlay or DiPlay-Legacy on the same unit.
-      placeholder: '原版 0.2.15：一直停在「正在連線」 / upstream 0.2.15: stuck on "Connecting"'
+      placeholder: '原版 0.2.19：一直停在「正在連線」 / upstream 0.2.19: stuck on "Connecting"'
     validations: {required: false}
   - type: input
     id: phone

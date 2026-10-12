@@ -35,7 +35,15 @@ Every picture is the real screen at that step on an Android 8.1 emulator; about 
 
 原版 DiPlay 從 0.2.15（2026-10-08）起可以裝在 Android 7.1 以上，更新也比這裡快。這個版本不是用來取代它的：它是原版一直停在「正在連線」、又看不出原因時，拿來找原因用的。
 
-**2026-10-11 更新：這裡的藍牙判定已經併入原版。** 原版從 [0.2.18](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.18) 起，遇到「Android 藍牙回報已連線、其實沒有連到手機」的車機，也會停下來說明原因並建議改用 USB（[#590](https://github.com/shihabal3amri/DiPlay/pull/590)，由這個專案提出）。所以請先裝原版 0.2.18 以上；原版仍然看不出原因時，再加裝這個版本，看更細的檢查卡片和報告。
+**2026-10-13 更新：這裡的幾項做法已經併入原版。** 請先裝原版 [0.2.19](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.19) 以上，它現在會：
+
+- 遇到「Android 藍牙回報已連線、其實沒有連到手機」的車機，停下來說明原因並建議改用 USB（0.2.18 起，[#590](https://github.com/shihabal3amri/DiPlay/pull/590)）。
+- 車機藍牙關著時，先請你開啟藍牙，不會先去動車機的 Wi-Fi（0.2.19 起，[#679](https://github.com/shihabal3amri/DiPlay/pull/679)）。
+- 讓不能存檔的車機也拿得到診斷報告：**設定 → 診斷 → 在手機上取得報告**，用手機掃 QR code，或在瀏覽器輸入畫面上的位址和六位數代碼（0.2.19 起，[#685](https://github.com/shihabal3amri/DiPlay/pull/685)、[#686](https://github.com/shihabal3amri/DiPlay/pull/686)、[#687](https://github.com/shihabal3amri/DiPlay/pull/687)）。
+
+這幾項都由這個專案提出，完整清單見下面的「回饋給原版的修改」。原版仍然看不出原因時，再加裝這個版本，看更細的檢查卡片和報告。
+
+**原版 0.2.19 在 Android 9 以下有一個問題（2026-10-13）：** 在「設定 → 搜尋設定」輸入文字，App 會直接關閉。修正已經送給原版（[#705](https://github.com/shihabal3amri/DiPlay/pull/705)）；在它發佈之前，請不要用搜尋，直接從左邊的分類進去。
 
 | 車機實際的 Android 版本 | 建議 |
 |---|---|
@@ -116,7 +124,7 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 ### 已知限制
 
 - **有線 USB 在 Android 8 上有問題。** Android 9 以前，系統不接受一次讀取超過 16 KB 的 USB 資料，這個版本的有線連線會因此失敗。原版從 0.2.16 起包含這項修正（[#478](https://github.com/shihabal3amri/DiPlay/pull/478)、[#495](https://github.com/shihabal3amri/DiPlay/pull/495)），這裡還沒有移植。Android 8 要用有線，請用原版 0.2.16 以上，或試 DiPlay-Legacy-Android v0.2.19 以上。
-- **通話和 Siri 的麥克風在 Android 9 以下可能沒有聲音**，因為系統通常沒有內建的 Opus 編碼器。原版同樣已修正（[#468](https://github.com/shihabal3amri/DiPlay/pull/468)）但尚未發佈，這裡還沒有。
+- **通話和 Siri 的麥克風在 Android 9 以下可能沒有聲音**，因為系統通常沒有內建的 Opus 編碼器。原版從 0.2.16 起已修正（[#468](https://github.com/shihabal3amri/DiPlay/pull/468)），這裡還沒有。
 - 以 0.2.12 為基礎。原版之後的介面改版和其他修正都不在這裡。
 - 還沒有任何 Android 8.1 實機用這個版本完整進入 CarPlay。
 
@@ -131,24 +139,38 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 ### 和原版比，這個版本還剩什麼
 
-對照的是原版在 2026-10-09 的原始碼（0.2.15 之後的 `main`）。原版後來自己也加了 Android 7.1 以上的支援、繁體中文和熱點優先用 IPv4，那幾項已經不算差異。
+對照的是原版 0.2.19（2026-10-12）。原版後來自己加了 Android 7.1 以上的支援、繁體中文和熱點優先用 IPv4；這裡提出的藍牙判定、先查藍牙和用瀏覽器讀報告也已經併入。那幾項不再是差異，或只剩下表中寫的細節不同。
 
 | | 原版 DiPlay | DiPlay T8 |
 |---|---|---|
 | 最低 Android 版本 | 7.1 | 8.1 |
 | 連線前的車機檢查，給一個結論 | 沒有 | 有 |
-| 判定「藍牙回報的連線是假的」並記住 | 沒有（只把藍牙狀態寫進紀錄） | 有 |
-| 先查藍牙，再動車機的 Wi-Fi | 先開熱點，再查藍牙 | 有；藍牙關著時還會自動開啟（Android 11 以下） |
+| 判定「藍牙回報的連線是假的」 | 有（0.2.18 起）：連線時停下來說明原因，不會記在首頁 | 有，並記在首頁，之後不再自動連線 |
+| 先查藍牙，再動車機的 Wi-Fi | 有（0.2.19 起）；藍牙關著時請你自己開啟 | 有；藍牙關著時還會自動開啟（Android 11 以下） |
 | Android 8／9 不用輸入名稱密碼的自建熱點 | 沒有（要輸入車機熱點的名稱密碼，或用現成的 Wi-Fi） | 有 |
 | 車機自帶的熱點開著時，由 App 處理 | 沒有 | 有，三種方式 |
-| 同一個 Wi-Fi 上用瀏覽器讀診斷報告 | 沒有 | 有 |
+| 用另一台裝置的瀏覽器讀診斷報告 | 有（0.2.19 起）：在設定裡開啟，掃 QR code 或輸入位址和代碼 | 有：App 開著時固定在 `:8765`，不用代碼 |
 | 安裝檔裡的 CarPlay 認證資料 | 內含 | 不含，從已安裝的原版複製 |
-| Android 8 的有線 USB | 已修正，尚未發佈 | 有已知問題 |
-| Android 9 以下的通話與 Siri 麥克風 | 已修正，尚未發佈 | 可能沒有聲音 |
+| Android 8 的有線 USB | 已修正（0.2.16 起） | 有已知問題 |
+| Android 9 以下的通話與 Siri 麥克風 | 已修正（0.2.16 起） | 可能沒有聲音 |
 | 0.2.12 之後的介面改版、深淺色主題、更新檢查 | 有 | 沒有 |
 | 維護 | 很活躍，幾乎每天發佈 | 一個人，有空才做 |
 
 所以分工很單純：**要連上 CarPlay，用原版；原版連不上、想知道是車機不行還是設定沒弄好，加裝這個。**
+
+### 回饋給原版的修改
+
+在這裡找到的問題，能修在原版的就直接送給原版，讓所有人都用得到。狀態是 2026-10-13 的情況。
+
+| 原版的 PR | 內容 | 狀態 |
+|---|---|---|
+| [#590](https://github.com/shihabal3amri/DiPlay/pull/590) | 藍牙回報的連線是假的時，停下來說明原因 | 已合併，0.2.18 |
+| [#679](https://github.com/shihabal3amri/DiPlay/pull/679) | 藍牙關著時先提示開啟，不先動車機的 Wi-Fi | 已合併，0.2.19 |
+| [#680](https://github.com/shihabal3amri/DiPlay/pull/680) | 把 Allwinner T8 的實測紀錄寫進原版的文件 | 已合併，0.2.19 |
+| [#681](https://github.com/shihabal3amri/DiPlay/pull/681) | 十四處繁體中文改用台灣用語 | 已合併，0.2.19 |
+| [#685](https://github.com/shihabal3amri/DiPlay/pull/685)、[#686](https://github.com/shihabal3amri/DiPlay/pull/686)、[#687](https://github.com/shihabal3amri/DiPlay/pull/687) | 手機頁面不再被閒置的連線卡住；可以在手機上下載診斷報告；可以輸入位址和代碼開啟 | 已合併，0.2.19 |
+| [#702](https://github.com/shihabal3amri/DiPlay/pull/702) | 診斷報告列出方向盤按鍵服務收到的按鍵 | 審查中 |
+| [#705](https://github.com/shihabal3amri/DiPlay/pull/705) | 修正 0.2.19 在 Android 9 以下搜尋設定時關閉 | 審查中 |
 
 ### 實際測過什麼
 
@@ -192,7 +214,15 @@ ANDROID_KEYSTORE_PATH=... ANDROID_KEY_ALIAS=... ANDROID_KEYSTORE_PASSWORD=... AN
 
 Upstream DiPlay installs on Android 7.1 and newer since 0.2.15 (2026-10-08) and moves faster than this fork. This build does not replace it. It is for the case where upstream sits on "Connecting" and gives no reason.
 
-**Update, 2026-10-11: the Bluetooth check from this fork is now in upstream.** From [0.2.18](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.18), upstream also stops with the cause and suggests USB on head units whose Android Bluetooth reports a connection that reaches no phone ([#590](https://github.com/shihabal3amri/DiPlay/pull/590), contributed from this fork). So install upstream 0.2.18 or newer first, and add this build when upstream still gives no reason and you want the more detailed check card and report.
+**Update, 2026-10-13: several things from this fork are now in upstream.** Install upstream [0.2.19](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.19) or newer first. It now:
+
+- stops with the cause and suggests USB on head units whose Android Bluetooth reports a connection that reaches no phone (since 0.2.18, [#590](https://github.com/shihabal3amri/DiPlay/pull/590));
+- asks for Bluetooth to be turned on when it is off, before it touches the unit's Wi-Fi (since 0.2.19, [#679](https://github.com/shihabal3amri/DiPlay/pull/679));
+- hands over the diagnostic report on units that cannot save a file: **Settings → Diagnostics → Get the report on a phone**, by QR code or by typing the address and the six-digit code shown on screen (since 0.2.19, [#685](https://github.com/shihabal3amri/DiPlay/pull/685), [#686](https://github.com/shihabal3amri/DiPlay/pull/686), [#687](https://github.com/shihabal3amri/DiPlay/pull/687)).
+
+All of these were contributed from this fork; the full list is under "What went back to upstream" below. Add this build when upstream still gives no reason and you want the more detailed check card and report.
+
+**One fault in upstream 0.2.19 on Android 9 and earlier (as of 2026-10-13):** typing into **Settings → Search settings** closes the app. The fix has been sent to upstream ([#705](https://github.com/shihabal3amri/DiPlay/pull/705)); until it is released, leave the search alone and open a category from the list on the left.
 
 | Real Android version of the head unit | What to install |
 |---|---|
@@ -261,7 +291,7 @@ The screen names the cause: no Android Bluetooth, Bluetooth whose connections ar
 ### Known limits
 
 - **Wired USB is faulty on Android 8.** Before Android 9 the system refuses USB reads larger than 16 KB, and this build's wired path asks for more. Upstream carries the fix since 0.2.16 ([#478](https://github.com/shihabal3amri/DiPlay/pull/478), [#495](https://github.com/shihabal3amri/DiPlay/pull/495)); it is not ported here. For a cable on Android 8, use upstream 0.2.16 or newer, or try DiPlay-Legacy-Android v0.2.19 or newer.
-- **The microphone for calls and Siri may be silent below Android 10**, where the system usually has no Opus encoder. Upstream fixed that too ([#468](https://github.com/shihabal3amri/DiPlay/pull/468)), also unreleased; this build has not.
+- **The microphone for calls and Siri may be silent below Android 10**, where the system usually has no Opus encoder. Upstream carries the fix since 0.2.16 ([#468](https://github.com/shihabal3amri/DiPlay/pull/468)); this build has not.
 - Based on 0.2.12. Upstream's later interface redesign and other fixes are not here.
 - No Android 8.1 unit has completed a CarPlay session with this build yet.
 
@@ -275,24 +305,38 @@ A report helps whether it worked or not: owners of the same unit learn what to e
 
 ### What this build still has that upstream does not
 
-Compared with upstream's source on 2026-10-09 (`main` after 0.2.15). Upstream has since added Android 7.1 support, Traditional Chinese and IPv4 first on hotspots itself, so those no longer count.
+Compared with upstream 0.2.19 (2026-10-12). Upstream has since added Android 7.1 support, Traditional Chinese and IPv4 first on hotspots itself, and has taken the Bluetooth test, the Bluetooth-first order and the report in a browser from this fork. Those no longer count, or differ only in the detail the table gives.
 
 | | Upstream DiPlay | DiPlay T8 |
 |---|---|---|
 | Minimum Android | 7.1 | 8.1 |
 | A head unit check before connecting, with one verdict | no | yes |
-| A test for Bluetooth connections that are not real, remembered afterwards | no (Bluetooth state goes to the log only) | yes |
-| Bluetooth checked before the unit's Wi-Fi is touched | hotspot first, Bluetooth after | yes, and Bluetooth is switched on by the app up to Android 11 |
+| A test for Bluetooth connections that are not real | yes (since 0.2.18): the attempt stops with the cause; nothing is kept on the home page | yes, kept on the home page, and the app stops connecting by itself |
+| Bluetooth checked before the unit's Wi-Fi is touched | yes (since 0.2.19); with Bluetooth off it asks you to turn it on | yes, and Bluetooth is switched on by the app up to Android 11 |
 | An app-owned hotspot on Android 8 and 9, nothing to type | no (type the car hotspot's name and password, or use an existing Wi-Fi) | yes |
 | Handling the car's own hotspot when it is on | no | yes, three ways |
-| The diagnostic report in a browser on the same Wi-Fi | no | yes |
+| The diagnostic report in another device's browser | yes (since 0.2.19): opened from Settings, by QR code or by a typed address and code | yes: at a fixed `:8765` while the app is open, no code |
 | CarPlay identity inside the APK | bundled | not bundled; copied from the installed original |
-| Wired USB on Android 8 | fixed, not released yet | known fault |
-| Microphone for calls and Siri below Android 10 | fixed, not released yet | may be silent |
+| Wired USB on Android 8 | fixed (since 0.2.16) | known fault |
+| Microphone for calls and Siri below Android 10 | fixed (since 0.2.16) | may be silent |
 | The interface redesign, light and dark themes and update check after 0.2.12 | yes | no |
 | Maintenance | very active, a release almost daily | one person, in spare time |
 
 So the split is simple: **to get CarPlay running, use upstream; when upstream will not connect and you want to know whether it is the unit or a setting, add this one.**
+
+### What went back to upstream
+
+What is found here and can be fixed in upstream is sent there, so everyone gets it. Status as of 2026-10-13.
+
+| Upstream PR | What it does | Status |
+|---|---|---|
+| [#590](https://github.com/shihabal3amri/DiPlay/pull/590) | Stops with the cause when Bluetooth connections are not real | merged, 0.2.18 |
+| [#679](https://github.com/shihabal3amri/DiPlay/pull/679) | Asks for Bluetooth before the unit's Wi-Fi is touched | merged, 0.2.19 |
+| [#680](https://github.com/shihabal3amri/DiPlay/pull/680) | Records the Allwinner T8 test in upstream's documents | merged, 0.2.19 |
+| [#681](https://github.com/shihabal3amri/DiPlay/pull/681) | Taiwan wording in fourteen Traditional Chinese strings | merged, 0.2.19 |
+| [#685](https://github.com/shihabal3amri/DiPlay/pull/685), [#686](https://github.com/shihabal3amri/DiPlay/pull/686), [#687](https://github.com/shihabal3amri/DiPlay/pull/687) | The phone page no longer stalls behind an idle connection; the diagnostic report can be downloaded on a phone; the page can be opened by typing an address and a code | merged, 0.2.19 |
+| [#702](https://github.com/shihabal3amri/DiPlay/pull/702) | The diagnostic report lists the keys the wheel key service was given | in review |
+| [#705](https://github.com/shihabal3amri/DiPlay/pull/705) | Keeps Settings search from closing 0.2.19 on Android 9 and earlier | in review |
 
 ### What was actually exercised
 
