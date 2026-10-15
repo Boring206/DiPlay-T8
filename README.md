@@ -177,8 +177,8 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 | [#777](https://github.com/shihabal3amri/DiPlay/pull/777) | 非比亞迪車機在首頁就請你允許熱點需要的系統權限 | 已合併，0.2.20 |
 | [#778](https://github.com/shihabal3amri/DiPlay/pull/778) | 還沒選 iPhone 時，「選擇 iPhone」不顯示英文的佔位名稱 | 已合併，0.2.20 |
 | [#786](https://github.com/shihabal3amri/DiPlay/pull/786) | 「只在長按時開 Siri」只在比亞迪車機顯示 | 已合併，0.2.20 |
-| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | 無線連線需要的權限被拒絕時，連線畫面寫出缺的是哪個權限 | 審查中 |
-| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | 熱點或 iPhone 連不上時，連線畫面寫出原因，自動重試停止時也說明 | 審查中 |
+| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | 無線連線需要的權限被拒絕時，連線畫面寫出缺的是哪個權限 | 已合併，下一版 |
+| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | 熱點或 iPhone 連不上時，連線畫面寫出原因，自動重試停止時也說明 | 已合併，下一版 |
 | [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | 用 USB 等 iPhone 時，診斷報告列出 Android 看到的 USB 裝置 | 審查中 |
 
 ### 實際測過什麼
@@ -352,8 +352,8 @@ What is found here and can be fixed in upstream is sent there, so everyone gets 
 | [#777](https://github.com/shihabal3amri/DiPlay/pull/777) | Home asks for the system access the hotspot needs on units that are not BYD | merged, 0.2.20 |
 | [#778](https://github.com/shihabal3amri/DiPlay/pull/778) | Choose iPhone shows no English placeholder name before an iPhone is chosen | merged, 0.2.20 |
 | [#786](https://github.com/shihabal3amri/DiPlay/pull/786) | Siri on long press only is offered on BYD units only | merged, 0.2.20 |
-| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | The connecting screen names the wireless permission that was refused | in review |
-| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | The connecting screen says why the hotspot or iPhone did not connect, and when automatic retries stop | in review |
+| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | The connecting screen names the wireless permission that was refused | merged, next release |
+| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | The connecting screen says why the hotspot or iPhone did not connect, and when automatic retries stop | merged, next release |
 | [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | While waiting for the iPhone over USB, the report lists the USB devices Android sees | in review |
 
 ### What was actually exercised
