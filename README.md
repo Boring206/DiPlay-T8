@@ -33,22 +33,24 @@ Every picture is the real screen at that step on an Android 8.1 emulator; about 
 
 ### 先裝原版，連不上再裝這個
 
-原版 DiPlay 從 0.2.15（2026-10-08）起可以裝在 Android 7.1 以上，更新也比這裡快。這個版本不是用來取代它的：它是原版一直停在「正在連線」、又看不出原因時，拿來找原因用的。
+原版 DiPlay 從 0.2.15（2026-10-08）起可以裝在 Android 7.1 以上，0.2.21 起連 Android 7.0 也能裝，更新也比這裡快。這個版本不是用來取代它的：它是原版一直停在「正在連線」、又看不出原因時，拿來找原因用的。
 
-**2026-10-15 更新：這裡的幾項做法已經併入原版。** 請先裝原版 [0.2.20](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.20) 以上，它現在會：
+**2026-10-28 更新：這個專案送給原版的 66 個 PR 都已經合併並發布，最新是 0.2.22。** 請先裝原版 [0.2.22](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.22) 以上，它現在會：
 
 - 遇到「Android 藍牙回報已連線、其實沒有連到手機」的車機，停下來說明原因並建議改用 USB（0.2.18 起，[#590](https://github.com/shihabal3amri/DiPlay/pull/590)）。
 - 車機藍牙關著時，先請你開啟藍牙，不會先去動車機的 Wi-Fi（0.2.19 起，[#679](https://github.com/shihabal3amri/DiPlay/pull/679)）。
 - 讓不能存檔的車機也拿得到診斷報告：**設定 → 診斷 → 在手機上取得報告**，用手機掃 QR code，或在瀏覽器輸入畫面上的位址和六位數代碼（0.2.19 起，[#685](https://github.com/shihabal3amri/DiPlay/pull/685)、[#686](https://github.com/shihabal3amri/DiPlay/pull/686)、[#687](https://github.com/shihabal3amri/DiPlay/pull/687)）。
 - 車機的 Android 藍牙不能用時（沒有藍牙、打不開，或無法建立連線），直接說明原因，不再一直重試或一直要你開啟（0.2.20 起，[#725](https://github.com/shihabal3amri/DiPlay/pull/725)、[#745](https://github.com/shihabal3amri/DiPlay/pull/745)）。
+- 連不上時，連線畫面用白話寫出已知的原因，首頁和診斷報告也會記住上一次的問題（0.2.22 起，[#1058](https://github.com/shihabal3amri/DiPlay/pull/1058)、[#1062](https://github.com/shihabal3amri/DiPlay/pull/1062)、[#1066](https://github.com/shihabal3amri/DiPlay/pull/1066)）。
+- 比亞迪 DiLink 3.0、4.0 等車機用車機熱點時，會自動選對網卡，不必再手動填 `wlan0`（0.2.22 起，[#936](https://github.com/shihabal3amri/DiPlay/pull/936)、[#950](https://github.com/shihabal3amri/DiPlay/pull/950)）。
 
 這幾項都由這個專案提出，完整清單見下面的「回饋給原版的修改」。原版仍然看不出原因時，再加裝這個版本，看更細的檢查卡片和報告。
 
 | 車機實際的 Android 版本 | 建議 |
 |---|---|
-| 7.1 以上 | 先裝[原版 DiPlay 的最新版](https://github.com/shihabal3amri/DiPlay/releases)。 |
+| 7.0 以上 | 先裝[原版 DiPlay 的最新版](https://github.com/shihabal3amri/DiPlay/releases)。 |
 | 8.1 以上，而且原版的無線連不上 | 加裝 DiPlay T8，看首頁的檢查卡片和連線畫面寫的原因。兩個 App 可以並存。 |
-| 4.4 到 7.0 | [DiPlay-Legacy-Android](https://github.com/programmerguohuajing/DiPlay-Legacy-Android/releases) v0.2.18 以上。 |
+| 4.4 到 6.0 | [DiPlay-Legacy-Android](https://github.com/programmerguohuajing/DiPlay-Legacy-Android/releases) v0.2.18 以上。 |
 
 **設定頁寫的 Android 版本不一定是真的。** 不少副廠車機顯示 9、10 甚至 12，實際是 8.1 或更舊。DiPlay T8 首頁檢查卡片上、結論下面那一行小字，是系統自己回報的版本，例如 `Android 8.1.0 (API 27)`；以 API 數字為準。安裝時出現「解析套件時發生問題」，代表實際版本比那個安裝檔要求的還舊。
 
@@ -138,13 +140,13 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 ### 和原版比，這個版本還剩什麼
 
-對照的是原版 0.2.20（2026-10-14）。原版後來自己加了 Android 7.1 以上的支援、繁體中文和熱點優先用 IPv4；這裡提出的藍牙判定、先查藍牙和用瀏覽器讀報告也已經併入。那幾項不再是差異，或只剩下表中寫的細節不同。
+對照的是原版 0.2.22（2026-10-28）。原版後來自己加了 Android 7.0 以上的支援、繁體中文和熱點優先用 IPv4；這裡提出的藍牙判定、先查藍牙和用瀏覽器讀報告也已經併入。那幾項不再是差異，或只剩下表中寫的細節不同。
 
 | | 原版 DiPlay | DiPlay T8 |
 |---|---|---|
-| 最低 Android 版本 | 7.1 | 8.1 |
+| 最低 Android 版本 | 7.0 | 8.1 |
 | 連線前的車機檢查，給一個結論 | 沒有 | 有 |
-| 判定「藍牙回報的連線是假的」 | 有（0.2.18 起）：連線時停下來說明原因，不會記在首頁 | 有，並記在首頁，之後不再自動連線 |
+| 判定「藍牙回報的連線是假的」 | 有（0.2.18 起）：連線時停下來說明原因；0.2.22 起首頁會顯示上一次的問題 | 有，並記在首頁，之後不再自動連線 |
 | 先查藍牙，再動車機的 Wi-Fi | 有（0.2.19 起）；藍牙關著時請你自己開啟 | 有；藍牙關著時還會自動開啟（Android 11 以下） |
 | Android 8／9 不用輸入名稱密碼的自建熱點 | 沒有（要輸入車機熱點的名稱密碼，或用現成的 Wi-Fi） | 有 |
 | 車機自帶的熱點開著時，由 App 處理 | 沒有 | 有，三種方式 |
@@ -159,7 +161,7 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 
 ### 回饋給原版的修改
 
-在這裡找到的問題，能修在原版的就直接送給原版，讓所有人都用得到。狀態是 2026-10-15 的情況。
+在這裡找到的問題，能修在原版的就直接送給原版，讓所有人都用得到。狀態是 2026-10-28 的情況。
 
 | 原版的 PR | 內容 | 狀態 |
 |---|---|---|
@@ -177,9 +179,15 @@ CarPlay 不需要車機有網路：車機開一個沒有網路的 Wi-Fi 給 iPho
 | [#777](https://github.com/shihabal3amri/DiPlay/pull/777) | 非比亞迪車機在首頁就請你允許熱點需要的系統權限 | 已合併，0.2.20 |
 | [#778](https://github.com/shihabal3amri/DiPlay/pull/778) | 還沒選 iPhone 時，「選擇 iPhone」不顯示英文的佔位名稱 | 已合併，0.2.20 |
 | [#786](https://github.com/shihabal3amri/DiPlay/pull/786) | 「只在長按時開 Siri」只在比亞迪車機顯示 | 已合併，0.2.20 |
-| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | 無線連線需要的權限被拒絕時，連線畫面寫出缺的是哪個權限 | 已合併，下一版 |
-| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | 熱點或 iPhone 連不上時，連線畫面寫出原因，自動重試停止時也說明 | 已合併，下一版 |
-| [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | 用 USB 等 iPhone 時，診斷報告列出 Android 看到的 USB 裝置 | 已合併，下一版 |
+| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | 無線連線需要的權限被拒絕時，連線畫面寫出缺的是哪個權限 | 已合併，0.2.21 |
+| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | 熱點或 iPhone 連不上時，連線畫面寫出原因，自動重試停止時也說明 | 已合併，0.2.21 |
+| [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | 用 USB 等 iPhone 時，診斷報告列出 Android 看到的 USB 裝置 | 已合併，0.2.21 |
+| [#847](https://github.com/shihabal3amri/DiPlay/pull/847) | 原版可以裝在 Android 7.0 | 已合併，0.2.21 |
+| [#853](https://github.com/shihabal3amri/DiPlay/pull/853) | 沒設定用不到的熱點時，CarPlay 選單的設定也能儲存 | 已合併，0.2.21 |
+| [#876](https://github.com/shihabal3amri/DiPlay/pull/876) | 有線連線在重試前已經恢復時，不再打斷它 | 已合併，0.2.21 |
+| [#893](https://github.com/shihabal3amri/DiPlay/pull/893) | 在車機熱點旁邊拒絕 Wi-Fi Direct 後，不再一直重複詢問 | 已合併，0.2.21 |
+
+0.2.22 又收錄了 43 個，大多是在 Galaxy Note20 測試機上配 iPhone 實測時找到的：多點觸控（[#912](https://github.com/shihabal3amri/DiPlay/pull/912)）、藍牙打開後立刻重試（[#914](https://github.com/shihabal3amri/DiPlay/pull/914)）、DiLink 3.0／4.0 的熱點網卡（[#936](https://github.com/shihabal3amri/DiPlay/pull/936)、[#950](https://github.com/shihabal3amri/DiPlay/pull/950)）、Wi-Fi 音樂速度忽快忽慢（[#993](https://github.com/shihabal3amri/DiPlay/pull/993)、[#1070](https://github.com/shihabal3amri/DiPlay/pull/1070)、[#1080](https://github.com/shihabal3amri/DiPlay/pull/1080)）、用白話說明連不上的原因（[#1058](https://github.com/shihabal3amri/DiPlay/pull/1058)、[#1060](https://github.com/shihabal3amri/DiPlay/pull/1060)、[#1062](https://github.com/shihabal3amri/DiPlay/pull/1062)、[#1066](https://github.com/shihabal3amri/DiPlay/pull/1066)）、開機自動啟動時直接回到 CarPlay（[#1085](https://github.com/shihabal3amri/DiPlay/pull/1085)）等。完整清單：[原版裡由 Boring206 送出並已合併的 PR](https://github.com/shihabal3amri/DiPlay/pulls?q=is%3Apr+author%3ABoring206+is%3Amerged)。
 
 ### 實際測過什麼
 
@@ -221,22 +229,24 @@ ANDROID_KEYSTORE_PATH=... ANDROID_KEY_ALIAS=... ANDROID_KEYSTORE_PASSWORD=... AN
 
 ### Install upstream first; add this one when it will not connect
 
-Upstream DiPlay installs on Android 7.1 and newer since 0.2.15 (2026-10-08) and moves faster than this fork. This build does not replace it. It is for the case where upstream sits on "Connecting" and gives no reason.
+Upstream DiPlay installs on Android 7.1 and newer since 0.2.15 (2026-10-08), on Android 7.0 since 0.2.21, and moves faster than this fork. This build does not replace it. It is for the case where upstream sits on "Connecting" and gives no reason.
 
-**Update, 2026-10-15: several things from this fork are now in upstream.** Install upstream [0.2.20](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.20) or newer first. It now:
+**Update, 2026-10-28: all 66 PRs this fork sent upstream are merged and released; the latest is 0.2.22.** Install upstream [0.2.22](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.22) or newer first. It now:
 
 - stops with the cause and suggests USB on head units whose Android Bluetooth reports a connection that reaches no phone (since 0.2.18, [#590](https://github.com/shihabal3amri/DiPlay/pull/590));
 - asks for Bluetooth to be turned on when it is off, before it touches the unit's Wi-Fi (since 0.2.19, [#679](https://github.com/shihabal3amri/DiPlay/pull/679));
 - hands over the diagnostic report on units that cannot save a file: **Settings → Diagnostics → Get the report on a phone**, by QR code or by typing the address and the six-digit code shown on screen (since 0.2.19, [#685](https://github.com/shihabal3amri/DiPlay/pull/685), [#686](https://github.com/shihabal3amri/DiPlay/pull/686), [#687](https://github.com/shihabal3amri/DiPlay/pull/687));
-- says so, instead of retrying or asking again, when the head unit's Android Bluetooth cannot be used: no adapter, it will not turn on, or it cannot open connections (since 0.2.20, [#725](https://github.com/shihabal3amri/DiPlay/pull/725), [#745](https://github.com/shihabal3amri/DiPlay/pull/745)).
+- says so, instead of retrying or asking again, when the head unit's Android Bluetooth cannot be used: no adapter, it will not turn on, or it cannot open connections (since 0.2.20, [#725](https://github.com/shihabal3amri/DiPlay/pull/725), [#745](https://github.com/shihabal3amri/DiPlay/pull/745));
+- names the known cause in plain words on the connecting screen when it cannot connect, and remembers the last problem on Home and in the report (since 0.2.22, [#1058](https://github.com/shihabal3amri/DiPlay/pull/1058), [#1062](https://github.com/shihabal3amri/DiPlay/pull/1062), [#1066](https://github.com/shihabal3amri/DiPlay/pull/1066));
+- picks the right network interface for the car hotspot on BYD DiLink 3.0, 4.0 and similar units, so `wlan0` no longer has to be typed (since 0.2.22, [#936](https://github.com/shihabal3amri/DiPlay/pull/936), [#950](https://github.com/shihabal3amri/DiPlay/pull/950)).
 
 All of these were contributed from this fork; the full list is under "What went back to upstream" below. Add this build when upstream still gives no reason and you want the more detailed check card and report.
 
 | Real Android version of the head unit | What to install |
 |---|---|
-| 7.1 or newer | The [latest upstream DiPlay](https://github.com/shihabal3amri/DiPlay/releases) first. |
+| 7.0 or newer | The [latest upstream DiPlay](https://github.com/shihabal3amri/DiPlay/releases) first. |
 | 8.1 or newer, and upstream will not connect wirelessly | Add DiPlay T8 and read the check card on its home page and the cause on its connecting screen. The two apps install side by side. |
-| 4.4 to 7.0 | [DiPlay-Legacy-Android](https://github.com/programmerguohuajing/DiPlay-Legacy-Android/releases) v0.2.18 or newer. |
+| 4.4 to 6.0 | [DiPlay-Legacy-Android](https://github.com/programmerguohuajing/DiPlay-Legacy-Android/releases) v0.2.18 or newer. |
 
 **The Android version on a unit's settings page is often not the real one.** Many aftermarket units show 9, 10 or even 12 and run 8.1 or older. The small line under the verdict on DiPlay T8's check card is what the system itself reports, for example `Android 8.1.0 (API 27)`; go by the API number. "There was a problem parsing the package" on install means the real version is older than that APK needs.
 
@@ -313,13 +323,13 @@ A report helps whether it worked or not: owners of the same unit learn what to e
 
 ### What this build still has that upstream does not
 
-Compared with upstream 0.2.20 (2026-10-14). Upstream has since added Android 7.1 support, Traditional Chinese and IPv4 first on hotspots itself, and has taken the Bluetooth test, the Bluetooth-first order and the report in a browser from this fork. Those no longer count, or differ only in the detail the table gives.
+Compared with upstream 0.2.22 (2026-10-28). Upstream has since added Android 7.0 support, Traditional Chinese and IPv4 first on hotspots itself, and has taken the Bluetooth test, the Bluetooth-first order and the report in a browser from this fork. Those no longer count, or differ only in the detail the table gives.
 
 | | Upstream DiPlay | DiPlay T8 |
 |---|---|---|
-| Minimum Android | 7.1 | 8.1 |
+| Minimum Android | 7.0 | 8.1 |
 | A head unit check before connecting, with one verdict | no | yes |
-| A test for Bluetooth connections that are not real | yes (since 0.2.18): the attempt stops with the cause; nothing is kept on the home page | yes, kept on the home page, and the app stops connecting by itself |
+| A test for Bluetooth connections that are not real | yes (since 0.2.18): the attempt stops with the cause; since 0.2.22 Home shows the last problem | yes, kept on the home page, and the app stops connecting by itself |
 | Bluetooth checked before the unit's Wi-Fi is touched | yes (since 0.2.19); with Bluetooth off it asks you to turn it on | yes, and Bluetooth is switched on by the app up to Android 11 |
 | An app-owned hotspot on Android 8 and 9, nothing to type | no (type the car hotspot's name and password, or use an existing Wi-Fi) | yes |
 | Handling the car's own hotspot when it is on | no | yes, three ways |
@@ -334,7 +344,7 @@ So the split is simple: **to get CarPlay running, use upstream; when upstream wi
 
 ### What went back to upstream
 
-What is found here and can be fixed in upstream is sent there, so everyone gets it. Status as of 2026-10-15.
+What is found here and can be fixed in upstream is sent there, so everyone gets it. Status as of 2026-10-28.
 
 | Upstream PR | What it does | Status |
 |---|---|---|
@@ -352,9 +362,15 @@ What is found here and can be fixed in upstream is sent there, so everyone gets 
 | [#777](https://github.com/shihabal3amri/DiPlay/pull/777) | Home asks for the system access the hotspot needs on units that are not BYD | merged, 0.2.20 |
 | [#778](https://github.com/shihabal3amri/DiPlay/pull/778) | Choose iPhone shows no English placeholder name before an iPhone is chosen | merged, 0.2.20 |
 | [#786](https://github.com/shihabal3amri/DiPlay/pull/786) | Siri on long press only is offered on BYD units only | merged, 0.2.20 |
-| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | The connecting screen names the wireless permission that was refused | merged, next release |
-| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | The connecting screen says why the hotspot or iPhone did not connect, and when automatic retries stop | merged, next release |
-| [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | While waiting for the iPhone over USB, the report lists the USB devices Android sees | merged, next release |
+| [#795](https://github.com/shihabal3amri/DiPlay/pull/795) | The connecting screen names the wireless permission that was refused | merged, 0.2.21 |
+| [#824](https://github.com/shihabal3amri/DiPlay/pull/824) | The connecting screen says why the hotspot or iPhone did not connect, and when automatic retries stop | merged, 0.2.21 |
+| [#830](https://github.com/shihabal3amri/DiPlay/pull/830) | While waiting for the iPhone over USB, the report lists the USB devices Android sees | merged, 0.2.21 |
+| [#847](https://github.com/shihabal3amri/DiPlay/pull/847) | Upstream installs on Android 7.0 | merged, 0.2.21 |
+| [#853](https://github.com/shihabal3amri/DiPlay/pull/853) | CarPlay menu settings save even when an unused hotspot is not set up | merged, 0.2.21 |
+| [#876](https://github.com/shihabal3amri/DiPlay/pull/876) | A wired attempt that recovers before its retry is left alone | merged, 0.2.21 |
+| [#893](https://github.com/shihabal3amri/DiPlay/pull/893) | No repeated prompt after Wi-Fi Direct is refused beside the car hotspot | merged, 0.2.21 |
+
+0.2.22 took 43 more, most of them found while testing on a Galaxy Note20 with an iPhone: multi-touch ([#912](https://github.com/shihabal3amri/DiPlay/pull/912)), an immediate retry when Bluetooth turns on ([#914](https://github.com/shihabal3amri/DiPlay/pull/914)), the hotspot interface on DiLink 3.0 and 4.0 ([#936](https://github.com/shihabal3amri/DiPlay/pull/936), [#950](https://github.com/shihabal3amri/DiPlay/pull/950)), music speed swings over Wi-Fi ([#993](https://github.com/shihabal3amri/DiPlay/pull/993), [#1070](https://github.com/shihabal3amri/DiPlay/pull/1070), [#1080](https://github.com/shihabal3amri/DiPlay/pull/1080)), failure causes in plain words ([#1058](https://github.com/shihabal3amri/DiPlay/pull/1058), [#1060](https://github.com/shihabal3amri/DiPlay/pull/1060), [#1062](https://github.com/shihabal3amri/DiPlay/pull/1062), [#1066](https://github.com/shihabal3amri/DiPlay/pull/1066)), returning to CarPlay after the boot start ([#1085](https://github.com/shihabal3amri/DiPlay/pull/1085)) and more. The full list: [PRs by Boring206 merged upstream](https://github.com/shihabal3amri/DiPlay/pulls?q=is%3Apr+author%3ABoring206+is%3Amerged).
 
 ### What was actually exercised
 
