@@ -186,4 +186,136 @@ class Iap2ProtocolTest {
 
         assertTrue(formatted.contains("\\r\\n"))
     }
+
+    @Test
+    fun formatterHidesTheAccessoryWifiPassphrase() {
+        val passphrase = "Car-Hotspot-Pass-4821"
+        val frame = Iap2WirelessMessages.accessoryWiFiConfiguration(
+            ssid = "DIRECT-xy-DiPlay",
+            passphrase = passphrase,
+            channel = 36,
+            securityType = 3,
+        )
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", frame)
+
+        assertFalse(formatted, passphrase in formatted)
+        assertTrue(formatted, "passphrase: <redacted>" in formatted)
+        assertTrue(formatted, "SSID: \"DIRECT-xy-DiPlay\"" in formatted)
+        assertTrue(formatted, "securityType: u8=3" in formatted)
+    }
+
+    @Test
+    fun formatterHidesTheWirelessSessionPassphrase() {
+        val passphrase = "Car-Hotspot-Pass-4821"
+        val frame = Iap2CarPlayMessages.startSession(
+            wireless = Iap2WirelessSessionParameters(
+                ssid = "DIRECT-xy-DiPlay",
+                passphrase = passphrase,
+                channel = 36,
+                ipAddresses = listOf("192.168.49.1"),
+                securityType = 3,
+            ),
+            airPlayPort = 7000,
+            publicKey = "pub",
+            sourceVersion = "1.0",
+        )
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", frame)
+
+        assertFalse(formatted, passphrase in formatted)
+        assertTrue(formatted, "passphrase: <redacted>" in formatted)
+        assertTrue(formatted, "SSID: \"DIRECT-xy-DiPlay\"" in formatted)
+        assertTrue(formatted, "securityType: u8=3" in formatted)
+    }
+
+    @Test
+    fun formatterStillShowsTheEmptyPassphraseOfAnOpenNetwork() {
+        val frame = Iap2WirelessMessages.accessoryWiFiConfiguration(
+            ssid = "DIRECT-xy-DiPlay",
+            passphrase = "",
+            channel = 6,
+            securityType = 0,
+        )
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", frame)
+
+        assertTrue(formatted, "passphrase: \"\"" in formatted)
+    }
+
+    @Test
+    fun formatterHidesTheAccessoryWifiPassphraseInTheRawBody() {
+        val passphrase = "Car-Hotspot-Pass-4821"
+        val frame = Iap2WirelessMessages.accessoryWiFiConfiguration(
+            ssid = "Home",
+            passphrase = passphrase,
+            channel = 36,
+            securityType = 3,
+        )
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", frame)
+
+        assertTrue(formatted, "raw-body=<redacted>" in formatted)
+        assertShowsNoPartOf(passphrase, formatted)
+    }
+
+    @Test
+    fun formatterHidesTheWirelessSessionPassphraseInTheRawBody() {
+        val passphrase = "Car-Hotspot-Pass-4821"
+        val frame = Iap2CarPlayMessages.startSession(
+            wireless = Iap2WirelessSessionParameters(
+                ssid = "Home",
+                passphrase = passphrase,
+                channel = 36,
+                ipAddresses = listOf("192.168.49.1"),
+                securityType = 3,
+            ),
+            airPlayPort = 7000,
+            publicKey = "pub",
+            sourceVersion = "1.0",
+        )
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", frame)
+
+        assertTrue(formatted, "raw-body=<redacted>" in formatted)
+        assertShowsNoPartOf(passphrase, formatted)
+    }
+
+    @Test
+    fun formatterHidesThePassphraseInAMalformedBody() {
+        val passphrase = "Car-Hotspot-Pass-4821"
+        val body = Iap2WirelessMessages.accessoryWiFiConfiguration(
+            ssid = "Home",
+            passphrase = passphrase,
+            channel = 36,
+            securityType = 3,
+        ).payload
+        val truncated = Iap2Frame(Iap2Endpoints.ACCESSORY_WIFI_CONFIGURATION.id, body.copyOf(body.size - 1))
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wireless", truncated)
+
+        assertTrue(formatted, "body=malformed TLV" in formatted)
+        assertTrue(formatted, "raw-body=<redacted>" in formatted)
+        assertShowsNoPartOf(passphrase, formatted)
+    }
+
+    @Test
+    fun formatterStillShowsTheRawBodyOfFramesWithoutSecrets() {
+        val frame = Iap2ControlMessages.locationInformation("\$GPGGA,1")
+
+        val formatted = Iap2FrameFormatter.format(Iap2TraceDirection.TX, "wired", frame)
+
+        assertTrue(formatted, "raw-body=${hex(frame.payload)}" in formatted)
+    }
+
+    private fun assertShowsNoPartOf(passphrase: String, formatted: String) {
+        assertFalse(formatted, passphrase in formatted)
+        // Four-byte runs, in the trace's hex form; shorter runs can match other bytes by chance.
+        passphrase.windowed(4).forEach { run ->
+            assertFalse(formatted, hex(run.encodeToByteArray()) in formatted.lowercase())
+        }
+    }
+
+    private fun hex(bytes: ByteArray): String =
+        bytes.joinToString(" ") { "%02x".format(it.toInt() and 0xff) }
 }
