@@ -1018,6 +1018,8 @@
     <string name="settings_mfi_target_description">Choose USB/CH341 only while a CH341 authentication adapter is connected to the head unit. Without one, choose Local offline. Applies at the next connection.</string>
     <string name="settings_call_speakerphone">Calls on the loudspeaker</string>
     <string name="settings_call_speakerphone_description">For an Android phone or tablet used as the head unit: plays CarPlay calls on its loudspeaker instead of the earpiece and uses its hands-free microphone. Leave off on a car head unit. Applies from the next call.</string>
+    <string name="settings_call_media_output">Calls through the media output (experimental)</string>
+    <string name="settings_call_media_output_description">For a head unit where music plays but CarPlay calls are silent: plays calls the way music plays, without Android\'s call mode, and records them with the plain microphone. Android\'s own echo and noise reduction for calls does not run, so turn on call echo cancellation if the other person hears an echo. Leave off if calls already have sound. Applies from the next call.</string>
     <string name="settings_navigation_attenuation">Navigation guidance volume</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Reduce CarPlay navigation guidance without changing music or call volume. Applies immediately; your head unit’s navigation volume still works.</string>

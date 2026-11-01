@@ -952,6 +952,8 @@
     <string name="settings_mfi_target_description">Yalnızca ana üniteye bir CH341 kimlik doğrulama adaptörü bağlıyken USB/CH341\'i seçin. Adaptör yoksa Yerel çevrimdışı\'nı seçin. Sonraki bağlantıda geçerli olur.</string>
     <string name="settings_call_speakerphone">Hoparlörden aramalar</string>
     <string name="settings_call_speakerphone_description">Ana ünite olarak kullanılan bir Android telefon veya tablet içindir: CarPlay aramalarını ahize yerine hoparlörden oynatır ve eller serbest mikrofonunu kullanır. Araç ana ünitesinde kapalı bırakın. Sonraki aramadan itibaren geçerli olur.</string>
+    <string name="settings_call_media_output">Medya çıkışından aramalar (deneysel)</string>
+    <string name="settings_call_media_output_description">Müziğin çaldığı ama CarPlay aramalarının sessiz kaldığı ana üniteler içindir: aramaları müzik gibi, Android\'in arama modu olmadan oynatır ve normal mikrofonla kaydeder. Android\'in aramalar için yankı ve gürültü azaltması çalışmaz; karşı taraf yankı duyarsa arama yankı engellemeyi açın. Aramalarda zaten ses varsa kapalı bırakın. Sonraki aramadan itibaren geçerli olur.</string>
     <string name="settings_navigation_attenuation">Navigasyon yönlendirme ses düzeyi</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Müzik veya arama sesini değiştirmeden CarPlay navigasyon yönlendirmesini azaltın. Hemen geçerli olur; ana ünitenizin navigasyon ses düzeyi çalışmaya devam eder.</string>

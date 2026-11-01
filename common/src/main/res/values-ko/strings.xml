@@ -986,6 +986,8 @@
     <string name="settings_mfi_target_description">CH341 인증 어댑터가 헤드 유닛에 연결된 경우에만 USB/CH341을 선택하세요. 어댑터가 없으면 로컬 오프라인을 선택하세요. 다음 연결부터 적용됩니다.</string>
     <string name="settings_call_speakerphone">스피커폰으로 통화</string>
     <string name="settings_call_speakerphone_description">헤드 유닛으로 사용하는 Android 휴대전화 또는 태블릿용 설정입니다. CarPlay 통화를 수화부 대신 스피커로 재생하고 핸즈프리 마이크를 사용합니다. 차량 헤드 유닛에서는 끄세요. 다음 통화부터 적용됩니다.</string>
+    <string name="settings_call_media_output">미디어 출력으로 통화 (실험 기능)</string>
+    <string name="settings_call_media_output_description">음악은 나오지만 CarPlay 통화가 들리지 않는 헤드 유닛용 설정입니다. 통화를 음악과 같은 방식으로 재생하고 Android 통화 모드를 사용하지 않으며 일반 마이크로 녹음합니다. Android 자체 통화 에코 제거와 소음 감소가 작동하지 않으므로 상대방에게 에코가 들리면 ‘통화 에코 제거’를 켜세요. 통화 소리가 이미 나오면 끄세요. 다음 통화부터 적용됩니다.</string>
     <string name="settings_navigation_attenuation">내비게이션 안내 음량</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">음악이나 통화 음량은 변경하지 않고 CarPlay 내비게이션 안내 음량을 낮춥니다. 즉시 적용되며 헤드 유닛의 내비게이션 음량 조절 기능은 계속 사용할 수 있습니다.</string>

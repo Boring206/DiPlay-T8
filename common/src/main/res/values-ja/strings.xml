@@ -1017,6 +1017,8 @@
     <string name="settings_mfi_target_description">USB/CH341 は、CH341 認証アダプターを車載機に接続しているときだけ選択してください。接続していない場合は「ローカル／オフライン」を選択します。次回の接続から適用されます。</string>
     <string name="settings_call_speakerphone">通話をスピーカーで再生</string>
     <string name="settings_call_speakerphone_description">車載機として使う Android スマートフォンやタブレット向け：CarPlay の通話を受話口ではなくスピーカーで再生し、ハンズフリー用マイクを使います。車の車載機ではオフのままにしてください。次の通話から適用されます。</string>
+    <string name="settings_call_media_output">通話をメディア出力で再生（実験的機能）</string>
+    <string name="settings_call_media_output_description">音楽は鳴るのに CarPlay の通話が無音になる車載機向け：通話を音楽と同じ方法で再生し、Android の通話モードを使わず、通常のマイクで録音します。Android 標準の通話用エコーキャンセルとノイズ抑制は動作しないため、相手にエコーが聞こえる場合は「通話のエコーキャンセル」をオンにしてください。通話に音が出る場合はオフのままにしてください。次の通話から適用されます。</string>
     <string name="settings_navigation_attenuation">ナビ案内の音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">CarPlayのナビ案内だけ音量を下げます。音楽や通話の音量は変わりません。変更はすぐに反映され、車載端末側のナビ音量も引き続き使用できます。</string>

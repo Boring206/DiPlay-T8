@@ -5326,6 +5326,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             callEchoCancellation = AirPlayPersistence.loadCallEchoCancellation(this),
             callVoiceFilter = AirPlayPersistence.loadCallVoiceFilter(this),
             callSpeakerphone = { AirPlayPersistence.loadCallSpeakerphone(this) },
+            callMediaOutput = { AirPlayPersistence.loadCallMediaOutput(this) },
             // Only a SurfaceView honours release timestamps; smooth video always selects one.
             videoPacingDelayMillis = if (smoothVideo) smoothVideoDelayMillis(fps) else 0,
             mainVideoFrameRate = fps,

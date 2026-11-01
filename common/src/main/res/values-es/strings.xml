@@ -915,6 +915,8 @@
     <string name="settings_mfi_target_description">Elige USB/CH341 solo si hay un adaptador de autenticación CH341 conectado a la unidad principal. Sin él, elige Local sin conexión. Se aplica en la próxima conexión.</string>
     <string name="settings_call_speakerphone">Llamadas por el altavoz</string>
     <string name="settings_call_speakerphone_description">Para un teléfono o una tableta Android usados como unidad principal: reproduce las llamadas de CarPlay por su altavoz en lugar del auricular y usa su micrófono manos libres. Déjalo desactivado en la unidad principal de un coche. Se aplica desde la próxima llamada.</string>
+    <string name="settings_call_media_output">Llamadas por la salida multimedia (experimental)</string>
+    <string name="settings_call_media_output_description">Para una unidad principal en la que la música suena pero las llamadas de CarPlay no: reproduce las llamadas como la música, sin el modo de llamada de Android, y graba con el micrófono normal. La cancelación de eco y la reducción de ruido de Android para llamadas no se ejecutan; si la otra persona oye eco, activa la cancelación de eco en llamadas. Déjalo desactivado si las llamadas ya tienen sonido. Se aplica desde la próxima llamada.</string>
     <string name="settings_navigation_attenuation">Volumen de las indicaciones de navegación</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Reduce solo las indicaciones de navegación de CarPlay, sin cambiar música ni llamadas. Se aplica al instante; sigue funcionando el volumen de navegación de la unidad.</string>

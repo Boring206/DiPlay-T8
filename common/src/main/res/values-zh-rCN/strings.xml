@@ -975,6 +975,8 @@
     <string name="settings_mfi_target_description">只有车机上插着 CH341 认证适配器时才选择 USB/CH341。没有适配器时请选择「本地离线」。下次连接时生效。</string>
     <string name="settings_call_speakerphone">通话使用扬声器</string>
     <string name="settings_call_speakerphone_description">适用于用作车机的 Android 手机或平板：CarPlay 通话从扬声器播放而不是听筒，并使用免提麦克风。车机上请保持关闭。从下一次通话开始生效。</string>
+    <string name="settings_call_media_output">通话改走媒体输出（实验性）</string>
+    <string name="settings_call_media_output_description">适用于音乐有声音、CarPlay 通话却没有声音的车机：通话按播放音乐的方式播放，不进入 Android 的通话模式，并用普通麦克风录音。Android 自带的通话回声消除和降噪不会运行，如果对方听到回声，请打开「通话回声消除」。通话已经有声音时请保持关闭。从下一次通话开始生效。</string>
     <string name="settings_navigation_attenuation">导航播报音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">仅降低 CarPlay 导航播报音量，不影响音乐和通话。调整立即生效，车机自身的导航音量仍可使用。</string>

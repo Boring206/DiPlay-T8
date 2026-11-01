@@ -82,6 +82,7 @@ object AirPlayPersistence {
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
     private const val KEY_CALL_SPEAKERPHONE = "call_speakerphone"
+    private const val KEY_CALL_MEDIA_OUTPUT = "call_media_output"
     private const val KEY_SMOOTH_VIDEO = "smooth_video"
     private const val KEY_MTK_DECODER_TUNING = "mtk_decoder_tuning"
     private const val KEY_DIRECT_VIDEO_OUTPUT = "direct_video_output"
@@ -810,6 +811,13 @@ object AirPlayPersistence {
 
     fun saveCallSpeakerphone(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_SPEAKERPHONE, enabled).apply()
+    }
+
+    fun loadCallMediaOutput(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_MEDIA_OUTPUT, false)
+
+    fun saveCallMediaOutput(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_MEDIA_OUTPUT, enabled).apply()
     }
 
     fun saveFps(context: Context, fps: Int) {

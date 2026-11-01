@@ -204,6 +204,8 @@ class AndroidMediaSink(
     private val callVoiceFilter: Boolean = false,
     /** Read at each call: a phone or tablet used as the head unit plays calls on its loudspeaker (#701). */
     private val callSpeakerphone: () -> Boolean = { false },
+    /** Read at each call: play calls like music on a head unit whose call path is silent ([callPlaysAsMedia]). */
+    private val callMediaOutput: () -> Boolean = { false },
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -558,8 +560,7 @@ class AndroidMediaSink(
     override fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
-            val speakerphoneCall = config.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)
+            val speakerphoneCall = config.audioType == "telephony" && callPlaysAsMedia()
             if (config.audioType == "telephony" && !speakerphoneCall) enterCommunicationMode(id)
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
@@ -585,6 +586,14 @@ class AndroidMediaSink(
             restoreAudioMode(id)
         }
     }
+
+    /**
+     * A call plays like music, without Android's call mode, while DiPlay has paused the car Bluetooth (no SCO), or
+     * when the driver chose it for a head unit whose call path stays silent although music plays (#1198, #1214).
+     */
+    private fun callPlaysAsMedia(): Boolean =
+        (appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)) ||
+            runCatching(callMediaOutput).getOrDefault(false)
 
     private fun enterCommunicationMode(id: AudioStreamId) {
         val manager = audioManager ?: return
@@ -746,8 +755,7 @@ class AndroidMediaSink(
             mediaBufferMillis,
             onAudioDiagnostic,
             ambientSinkToken,
-            speakerphoneCall = format.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
+            speakerphoneCall = format.audioType == "telephony" && callPlaysAsMedia(),
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also {
