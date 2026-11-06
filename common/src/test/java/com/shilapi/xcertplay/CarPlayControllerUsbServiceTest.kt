@@ -214,7 +214,7 @@ class CarPlayControllerUsbServiceTest {
         assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
     }
 
-    @Test fun anAttachOrAnIphoneThatLeftTheBusEndsTheWaitWithoutALook() {
+    @Test fun anAttachEndsTheWaitWithoutALook() {
         val context = UsbContext(true)
         val usb = context.getSystemService(UsbManager::class.java)
         val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
@@ -230,12 +230,54 @@ class CarPlayControllerUsbServiceTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
         assertTrue(logs.none { it.contains("USB transition unanswered") })
 
-        // The iPhone is off the bus while it re-enumerates: its attach will end the wait.
+        // The iPhone is off the bus while it re-enumerates, then its attach answers the request.
         shadowOf(usb).removeUsbDevice(iphone)
         ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
             ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
-        assertTrue(logs.none { it.contains("USB transition unanswered") })
+        ReflectionHelpers.getField<java.util.concurrent.atomic.AtomicInteger>(controller, "availabilityPollGeneration")
+            .incrementAndGet()
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/005"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        assertTrue(logs.none { it.contains("USB transition unanswered") || it.contains("permission already granted") })
+    }
+
+    // #1220: a Necvox unit (Android 10) never broadcast the attach of the iPhone back in CarPlay mode, so
+    // wired CarPlay stayed on "Getting CarPlay ready" for 20 minutes.
+    @Test fun anIphoneBackUnderANewNameWithoutAnAttachIsTakenUp() {
+        val context = UsbContext(true)
+        val usb = context.getSystemService(UsbManager::class.java)
+        val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
+        shadowOf(usb).addOrUpdateUsbDevice(iphone, true)
+        val logs = mutableListOf<String>()
+        val controller = waitingForReenumeration(context, logs)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
+            ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
+        shadowOf(usb).removeUsbDevice(iphone)
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/005"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(CarPlayController.REENUMERATION_WAIT_MILLIS + 100))
+
+        assertTrue(logs.any { it.contains("the iPhone is back as /dev/bus/usb/001/005 without an attach") })
+        assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
+    }
+
+    @Test fun anIphoneStillOffTheBusIsLookedForUntilItReturns() {
+        val context = UsbContext(true)
+        val usb = context.getSystemService(UsbManager::class.java)
+        val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
+        val logs = mutableListOf<String>()
+        val controller = waitingForReenumeration(context, logs)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
+            ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(25))
+        assertTrue(logs.none { it.contains("permission already granted") })
+        assertEquals(1, logs.count { it.contains("no iPhone listed after 10000ms count=1; still looking") })
+
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/006"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+        assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
     }
 
     private fun waitingForReenumeration(context: Context, logs: MutableList<String>): CarPlayController {
