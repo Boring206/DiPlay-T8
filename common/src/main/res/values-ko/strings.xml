@@ -2,7 +2,7 @@
     <string name="existing_wifi_title">기존 Wi-Fi / 동일 LAN</string>
     <string name="existing_wifi_description">기존 공유기나 휴대용 Wi-Fi를 사용합니다. 인터넷에 연결된 같은 네트워크에 iPhone과 차량을 연결하세요.</string>
     <string name="existing_wifi_hint">기존 Wi-Fi · 두 기기를 같은 Wi-Fi에 연결하고 Bluetooth를 켜세요. 차량 핫스팟은 필요하지 않습니다.</string>
-    <string name="existing_wifi_instructions">시스템 설정에서 차량과 iPhone을 같은 외부 Wi-Fi에 연결하세요. 아래에 정확한 네트워크 이름과 WPA2 비밀번호를 입력하세요. 개방형 네트워크만 비밀번호를 비워 둘 수 있습니다. 공유기에서 WPA2 또는 WPA2/WPA3 혼합 모드를 사용하고 클라이언트 격리를 해제하세요. DiPlay는 이 Wi-Fi 연결을 유지하며 핫스팟을 만들지 않습니다.</string>
+    <string name="existing_wifi_instructions">시스템 설정에서 차량과 iPhone을 같은 외부 Wi-Fi에 연결하세요. 아래에 정확한 네트워크 이름과 WPA2 비밀번호를 입력하세요. 비밀번호가 없는 개방형 네트워크는 사용할 수 없습니다. iPhone은 비밀번호가 있는 네트워크에서만 무선 CarPlay를 시작하기 때문입니다. 공유기에서 WPA2 또는 WPA2/WPA3 혼합 모드를 사용하고 클라이언트 격리를 해제하세요. DiPlay는 이 Wi-Fi 연결을 유지하며 핫스팟을 만들지 않습니다.</string>
     <string name="existing_wifi_details">외부 Wi-Fi 정보</string>
     <string name="existing_wifi_ssid">외부 Wi-Fi 이름(SSID)</string>
     <string name="existing_wifi_password">외부 Wi-Fi 비밀번호</string>
@@ -1046,6 +1046,8 @@
     <string name="connection_help_usb_device_not_iphone">차량의 데이터 또는 CarPlay USB 포트에 USB 데이터 케이블을 연결하고, 다른 USB 기기를 분리한 뒤 iPhone 잠금을 해제하세요.</string>
     <string name="car_hotspot_details_differ">차량 핫스팟 설정이 DiPlay에 저장된 정보와 다릅니다</string>
     <string name="connection_help_car_hotspot_details_differ">연결 설정에서 저장된 핫스팟 편집을 누르고 차량 핫스팟 설정의 이름과 비밀번호를 그대로 입력한 뒤 다시 시도하세요.</string>
+    <string name="existing_wifi_is_open">공유 Wi-Fi에 비밀번호가 없음</string>
+    <string name="connection_help_existing_wifi_open">iPhone은 비밀번호가 있는 Wi-Fi에서만 무선 CarPlay를 시작합니다. 공유기에 WPA2 비밀번호를 설정하고 차량과 iPhone을 다시 연결한 뒤 연결 설정에 비밀번호를 입력하고 다시 시도하세요.</string>
     <string name="hotspot_interface_not_found">DiPlay에 저장된 핫스팟 인터페이스가 이 차량에 없습니다</string>
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>

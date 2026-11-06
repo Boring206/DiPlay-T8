@@ -27,6 +27,7 @@ internal object ConnectionFailureGuidance {
             ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND -> return R.string.connection_help_hotspot_interface_not_found
             ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT,
             ConnectionFailureCause.CAR_HOTSPOT_START_FAILED -> return R.string.connection_help_hotspot
+            ConnectionFailureCause.EXISTING_WIFI_OPEN -> return R.string.connection_help_existing_wifi_open
             null -> Unit
         }
         when (failure.startupFailure) {
@@ -72,6 +73,7 @@ internal object ConnectionFailureGuidance {
         ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND -> R.string.hotspot_interface_not_found
         ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT -> R.string.hotspot_control_timeout
         ConnectionFailureCause.CAR_HOTSPOT_START_FAILED -> R.string.hotspot_control_failed
+        ConnectionFailureCause.EXISTING_WIFI_OPEN -> R.string.existing_wifi_is_open
     }
 
     /** The network the iPhone joins: the car hotspot, a Wi-Fi Direct group, or a shared Wi-Fi. */

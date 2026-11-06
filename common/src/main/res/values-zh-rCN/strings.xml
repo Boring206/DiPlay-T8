@@ -2,7 +2,7 @@
     <string name="existing_wifi_title">现有 Wi-Fi / 同一局域网</string>
     <string name="existing_wifi_description">使用已有路由器或随身 Wi-Fi。让 iPhone 和车机保持连接同一网络，并通过它上网。</string>
     <string name="existing_wifi_hint">现有 Wi-Fi · 两台设备保持连接同一 Wi-Fi，蓝牙保持开启，无需开启车机热点。</string>
-    <string name="existing_wifi_instructions">先在系统设置中将车机和 iPhone 连接同一外部 Wi-Fi，再准确填写它的名称和 WPA2 密码；仅开放网络可留空密码。路由器使用 WPA2 或 WPA2/WPA3 混合模式，并关闭客户端隔离。DiPlay 保持此 Wi-Fi 连接，不创建热点。</string>
+    <string name="existing_wifi_instructions">先在系统设置中将车机和 iPhone 连接同一外部 Wi-Fi，再准确填写它的名称和 WPA2 密码；没有密码的开放网络无法使用，因为 iPhone 只会在有密码的网络上启动无线 CarPlay。路由器使用 WPA2 或 WPA2/WPA3 混合模式，并关闭客户端隔离。DiPlay 保持此 Wi-Fi 连接，不创建热点。</string>
     <string name="existing_wifi_details">外部 Wi-Fi 详情</string>
     <string name="existing_wifi_ssid">外部 Wi-Fi 名称（SSID）</string>
     <string name="existing_wifi_password">外部 Wi-Fi 密码</string>
@@ -958,6 +958,8 @@
     <string name="connection_help_usb_device_not_iphone">请用 USB 数据线连接车机的 USB 数据接口或 CarPlay 接口，拔掉其他 USB 设备，并解锁 iPhone。</string>
     <string name="car_hotspot_details_differ">车机热点设置与 DiPlay 中保存的不同</string>
     <string name="connection_help_car_hotspot_details_differ">请在“连接设置”中点击“编辑已保存的热点”，从车机热点设置中复制名称和密码，然后重试。</string>
+    <string name="existing_wifi_is_open">共享的 Wi-Fi 没有密码</string>
+    <string name="connection_help_existing_wifi_open">iPhone 只会在有密码的 Wi-Fi 上启动无线 CarPlay。请在路由器设置 WPA2 密码，让车机和 iPhone 重新连接，再在“连接设置”中填入密码，然后重试。</string>
     <string name="hotspot_interface_not_found">DiPlay 中保存的热点网络接口在此车机上不存在</string>
     <string name="connection_help_hotspot_interface_not_found">请在“连接设置”中点击“编辑已保存的热点”，清空“热点网络接口（可选）”，然后重试。</string>
     <string name="connection_help_car_hotspot_off">请在车机设置中开启车机热点，然后重试。</string>

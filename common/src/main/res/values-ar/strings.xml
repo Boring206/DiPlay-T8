@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">شبكة Wi-Fi موجودة / نفس الشبكة المحلية</string>
     <string name="existing_wifi_description">استخدم جهاز توجيه أو Wi-Fi محمولاً موجوداً. أبقِ iPhone والسيارة على الشبكة نفسها مع اتصال بالإنترنت.</string>
     <string name="existing_wifi_hint">Wi-Fi موجودة · أبقِ الجهازين على شبكة Wi-Fi نفسها والبلوتوث قيد التشغيل. لا تحتاج إلى نقطة اتصال السيارة.</string>
-    <string name="existing_wifi_instructions">وصّل السيارة وiPhone بشبكة Wi-Fi خارجية واحدة في إعدادات النظام. أدخل اسمها الدقيق وكلمة مرور WPA2؛ اترك كلمة المرور فارغة للشبكة المفتوحة فقط. استخدم WPA2 أو الوضع المختلط WPA2/WPA3 وأوقف عزل الأجهزة في جهاز التوجيه. يحتفظ DiPlay بهذا الاتصال ولا ينشئ نقطة اتصال.</string>
+    <string name="existing_wifi_instructions">وصّل السيارة وiPhone بشبكة Wi-Fi خارجية واحدة في إعدادات النظام. أدخل اسمها الدقيق وكلمة مرور WPA2؛ لا تعمل الشبكة المفتوحة بلا كلمة مرور، لأن iPhone لا يبدأ CarPlay اللاسلكي إلا على شبكة محمية بكلمة مرور. استخدم WPA2 أو الوضع المختلط WPA2/WPA3 وأوقف عزل الأجهزة في جهاز التوجيه. يحتفظ DiPlay بهذا الاتصال ولا ينشئ نقطة اتصال.</string>
     <string name="existing_wifi_details">بيانات شبكة Wi-Fi الخارجية</string>
     <string name="existing_wifi_ssid">اسم شبكة Wi-Fi الخارجية (SSID)</string>
     <string name="existing_wifi_password">كلمة مرور شبكة Wi-Fi الخارجية</string>
@@ -947,6 +947,8 @@
     <string name="connection_help_usb_device_not_iphone">استخدم كابل بيانات USB في منفذ بيانات USB أو منفذ CarPlay في السيارة، وافصل أجهزة USB الأخرى، وافتح قفل iPhone.</string>
     <string name="car_hotspot_details_differ">إعدادات نقطة اتصال السيارة تختلف عن المحفوظة في DiPlay</string>
     <string name="connection_help_car_hotspot_details_differ">في «إعداد الاتصال»، اضغط «تعديل نقطة الاتصال المحفوظة» وانسخ الاسم وكلمة المرور من إعدادات نقطة اتصال السيارة، ثم أعد المحاولة.</string>
+    <string name="existing_wifi_is_open">شبكة Wi-Fi المشتركة بلا كلمة مرور</string>
+    <string name="connection_help_existing_wifi_open">لا يبدأ iPhone تشغيل CarPlay اللاسلكي إلا على شبكة Wi-Fi محمية بكلمة مرور. عيّن كلمة مرور WPA2 في جهاز التوجيه، وأعد توصيل السيارة وiPhone بها، وأدخل كلمة المرور في «إعداد الاتصال»، ثم أعد المحاولة.</string>
     <string name="hotspot_interface_not_found">واجهة نقطة الاتصال المحفوظة في DiPlay غير موجودة في هذه السيارة</string>
     <string name="connection_help_hotspot_interface_not_found">في «إعداد الاتصال»، اضغط «تعديل نقطة الاتصال المحفوظة» وامسح «واجهة نقطة الاتصال (اختياري)»، ثم أعد المحاولة.</string>
     <string name="connection_help_car_hotspot_off">شغّل نقطة اتصال السيارة في إعدادات السيارة، ثم أعد المحاولة.</string>

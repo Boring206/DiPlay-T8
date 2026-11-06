@@ -2,7 +2,7 @@
     <string name="existing_wifi_title">現有 Wi-Fi / 同一區域網路</string>
     <string name="existing_wifi_description">使用已有路由器或隨身 Wi-Fi。讓 iPhone 和車機保持連線同一網路，並透過它上網。</string>
     <string name="existing_wifi_hint">現有 Wi-Fi · 兩部裝置保持連線同一 Wi-Fi，藍牙保持開啟，無需開啟車機熱點。</string>
-    <string name="existing_wifi_instructions">先在系統設定中將車機和 iPhone 連線同一外部 Wi-Fi，再準確填寫它的名稱和 WPA2 密碼；僅開放網路可留空密碼。路由器使用 WPA2 或 WPA2/WPA3 混合模式，並關閉用戶端隔離。DiPlay 保持此 Wi-Fi 連線，不建立熱點。</string>
+    <string name="existing_wifi_instructions">先在系統設定中將車機和 iPhone 連線同一外部 Wi-Fi，再準確填寫它的名稱和 WPA2 密碼；沒有密碼的開放網路無法使用，因為 iPhone 只會在有密碼的網路上啟動無線 CarPlay。路由器使用 WPA2 或 WPA2/WPA3 混合模式，並關閉用戶端隔離。DiPlay 保持此 Wi-Fi 連線，不建立熱點。</string>
     <string name="existing_wifi_details">外部 Wi-Fi 詳細資訊</string>
     <string name="existing_wifi_ssid">外部 Wi-Fi 名稱（SSID）</string>
     <string name="existing_wifi_password">外部 Wi-Fi 密碼</string>
@@ -958,6 +958,8 @@
     <string name="connection_help_usb_device_not_iphone">請用 USB 傳輸線連接車機的 USB 資料連線埠或 CarPlay 連線埠，拔除其他 USB 裝置，並解鎖 iPhone。</string>
     <string name="car_hotspot_details_differ">車機熱點設定與 DiPlay 儲存的不同</string>
     <string name="connection_help_car_hotspot_details_differ">請在「連線設定」點一下「編輯已儲存的熱點」，從車機熱點設定中複製名稱和密碼，再重試。</string>
+    <string name="existing_wifi_is_open">共用的 Wi-Fi 沒有密碼</string>
+    <string name="connection_help_existing_wifi_open">iPhone 只會在有密碼的 Wi-Fi 上啟動無線 CarPlay。請在路由器設定 WPA2 密碼，讓車機和 iPhone 重新連上，再到「連線設定」填入密碼後重試。</string>
     <string name="hotspot_interface_not_found">DiPlay 儲存的熱點網路介面在此車機上不存在</string>
     <string name="connection_help_hotspot_interface_not_found">請在「連線設定」點一下「編輯已儲存的熱點」，清除「熱點網路介面（選填）」，再重試。</string>
     <string name="connection_help_car_hotspot_off">請在車機設定中開啟車機熱點，再重試。</string>

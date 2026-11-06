@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Существующая Wi-Fi / Одна LAN</string>
     <string name="existing_wifi_description">Используйте существующий роутер или мобильную точку Wi-Fi. iPhone и автомобиль остаются в одной сети с доступом в Интернет.</string>
     <string name="existing_wifi_hint">Существующая Wi-Fi · Подключите оба устройства к одной Wi-Fi и включите Bluetooth. Точка доступа автомобиля не нужна.</string>
-    <string name="existing_wifi_instructions">В системных настройках подключите автомобиль и iPhone к одной внешней Wi-Fi. Введите её точное имя и пароль WPA2; оставьте пароль пустым только для открытой сети. Используйте WPA2 или смешанный режим WPA2/WPA3 и отключите изоляцию клиентов на роутере. DiPlay сохраняет это подключение и не создаёт точку доступа.</string>
+    <string name="existing_wifi_instructions">В системных настройках подключите автомобиль и iPhone к одной внешней Wi-Fi. Введите её точное имя и пароль WPA2; открытая сеть без пароля не подойдёт: iPhone запускает беспроводной CarPlay только в сети с паролем. Используйте WPA2 или смешанный режим WPA2/WPA3 и отключите изоляцию клиентов на роутере. DiPlay сохраняет это подключение и не создаёт точку доступа.</string>
     <string name="existing_wifi_details">Данные внешней Wi-Fi</string>
     <string name="existing_wifi_ssid">Имя внешней Wi-Fi (SSID)</string>
     <string name="existing_wifi_password">Пароль внешней Wi-Fi</string>
@@ -898,6 +898,8 @@
     <string name="connection_help_usb_device_not_iphone">Используйте кабель данных USB и порт данных USB или порт CarPlay автомобиля, отключите другие USB-устройства и разблокируйте iPhone.</string>
     <string name="car_hotspot_details_differ">Настройки точки доступа автомобиля отличаются от сохранённых в DiPlay</string>
     <string name="connection_help_car_hotspot_details_differ">В разделе «Настройка подключения» нажмите «Изменить сохранённую точку доступа», скопируйте имя и пароль из настроек точки доступа автомобиля и повторите попытку.</string>
+    <string name="existing_wifi_is_open">У общей Wi-Fi нет пароля</string>
+    <string name="connection_help_existing_wifi_open">iPhone запускает беспроводной CarPlay только в сети Wi-Fi с паролем. Задайте на роутере пароль WPA2, заново подключите к сети автомобиль и iPhone, введите пароль в разделе «Настройка подключения» и повторите попытку.</string>
     <string name="hotspot_interface_not_found">Интерфейс точки доступа, сохранённый в DiPlay, отсутствует в этом автомобиле</string>
     <string name="connection_help_hotspot_interface_not_found">В разделе «Настройка подключения» нажмите «Изменить сохранённую точку доступа», очистите поле «Интерфейс точки доступа (необязательно)» и повторите попытку.</string>
     <string name="connection_help_car_hotspot_off">Включите точку доступа автомобиля в настройках автомобиля и повторите попытку.</string>

@@ -10,7 +10,7 @@
     <string name="existing_wifi_title">既存のWi-Fi／同一LAN</string>
     <string name="existing_wifi_description">既存のルーターやモバイルWi-Fiを使用します。iPhoneと車載端末を、インターネットに接続できる同じネットワークにつないでください。</string>
     <string name="existing_wifi_hint">既存のWi-Fi · 両端末を同じWi-Fiに接続し、Bluetoothもオンにしてください。車のホットスポットは不要です。</string>
-    <string name="existing_wifi_instructions">車載端末とiPhoneをシステム設定で同じWi-Fiに接続してください。下に正確なネットワーク名とWPA2パスワードを入力します。パスワードを空にできるのはオープンネットワークだけです。ルーターはWPA2またはWPA2/WPA3混在モードを使用し、クライアント分離を無効にしてください。DiPlayは既存のWi-Fiを使い、ホットスポットを作成しません。</string>
+    <string name="existing_wifi_instructions">車載端末とiPhoneをシステム設定で同じWi-Fiに接続してください。下に正確なネットワーク名とWPA2パスワードを入力します。パスワードのないオープンネットワークは使えません。iPhoneはパスワード付きのネットワークでしかワイヤレスCarPlayを開始しないためです。ルーターはWPA2またはWPA2/WPA3混在モードを使用し、クライアント分離を無効にしてください。DiPlayは既存のWi-Fiを使い、ホットスポットを作成しません。</string>
     <string name="existing_wifi_details">外部Wi-Fiの情報</string>
     <string name="existing_wifi_ssid">外部Wi-Fi名（SSID）</string>
     <string name="existing_wifi_password">外部Wi-Fiのパスワード</string>
@@ -1000,6 +1000,8 @@
     <string name="connection_help_usb_device_not_iphone">USBデータケーブルで車のUSBデータポートまたはCarPlay用ポートに接続し、ほかのUSBデバイスを外して、iPhoneのロックを解除してください。</string>
     <string name="car_hotspot_details_differ">車載ホットスポットの設定がDiPlayに保存された内容と異なります</string>
     <string name="connection_help_car_hotspot_details_differ">「接続設定」で「保存済みのホットスポットを編集」をタップし、車のホットスポット設定から名前とパスワードを転記してから再試行してください。</string>
+    <string name="existing_wifi_is_open">共有Wi-Fiにパスワードがありません</string>
+    <string name="connection_help_existing_wifi_open">iPhoneはパスワード付きのWi-FiでしかワイヤレスCarPlayを開始しません。ルーターにWPA2パスワードを設定し、車載端末とiPhoneを接続し直してから、「接続設定」にパスワードを入力して再試行してください。</string>
     <string name="hotspot_interface_not_found">DiPlayに保存されたホットスポットのインターフェースがこの車にありません</string>
     <string name="connection_help_hotspot_interface_not_found">「接続設定」で「保存済みのホットスポットを編集」をタップし、「ホットスポットのインターフェース（任意）」を空欄にしてから再試行してください。</string>
     <string name="connection_help_car_hotspot_off">車の設定で車載ホットスポットをオンにしてから再試行してください。</string>

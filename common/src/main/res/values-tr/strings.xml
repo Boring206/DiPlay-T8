@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Mevcut Wi-Fi / Aynı Yerel Ağ</string>
     <string name="existing_wifi_description">Mevcut bir yönlendirici veya taşınabilir Wi-Fi kullanın. iPhone ve aracı internet erişimi olan aynı ağda tutun.</string>
     <string name="existing_wifi_hint">Mevcut Wi-Fi · Her iki cihazı da aynı Wi-Fi ağında ve Bluetooth\'u açık tutun. Araç erişim noktası gerekmez.</string>
-    <string name="existing_wifi_instructions">Sistem ayarlarından aracı ve iPhone\'u aynı harici Wi-Fi ağına bağlayın. Aşağıya tam adını ve WPA2 parolasını girin; parolayı yalnızca açık ağlar için boş bırakın. WPA2 veya karma WPA2/WPA3 modunu kullanın ve yönlendiricide istemci yalıtımını devre dışı bırakın. DiPlay bu Wi-Fi bağlantısını korur ve erişim noktası oluşturmaz.</string>
+    <string name="existing_wifi_instructions">Sistem ayarlarından aracı ve iPhone\'u aynı harici Wi-Fi ağına bağlayın. Aşağıya tam adını ve WPA2 parolasını girin; parolasız açık bir ağ çalışmaz, çünkü iPhone kablosuz CarPlay\'i yalnızca parolalı bir ağda başlatır. WPA2 veya karma WPA2/WPA3 modunu kullanın ve yönlendiricide istemci yalıtımını devre dışı bırakın. DiPlay bu Wi-Fi bağlantısını korur ve erişim noktası oluşturmaz.</string>
     <string name="existing_wifi_details">Harici Wi-Fi ayrıntıları</string>
     <string name="existing_wifi_ssid">Harici Wi-Fi adı (SSID)</string>
     <string name="existing_wifi_password">Harici Wi-Fi parolası</string>
@@ -1010,6 +1010,8 @@
     <string name="cluster_song_gate">Müzik kartını otomatik etkinleştir</string>
     <string name="cluster_song_gate_description">Kart, aracın medya yığını açılana kadar gizli kalır. Kapıyı açmak bunu yapar; bu da medya ekranını kısa süre öne getirir ve ardından DiPlay\'e döner. Ekran yanıp sönmesini atlamak için kapalı bırakın. Hemen geçerli olur.</string>
     <string name="connection_help_car_hotspot_details_differ">Bağlantı kurulumunda, Kaydedilen erişim noktasını düzenle\'ye dokunun ve aracın erişim noktası ayarlarından ad ve parolayı kopyalayın, ardından tekrar deneyin.</string>
+    <string name="existing_wifi_is_open">Paylaşılan Wi-Fi\'nin parolası yok</string>
+    <string name="connection_help_existing_wifi_open">iPhone kablosuz CarPlay\'i yalnızca parolalı bir Wi-Fi ağında başlatır. Yönlendiricide bir WPA2 parolası ayarlayın, aracı ve iPhone\'u bu ağa yeniden bağlayın, parolayı Bağlantı kurulumuna girin ve tekrar deneyin.</string>
     <string name="connection_help_car_hotspot_off">Araç ayarlarından araç erişim noktasını açın, ardından tekrar deneyin.</string>
     <string name="connection_help_choose_iphone">Araçla birden fazla cihaz eşleştirilmiş. DiPlay\'e dönün, iPhone seç\'e dokunup kendinizinkini seçin, ardından tekrar deneyin.</string>
     <string name="connection_help_chosen_iphone_not_paired">iPhone\'u tekrar aracın Bluetooth\'u ile eşleştirin veya DiPlay\'e dönüp başka bir tane seçmek için iPhone seç\'e dokunun. Ardından tekrar deneyin.</string>
