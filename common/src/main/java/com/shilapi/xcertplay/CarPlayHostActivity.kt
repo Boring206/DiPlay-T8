@@ -55,6 +55,7 @@ import android.view.ViewTreeObserver
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -6889,6 +6890,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val hideTop = hideTopBar && !multiWindow
         val hideBottom = hideBottomBar && !multiWindow
+        applyCutoutMode(hideTop && hideBottom)
         WindowCompat.setDecorFitsSystemWindows(window, !(hideTop && hideBottom))
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         val peek = temporarySystemBarsVisible && !multiWindow && !harmanFullscreenEnabled
@@ -6904,6 +6906,22 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    /**
+     * Android 9 to 14 keep a full-screen window out of the notch strip, which stays black (#1224). With the fit
+     * on, the safe area already keeps CarPlay's controls clear of the notch, so the picture may fill the strip.
+     */
+    private fun applyCutoutMode(fullScreen: Boolean) {
+        if (Build.VERSION.SDK_INT < 28) return
+        val mode = if (fullScreen && AirPlayPersistence.loadFitScreenShape(this)) {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        } else {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+        }
+        if (window.attributes.layoutInDisplayCutoutMode != mode) {
+            window.attributes = window.attributes.apply { layoutInDisplayCutoutMode = mode }
+        }
     }
 
     /** Temporary reveal without persisting bar visibility or changing AirPlay's negotiated size. */
