@@ -2160,19 +2160,45 @@ class CarPlayController(
      * session left wired CarPlay waiting for minutes (#335). Without an attach the iPhone is looked at again,
      * which uses the mode it already offers, as before the request.
      */
-    private fun watchReenumeration(device: UsbDevice) {
+    private fun watchReenumeration(device: UsbDevice) = lookForReenumeratedIphone(device, REENUMERATION_WAIT_MILLIS)
+
+    /**
+     * Some head units never broadcast the attach of the iPhone back in CarPlay mode, which left wired CarPlay
+     * on "Getting CarPlay ready" for 20 minutes (#1220). An iPhone listed under a new name is taken up as if
+     * its attach had arrived, and one still off the bus is looked for again until it returns or attaches.
+     */
+    private fun lookForReenumeratedIphone(device: UsbDevice, delayMillis: Long) {
         val attempt = reenumerationAttempts
         val generation = availabilityPollGeneration.get()
         mainHandler.postDelayed({
             if (closed || phase != Phase.REENUMERATION || attempt != reenumerationAttempts ||
                 generation != availabilityPollGeneration.get()) return@postDelayed
-            // An iPhone that left the bus is still re-enumerating: its attach ends the wait.
-            val listed = iphoneHost.discover().firstOrNull { it.deviceName == device.deviceName } ?: return@postDelayed
-            connectionDiagnostic(
-                "USB transition unanswered after ${REENUMERATION_WAIT_MILLIS}ms count=$attempt; checking the iPhone again",
-            )
-            requestIphonePermission(listed)
-        }, REENUMERATION_WAIT_MILLIS)
+            val iphones = iphoneHost.discover()
+            val listed = iphones.firstOrNull { it.deviceName == device.deviceName }
+            val returned = iphones.firstOrNull()
+            when {
+                listed != null -> {
+                    connectionDiagnostic(
+                        "USB transition unanswered after ${REENUMERATION_WAIT_MILLIS}ms count=$attempt; checking the iPhone again",
+                    )
+                    requestIphonePermission(listed)
+                }
+                returned != null -> {
+                    connectionDiagnostic(
+                        "USB transition: the iPhone is back as ${returned.deviceName} without an attach count=$attempt",
+                    )
+                    onIphoneAttached(returned)
+                }
+                else -> {
+                    if (delayMillis == REENUMERATION_WAIT_MILLIS) {
+                        connectionDiagnostic(
+                            "USB transition: no iPhone listed after ${REENUMERATION_WAIT_MILLIS}ms count=$attempt; still looking",
+                        )
+                    }
+                    lookForReenumeratedIphone(device, DEVICE_AVAILABILITY_POLL_INTERVAL_MILLIS)
+                }
+            }
+        }, delayMillis)
     }
 
     private fun onIphoneAttached(device: UsbDevice) {
