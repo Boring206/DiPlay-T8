@@ -13,6 +13,9 @@ import android.os.Build
 import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
+import com.shilapi.xcertplay.network.WirelessStartupException
+import com.shilapi.xcertplay.network.WirelessStartupFailure
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.transport.Iap2WirelessSecurity
 import java.io.IOException
 import java.net.Inet6Address
@@ -160,10 +163,18 @@ class ExistingWifiManagerTest {
         manager().use { assertEquals(Iap2WirelessSecurity.WPA_WPA2, start(it).security) }
     }
 
-    @Test @Config(sdk = [33]) fun rejectsObservedOpenSecuredAndEnterpriseConfigurationMismatch() {
+    // #1232: an iPhone told to use an open network never opens the AirPlay connection, while the same
+    // router with WPA2 connects in seconds. Retrying cannot help, so the attempt stops with the reason.
+    @Test fun anOpenNetworkStopsBeforeAttachingWithItsOwnReason() {
+        manager("").use { assertOpenNetwork { start(it) } }
+    }
+
+    @Test @Config(sdk = [33]) fun anObservedOpenNetworkStopsEvenWithASavedPassword() {
         `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_OPEN)
-        manager().use { assertThrows(IOException::class.java) { start(it) } }
-        manager("").use { assertEquals(Iap2WirelessSecurity.NONE, start(it).security) }
+        manager().use { assertOpenNetwork { start(it) } }
+    }
+
+    @Test @Config(sdk = [33]) fun rejectsObservedSecuredAndEnterpriseConfigurationMismatch() {
         `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_PSK)
         manager("").use { assertThrows(IOException::class.java) { start(it) } }
         `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_EAP)
@@ -173,11 +184,11 @@ class ExistingWifiManagerTest {
     @Test fun redactedSsidAllowsManualConfigurationAndUnknownChannelStaysZero() {
         `when`(info.ssid).thenReturn(WifiManager.UNKNOWN_SSID)
         `when`(info.frequency).thenReturn(-1)
-        manager("").use {
+        manager().use {
             val result = start(it)
             assertEquals("Pocket Wi-Fi", result.ssid)
             assertEquals(0, result.channel)
-            assertEquals(Iap2WirelessSecurity.NONE, result.security)
+            assertEquals(Iap2WirelessSecurity.WPA_WPA2, result.security)
         }
     }
 
@@ -260,6 +271,13 @@ class ExistingWifiManagerTest {
 
     private fun capabilities(vararg transports: Int): NetworkCapabilities = mock(NetworkCapabilities::class.java).also {
         `when`(it.hasTransport(anyInt())).thenAnswer { call -> call.getArgument<Int>(0) in transports }
+    }
+
+    private fun assertOpenNetwork(attempt: () -> Unit) {
+        val failure = assertThrows(WirelessStartupException::class.java) { attempt() }
+        assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
+        assertFalse(failure.reason.retryable)
+        assertEquals(ConnectionFailureCause.EXISTING_WIFI_OPEN, failure.knownCause)
     }
 
     private fun start(manager: ExistingWifiManager, timeout: Long = 1000): WirelessHotspotInfo {
