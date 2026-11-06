@@ -3,6 +3,7 @@ package com.shilapi.xcertplay.backup
 import android.content.Context
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayPicture
+import com.shilapi.xcertplay.transport.LockdownPairRecord
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -67,6 +68,27 @@ class SettingsBackupCodecTest {
         assertFalse(diplay.has("phone_name"))
         assertEquals(80, document.getJSONObject("settings").getJSONObject("carplay_picture").getInt("brightness"))
         assertFalse(document.getJSONObject("settings").has("diplay_car_hotspot"))
+    }
+
+    @Test
+    fun exportOmitsWiredPairRecords() {
+        AirPlayPersistence.saveLockdownRecord(
+            context,
+            LockdownPairRecord.restore(
+                hostId = "HOST-OF-OWNER",
+                systemBuid = "BUID",
+                wifiMacAddress = "aa:bb:cc:dd:ee:ff",
+                devicePublicKeyPem = "device-key".toByteArray(),
+                deviceCertificatePem = "device-cert".toByteArray(),
+                hostPrivateKeyPem = "host-private".toByteArray(),
+                hostCertificatePem = "host-cert".toByteArray(),
+                rootPrivateKeyPem = "root-private".toByteArray(),
+                rootCertificatePem = "root-cert".toByteArray(),
+            ),
+        )
+        val document = String(SettingsBackupCodec.export(context, "0.2.22"))
+        assertFalse(document.contains("HOST-OF-OWNER"))
+        assertFalse(document.contains("lockdown"))
     }
 
     @Test
