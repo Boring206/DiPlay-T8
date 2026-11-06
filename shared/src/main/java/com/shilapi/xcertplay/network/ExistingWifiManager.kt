@@ -10,6 +10,7 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Looper
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 import com.shilapi.xcertplay.transport.Iap2WirelessSecurity
 import java.io.IOException
@@ -67,6 +68,7 @@ class ExistingWifiManager(
         }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         check(selected == null) { "ExistingWifiManager has already started" }
+        if (passphrase.isEmpty()) throw openNetwork()
         val started = System.nanoTime()
         // An explicit interface covers units whose station LAN runs on an interface Android never
         // reports as Wi-Fi, such as a USB NIC presenting itself as eth1 (#573 family). The SSID and
@@ -125,14 +127,10 @@ class ExistingWifiManager(
                     val observedSecurity = if (Build.VERSION.SDK_INT >= 31 && info != null) info.currentSecurityType else -1
                     if (Build.VERSION.SDK_INT >= 31) {
                         when (observedSecurity) {
-                            WifiInfo.SECURITY_TYPE_OPEN -> if (passphrase.isNotEmpty()) {
-                                throw IOException("Connected Wi-Fi is open; clear the saved Wi-Fi password")
-                            }
-                            WifiInfo.SECURITY_TYPE_PSK, WifiInfo.SECURITY_TYPE_SAE -> if (passphrase.isEmpty()) {
-                                throw IOException("Connected Wi-Fi is secured; enter its WPA2 password")
-                            }
+                            WifiInfo.SECURITY_TYPE_OPEN -> throw openNetwork()
+                            WifiInfo.SECURITY_TYPE_PSK, WifiInfo.SECURITY_TYPE_SAE,
                             WifiInfo.SECURITY_TYPE_UNKNOWN -> Unit
-                            else -> throw IOException("Existing Wi-Fi requires an open or WPA2-Personal network")
+                            else -> throw IOException("Existing Wi-Fi requires a WPA2-Personal network")
                         }
                     }
                 }
@@ -159,9 +157,9 @@ class ExistingWifiManager(
                     throw IOException("Existing Wi-Fi changed during startup; connect again")
                 }
                 onDiagnostic("Existing Wi-Fi attached iface=$name host=${address.hostAddress} " +
-                    "networkNameReadable=$networkNameReadable channel=$channel security=${security()} " +
+                    "networkNameReadable=$networkNameReadable channel=$channel security=${Iap2WirelessSecurity.WPA_WPA2} " +
                     "receiverIdentity=saved" + if (configured != null) " configuredInterface=$configured" else "")
-                return WirelessHotspotInfo(ssid, passphrase, security(), channel, frequency,
+                return WirelessHotspotInfo(ssid, passphrase, Iap2WirelessSecurity.WPA_WPA2, channel, frequency,
                     // The router's BSSID is not this receiver's AirPlay device identity.
                     null, name, address, when {
                         frequency == null -> "Auto"
@@ -190,8 +188,13 @@ class ExistingWifiManager(
         properties.interfaceName == interfaceName && properties.linkAddresses.any { it.address == host } &&
             existingWifiHostAddresses(properties.linkAddresses.map { it.address }, interfaceIndex).toSet() == hosts.toSet()
 
-    private fun security(): Iap2WirelessSecurity =
-        if (passphrase.isEmpty()) Iap2WirelessSecurity.NONE else Iap2WirelessSecurity.WPA_WPA2
+    // An iPhone told to use an open network never opens the AirPlay connection, while the same router
+    // with WPA2 connects within seconds (#1232), so retrying cannot help.
+    private fun openNetwork() = WirelessStartupException(
+        WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+        "Existing Wi-Fi is open; iPhones start wireless CarPlay only on a network with a password",
+        ConnectionFailureCause.EXISTING_WIFI_OPEN,
+    )
 
     private fun readableSsid(info: WifiInfo?): String? = info?.ssid?.removeSurrounding("\"")
         ?.takeUnless { it == WifiManager.UNKNOWN_SSID || it.isEmpty() }

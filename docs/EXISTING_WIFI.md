@@ -3,8 +3,10 @@
 Connect the Android receiver and iPhone to the same third-party router or portable
 Wi-Fi in system settings. In DiPlay → Connection setup → Wireless, select
 **Existing Wi-Fi / Same LAN**, enter the exact SSID and WPA2 password, and save.
-For an open network, leave the password empty. Keep Bluetooth enabled and the iPhone
-paired with the receiver, then start wireless CarPlay as usual.
+The network needs a password. An iPhone told to use an open network never opens the
+CarPlay connection, so DiPlay stops with that reason instead of retrying (#1232). Keep
+Bluetooth enabled and the iPhone paired with the receiver, then start wireless CarPlay
+as usual.
 
 Use WPA2-Personal or WPA2/WPA3 mixed mode. WPA3-only, enterprise authentication and
 captive portals are outside this mode’s current scope. Both clients must be able to
@@ -63,8 +65,16 @@ The contributor reports a successful clean install of the final implementation o
 21.1.21.2401160.1: the previous test app was uninstalled, the standalone test APK was
 installed and configured normally, and Same LAN entered CarPlay with no issues noticed
 during use. This validates that setup; it does not establish compatibility with every
-receiver, iOS version or router. Open and WPA2/WPA3 mixed networks have not been
-separately validated on hardware.
+receiver, iOS version or router. WPA2/WPA3 mixed networks have not been separately
+validated on hardware.
+
+Open networks do not work. On 2026-11-06 a Galaxy Note20 (Android 13) and an iPhone 16 Pro
+(iOS 27.2) shared one TOTOLINK router. With the router open, every attempt ended in the
+first-TCP timeout, on IPv4 and on IPv6, with the iPhone already joined to the network,
+and with the empty passphrase field left out of 0x5703 and 0x4301. With the same router on
+WPA2-Personal the iPhone opened the AirPlay connection 5.4 s after StartSession and
+CarPlay ran. #1232 reports the same timeout on an open network from an Android 12 box
+and iOS 26.
 For a device check, confirm that both devices keep the existing Wi-Fi connection,
 CarPlay starts, and the iPhone can use online services. For failures, save one diagnostic
 report with the attempt time and the iPhone’s actual Wi-Fi connection. An absence of
