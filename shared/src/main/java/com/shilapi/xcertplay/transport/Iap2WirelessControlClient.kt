@@ -179,14 +179,9 @@ class Iap2WirelessControlClient(
 
                     DEVICE_TRANSPORT_IDENTIFIER_NOTIFICATION -> {
                         transportNotificationSeen = true
-                        val identifiers = Iap2WirelessMessages.deviceTransportIdentifier(incoming)
+                        val diagnostic = deviceTransportIdentifierDiagnostic(incoming)
                         stage = later(stage, Iap2WirelessControlStage.TRANSPORT_NOTIFIED)
-                        onProgress(
-                            "iap2 rx=0x4e0e device-transport-identifier " +
-                                "bluetooth=${identifiers.bluetoothMac ?: "none"} " +
-                                "usb=${identifiers.usbTransportIdentifier ?: "none"}; " +
-                                "resending 0x5703",
-                        )
+                        onProgress("$diagnostic; resending 0x5703")
                         if (
                             postTransportWiFiConfigurationsSent >=
                             MAX_POST_TRANSPORT_WIFI_CONFIGURATION_SENDS
@@ -251,6 +246,17 @@ class Iap2WirelessControlClient(
                 "themeAssets=${value.themeAssets?.available ?: "unknown"}"
         } catch (error: Exception) {
             "iap2 availability decode=failed failureClass=${error.javaClass.simpleName}"
+        }
+
+        /** A malformed identifier is only logged; it must not end the control loop before 0x5703. */
+        internal fun deviceTransportIdentifierDiagnostic(frame: Iap2Frame): String = try {
+            val identifiers = Iap2WirelessMessages.deviceTransportIdentifier(frame)
+            "iap2 rx=0x4e0e device-transport-identifier " +
+                "bluetooth=${identifiers.bluetoothMac ?: "none"} " +
+                "usb=${identifiers.usbTransportIdentifier ?: "none"}"
+        } catch (error: Exception) {
+            "iap2 rx=0x4e0e device-transport-identifier decode=failed " +
+                "failureClass=${error.javaClass.simpleName}"
         }
 
         /** Optional AP hint is independent of the AirPlay receiver identity. */
