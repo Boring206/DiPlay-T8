@@ -22,9 +22,13 @@ import kotlin.math.roundToLong
 internal class MediaClockTrim(
     private val sampleRate: Int,
     private var targetFrames: Long,
-    private var integral: Double = learnedTrim,
+    integral: Double = learnedTrim,
     private val measuresTarget: Boolean = false,
 ) {
+    // Clean once for both phases: a NaN or out-of-range learned trim must never reach
+    // roundToInt / setPlaybackRate, whether or not this instance measures the target.
+    private var integral = if (integral.isFinite()) integral.coerceIn(-MAX_TRIM, MAX_TRIM) else 0.0
+
     private class Measuring(val halfStartNs: Long? = null, val earlierHalfMean: Double? = null) {
         var levelFrameNs = 0.0
     }
@@ -58,7 +62,8 @@ internal class MediaClockTrim(
         compressedBacklog = compressedFrames > targetFrames
         val buffered = queuedFrames.coerceAtLeast(0L) +
             compressedFrames.coerceIn(0L, sampleRate.toLong() * 16L)
-        val elapsedNs = nowNs - lastSampleNs
+        // A clock that jumps backwards is not a negative interval.
+        val elapsedNs = (nowNs - lastSampleNs).coerceAtLeast(0L)
         // Samples come only after writes, and over Wi-Fi the writes come in bursts 0.4 s apart: the level
         // just after one is its peak. Average what was queued over the time since the last write, while
         // the track drained it, or a 300 ms target reads as overfull and the trim plays fast (#807).
