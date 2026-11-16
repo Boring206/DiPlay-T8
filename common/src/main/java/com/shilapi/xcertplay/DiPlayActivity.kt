@@ -2030,6 +2030,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)
                 markReconnectNeeded()
             }
+            toggle(card, getString(R.string.settings_call_media_output), getString(R.string.settings_call_media_output_description),
+                AirPlayPersistence.loadCallMediaOutput(this)) { AirPlayPersistence.saveCallMediaOutput(this, it) }
             toggle(card, getString(R.string.call_voice_filter), getString(R.string.call_voice_filter_description),
                 AirPlayPersistence.loadCallVoiceFilter(this)) {
                 AirPlayPersistence.saveCallVoiceFilter(this, it)
@@ -2110,8 +2112,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             musicBufferChoice(card, wireless = false)
             toggle(card, getString(R.string.settings_call_speakerphone), getString(R.string.settings_call_speakerphone_description),
                 AirPlayPersistence.loadCallSpeakerphone(this)) { AirPlayPersistence.saveCallSpeakerphone(this, it) }
-            toggle(card, getString(R.string.settings_call_media_output), getString(R.string.settings_call_media_output_description),
-                AirPlayPersistence.loadCallMediaOutput(this)) { AirPlayPersistence.saveCallMediaOutput(this, it) }
         }
         filteredSection(content, SettingsSection.NAVIGATION_WHEEL,
             getString(R.string.settings_navigation_wheel_volume), R.drawable.ic_dp_audio) { card ->

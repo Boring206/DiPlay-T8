@@ -65,7 +65,35 @@ class CallMediaOutputTest {
         assertEquals(AudioChannel.PHONE, callChannel())
     }
 
+    // On the media output a call must not be muted by a transient focus loss, nor wait for the music start buffer.
+    @Test fun aCallOnTheMediaOutputTakesFocusAndStartsLikeACall() {
+        val withOption = playCall(mediaOutput = true)
+        val withoutOption = playCall(mediaOutput = false)
+
+        val focus = "Audio: focus requested channel=PHONE gain=${AudioManager.AUDIOFOCUS_GAIN_TRANSIENT} "
+        assertTrue(withOption.joinToString("\n"), withOption.any { it.startsWith(focus) })
+        assertEquals(startMs(withoutOption), startMs(withOption))
+    }
+
     private fun log() = diagnostics.joinToString("\n")
+
+    /** One call downlink's diagnostics with Audio focus on and a 1 s music buffer, up to its focus request. */
+    private fun playCall(mediaOutput: Boolean): List<String> {
+        val lines = CopyOnWriteArrayList<String>()
+        val callSink = AndroidMediaSink(context = context, audioFocusEnabled = true, mediaBufferMillis = 1000,
+            onAudioDiagnostic = lines::add, callMediaOutput = { mediaOutput })
+        try {
+            callSink.onAudioStarted(telephony, AudioFormat(AudioCodecKind.LPCM, 16_000, 1, 100, "telephony"), 0)
+            val deadline = System.nanoTime() + 5_000_000_000L
+            while (lines.none { it.startsWith("Audio: focus requested") } && System.nanoTime() < deadline) Thread.sleep(10)
+        } finally {
+            callSink.close()
+        }
+        return lines
+    }
+
+    private fun startMs(lines: List<String>): String =
+        lines.single { it.startsWith("Audio: ready audioType=telephony ") }.substringAfter(" startMs=").substringBefore(' ')
 
     private fun start(mediaOutput: Boolean) {
         sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add, callMediaOutput = { mediaOutput })
