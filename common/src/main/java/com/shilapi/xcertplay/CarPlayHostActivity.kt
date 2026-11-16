@@ -55,6 +55,7 @@ import android.view.ViewTreeObserver
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -3616,6 +3617,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         val baseline = settingsBaseline ?: return
         val previewChangedSystemBars = hideTopBar != AirPlayPersistence.loadHideTopBar(this) ||
             hideBottomBar != AirPlayPersistence.loadHideBottomBar(this)
+        val fitBefore = fitsScreenShape()
         loadPersistedSettings()
         baseline.safeAreaRects.forEach { (size, savedRect) ->
             savedRect?.let { rect ->
@@ -3652,11 +3654,13 @@ open class CarPlayHostActivity : ComponentActivity() {
         updateHotspotStatusBlock()
         updateResolutionMenu()
         updateDebugOverlays()
-        // Closing an unchanged menu must not schedule a display renegotiation. Real bar
-        // previews still need to restore the window and re-measure after cancellation.
+        // Closing an unchanged menu must not schedule a display renegotiation. Real bar and
+        // fit previews still need to restore the window and re-measure after cancellation.
         if (previewChangedSystemBars) {
             applyFullscreenMode()
             refreshDisplaySizeAfterLayout()
+        } else {
+            refreshWindowIfFitChanged(fitBefore)
         }
     }
 
@@ -4296,9 +4300,11 @@ open class CarPlayHostActivity : ComponentActivity() {
                 checked = mainDisplayDisableSafeArea,
                 description = getString(R.string.rect_fill_disable_safe_area_description),
             ) { checked ->
+                val fitBefore = fitsScreenShape()
                 mainDisplayDisableSafeArea = checked
                 updateSafeAreaSummary()
                 updateResolutionMenu()
+                refreshWindowIfFitChanged(fitBefore)
             },
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -4321,10 +4327,12 @@ open class CarPlayHostActivity : ComponentActivity() {
                     else getString(R.string.black_corner_overlay_value, value)
                 },
             ) { value ->
+                val fitBefore = fitsScreenShape()
                 blackCornerRadiusDp = value
                 blackCornerOverlay?.radiusDp = localCornerRadius()
                 clearIphoneCornerMask()
                 appendLog("Local black corner radius preview=$value dp")
+                refreshWindowIfFitChanged(fitBefore)
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 .apply { topMargin = dp(8) },
@@ -5229,12 +5237,22 @@ open class CarPlayHostActivity : ComponentActivity() {
      * another size or nothing is in the way.
      */
     private fun fittedSafeArea(size: DisplaySize): SafeAreaRect? {
-        if (!AirPlayPersistence.loadFitScreenShape(this)) return null
-        if (blackCornerRadiusDp == CarPlayBlackCornerOverlay.IPHONE_MASK) return null
+        if (!fitsScreenShape()) return null
         val view = videoView ?: return null
         if (view.width != size.width || view.height != size.height) return null
         val shape = AndroidScreenShape.over(view) ?: return null
         return ScreenShapeSafeArea.fit(shape, size.width, size.height)
+    }
+
+    /** Square corners and the iPhone corner mask send CarPlay no safe area, so they turn the fit off. */
+    private fun fitsScreenShape(): Boolean = AirPlayPersistence.loadFitScreenShape(this) &&
+        !mainDisplayDisableSafeArea && blackCornerRadiusDp != CarPlayBlackCornerOverlay.IPHONE_MASK
+
+    /** Like the bar switches, the menu moves the window at once, so Save reconnects once at the new size. */
+    private fun refreshWindowIfFitChanged(fitBefore: Boolean) {
+        if (fitsScreenShape() == fitBefore) return
+        applyFullscreenMode()
+        refreshDisplaySizeAfterLayout()
     }
 
     private fun updateSafeAreaSummary() {
@@ -6889,6 +6907,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val hideTop = hideTopBar && !multiWindow
         val hideBottom = hideBottomBar && !multiWindow
+        applyCutoutMode(hideTop && hideBottom)
         WindowCompat.setDecorFitsSystemWindows(window, !(hideTop && hideBottom))
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         val peek = temporarySystemBarsVisible && !multiWindow && !harmanFullscreenEnabled
@@ -6904,6 +6923,22 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    /**
+     * Android 9 to 14 keep a full-screen window out of the notch strip, which stays black (#1224). With the fit
+     * on, the safe area already keeps CarPlay's controls clear of the notch, so the picture may fill the strip.
+     */
+    private fun applyCutoutMode(fullScreen: Boolean) {
+        if (Build.VERSION.SDK_INT < 28) return
+        val mode = if (fullScreen && fitsScreenShape()) {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        } else {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+        }
+        if (window.attributes.layoutInDisplayCutoutMode != mode) {
+            window.attributes = window.attributes.apply { layoutInDisplayCutoutMode = mode }
+        }
     }
 
     /** Temporary reveal without persisting bar visibility or changing AirPlay's negotiated size. */
