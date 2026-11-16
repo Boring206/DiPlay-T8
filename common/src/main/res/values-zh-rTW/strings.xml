@@ -958,8 +958,8 @@
     <string name="connection_help_usb_device_not_iphone">請用 USB 傳輸線連接車機的 USB 資料連線埠或 CarPlay 連線埠，拔除其他 USB 裝置，並解鎖 iPhone。</string>
     <string name="car_hotspot_details_differ">車機熱點設定與 DiPlay 儲存的不同</string>
     <string name="connection_help_car_hotspot_details_differ">請在「連線設定」點一下「編輯已儲存的熱點」，從車機熱點設定中複製名稱和密碼，再重試。</string>
-    <string name="existing_wifi_is_open">共用的 Wi-Fi 沒有密碼</string>
-    <string name="connection_help_existing_wifi_open">iPhone 只會在有密碼的 Wi-Fi 上啟動無線 CarPlay。請在路由器設定 WPA2 密碼，讓車機和 iPhone 重新連上，再到「連線設定」填入密碼後重試。</string>
+    <string name="existing_wifi_needs_password">共用的 Wi-Fi 需要密碼</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhone 只會在有密碼的 Wi-Fi 上啟動無線 CarPlay。請在「連線設定」填入路由器的 WPA2 密碼。路由器如果沒有密碼，請先設定一組，並讓車機和 iPhone 重新連上。然後重試。</string>
     <string name="hotspot_interface_not_found">DiPlay 儲存的熱點網路介面在此車機上不存在</string>
     <string name="connection_help_hotspot_interface_not_found">請在「連線設定」點一下「編輯已儲存的熱點」，清除「熱點網路介面（選填）」，再重試。</string>
     <string name="connection_help_car_hotspot_off">請在車機設定中開啟車機熱點，再重試。</string>

@@ -75,6 +75,7 @@ and with the empty passphrase field left out of 0x5703 and 0x4301. With the same
 WPA2-Personal the iPhone opened the AirPlay connection 5.4 s after StartSession and
 CarPlay ran. #1232 reports the same timeout on an open network from an Android 12 box
 and iOS 26.
+
 For a device check, confirm that both devices keep the existing Wi-Fi connection,
 CarPlay starts, and the iPhone can use online services. For failures, save one diagnostic
 report with the attempt time and the iPhone’s actual Wi-Fi connection. An absence of

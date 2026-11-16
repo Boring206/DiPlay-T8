@@ -161,22 +161,24 @@ class ExistingWifiManagerTest {
         `when`(caps.transportInfo).thenReturn(redacted)
         doReturn(caps).`when`(connectivity).getNetworkCapabilities(network)
         manager().use { assertEquals(Iap2WirelessSecurity.WPA_WPA2, start(it).security) }
+        assertTrue(diagnostics.single { it.contains("Existing Wi-Fi attached") }.contains("security=PSK"))
     }
 
     // #1232: an iPhone told to use an open network never opens the AirPlay connection, while the same
     // router with WPA2 connects in seconds. Retrying cannot help, so the attempt stops with the reason.
-    @Test fun anOpenNetworkStopsBeforeAttachingWithItsOwnReason() {
-        manager("").use { assertOpenNetwork { start(it) } }
+    @Test @Config(sdk = [33]) fun aSecuredNetworkWithNoSavedPasswordStopsWithoutBeingCalledOpen() {
+        `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_PSK)
+        val failure = manager("").use { assertNeedsPassword { start(it) } }
+        assertTrue(failure.message!!.startsWith("No Existing Wi-Fi password is saved;"))
     }
 
     @Test @Config(sdk = [33]) fun anObservedOpenNetworkStopsEvenWithASavedPassword() {
         `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_OPEN)
-        manager().use { assertOpenNetwork { start(it) } }
+        val failure = manager().use { assertNeedsPassword { start(it) } }
+        assertTrue(failure.message!!.startsWith("Existing Wi-Fi is open;"))
     }
 
-    @Test @Config(sdk = [33]) fun rejectsObservedSecuredAndEnterpriseConfigurationMismatch() {
-        `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_PSK)
-        manager("").use { assertThrows(IOException::class.java) { start(it) } }
+    @Test @Config(sdk = [33]) fun rejectsAnObservedEnterpriseNetwork() {
         `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_EAP)
         manager().use { assertThrows(IOException::class.java) { start(it) } }
     }
@@ -273,11 +275,13 @@ class ExistingWifiManagerTest {
         `when`(it.hasTransport(anyInt())).thenAnswer { call -> call.getArgument<Int>(0) in transports }
     }
 
-    private fun assertOpenNetwork(attempt: () -> Unit) {
+    private fun assertNeedsPassword(attempt: () -> Unit): WirelessStartupException {
         val failure = assertThrows(WirelessStartupException::class.java) { attempt() }
         assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
         assertFalse(failure.reason.retryable)
-        assertEquals(ConnectionFailureCause.EXISTING_WIFI_OPEN, failure.knownCause)
+        assertEquals(ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD, failure.knownCause)
+        assertTrue(diagnostics.none { it.contains("Existing Wi-Fi attached") })
+        return failure
     }
 
     private fun start(manager: ExistingWifiManager, timeout: Long = 1000): WirelessHotspotInfo {

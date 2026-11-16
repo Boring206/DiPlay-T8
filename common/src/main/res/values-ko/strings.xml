@@ -1046,8 +1046,8 @@
     <string name="connection_help_usb_device_not_iphone">차량의 데이터 또는 CarPlay USB 포트에 USB 데이터 케이블을 연결하고, 다른 USB 기기를 분리한 뒤 iPhone 잠금을 해제하세요.</string>
     <string name="car_hotspot_details_differ">차량 핫스팟 설정이 DiPlay에 저장된 정보와 다릅니다</string>
     <string name="connection_help_car_hotspot_details_differ">연결 설정에서 저장된 핫스팟 편집을 누르고 차량 핫스팟 설정의 이름과 비밀번호를 그대로 입력한 뒤 다시 시도하세요.</string>
-    <string name="existing_wifi_is_open">공유 Wi-Fi에 비밀번호가 없음</string>
-    <string name="connection_help_existing_wifi_open">iPhone은 비밀번호가 있는 Wi-Fi에서만 무선 CarPlay를 시작합니다. 공유기에 WPA2 비밀번호를 설정하고 차량과 iPhone을 다시 연결한 뒤 연결 설정에 비밀번호를 입력하고 다시 시도하세요.</string>
+    <string name="existing_wifi_needs_password">공유 Wi-Fi에 비밀번호가 필요함</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhone은 비밀번호가 있는 Wi-Fi에서만 무선 CarPlay를 시작합니다. 연결 설정에 공유기의 WPA2 비밀번호를 입력하세요. 공유기에 비밀번호가 없으면 먼저 설정하고 차량과 iPhone을 다시 연결하세요. 그런 다음 다시 시도하세요.</string>
     <string name="hotspot_interface_not_found">DiPlay에 저장된 핫스팟 인터페이스가 이 차량에 없습니다</string>
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>

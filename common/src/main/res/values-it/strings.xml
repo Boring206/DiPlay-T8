@@ -1034,8 +1034,8 @@
     <string name="connection_help_usb_device_not_iphone">Usa un cavo dati USB nella porta dati USB o CarPlay dell’auto, scollega gli altri dispositivi USB e sblocca l’iPhone.</string>
     <string name="car_hotspot_details_differ">Le impostazioni dell’hotspot dell’auto sono diverse da quelle salvate in DiPlay</string>
     <string name="connection_help_car_hotspot_details_differ">In Configurazione connessione tocca Modifica hotspot salvato e copia nome e password dalle impostazioni dell’hotspot dell’auto, poi riprova.</string>
-    <string name="existing_wifi_is_open">Il Wi-Fi condiviso non ha una password</string>
-    <string name="connection_help_existing_wifi_open">L’iPhone avvia CarPlay wireless solo su una rete Wi-Fi con password. Imposta una password WPA2 sul router, ricollega l’auto e l’iPhone, inserisci la password in Configurazione connessione, poi riprova.</string>
+    <string name="existing_wifi_needs_password">Il Wi-Fi condiviso richiede una password</string>
+    <string name="connection_help_existing_wifi_needs_password">L’iPhone avvia CarPlay wireless solo su una rete Wi-Fi con password. Inserisci la password WPA2 del router in Configurazione connessione. Se il router non ne ha una, impostala e ricollega l’auto e l’iPhone. Poi riprova.</string>
     <string name="hotspot_interface_not_found">L’interfaccia dell’hotspot salvata in DiPlay non esiste su quest’auto</string>
     <string name="connection_help_hotspot_interface_not_found">In Configurazione connessione tocca Modifica hotspot salvato, svuota Interfaccia dell’hotspot (facoltativa), poi riprova.</string>
     <string name="connection_help_car_hotspot_off">Accendi l’hotspot dell’auto nelle impostazioni dell’auto, poi riprova.</string>

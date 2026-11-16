@@ -68,7 +68,7 @@ class ExistingWifiManager(
         }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         check(selected == null) { "ExistingWifiManager has already started" }
-        if (passphrase.isEmpty()) throw openNetwork()
+        if (passphrase.isEmpty()) throw needsPassword("No Existing Wi-Fi password is saved")
         val started = System.nanoTime()
         // An explicit interface covers units whose station LAN runs on an interface Android never
         // reports as Wi-Fi, such as a USB NIC presenting itself as eth1 (#573 family). The SSID and
@@ -107,6 +107,7 @@ class ExistingWifiManager(
                 var channel = 0
                 var apBssid: ByteArray? = null
                 var networkNameReadable = false
+                var observedSecurity = "unread"
                 if (configured == null) {
                     val capabilities = connectivity.getNetworkCapabilities(network)
                     val networkInfo = if (Build.VERSION.SDK_INT >= 31) capabilities?.transportInfo as? WifiInfo else null
@@ -124,12 +125,12 @@ class ExistingWifiManager(
                     frequency = info?.frequency?.takeIf { it > 0 }
                     channel = frequency?.let(::wifiFrequencyMhzToChannel) ?: 0
                     apBssid = accessPointAddress(info?.bssid)
-                    val observedSecurity = if (Build.VERSION.SDK_INT >= 31 && info != null) info.currentSecurityType else -1
-                    if (Build.VERSION.SDK_INT >= 31) {
-                        when (observedSecurity) {
-                            WifiInfo.SECURITY_TYPE_OPEN -> throw openNetwork()
-                            WifiInfo.SECURITY_TYPE_PSK, WifiInfo.SECURITY_TYPE_SAE,
-                            WifiInfo.SECURITY_TYPE_UNKNOWN -> Unit
+                    if (Build.VERSION.SDK_INT >= 31 && info != null) {
+                        observedSecurity = when (info.currentSecurityType) {
+                            WifiInfo.SECURITY_TYPE_OPEN -> throw needsPassword("Existing Wi-Fi is open")
+                            WifiInfo.SECURITY_TYPE_PSK -> "PSK"
+                            WifiInfo.SECURITY_TYPE_SAE -> "SAE"
+                            WifiInfo.SECURITY_TYPE_UNKNOWN -> "UNKNOWN"
                             else -> throw IOException("Existing Wi-Fi requires a WPA2-Personal network")
                         }
                     }
@@ -157,7 +158,7 @@ class ExistingWifiManager(
                     throw IOException("Existing Wi-Fi changed during startup; connect again")
                 }
                 onDiagnostic("Existing Wi-Fi attached iface=$name host=${address.hostAddress} " +
-                    "networkNameReadable=$networkNameReadable channel=$channel security=${Iap2WirelessSecurity.WPA_WPA2} " +
+                    "networkNameReadable=$networkNameReadable channel=$channel security=$observedSecurity " +
                     "receiverIdentity=saved" + if (configured != null) " configuredInterface=$configured" else "")
                 return WirelessHotspotInfo(ssid, passphrase, Iap2WirelessSecurity.WPA_WPA2, channel, frequency,
                     // The router's BSSID is not this receiver's AirPlay device identity.
@@ -190,10 +191,10 @@ class ExistingWifiManager(
 
     // An iPhone told to use an open network never opens the AirPlay connection, while the same router
     // with WPA2 connects within seconds (#1232), so retrying cannot help.
-    private fun openNetwork() = WirelessStartupException(
+    private fun needsPassword(detail: String) = WirelessStartupException(
         WirelessStartupFailure.HOTSPOT_CONFIGURATION,
-        "Existing Wi-Fi is open; iPhones start wireless CarPlay only on a network with a password",
-        ConnectionFailureCause.EXISTING_WIFI_OPEN,
+        "$detail; iPhones start wireless CarPlay only on a network with a password",
+        ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD,
     )
 
     private fun readableSsid(info: WifiInfo?): String? = info?.ssid?.removeSurrounding("\"")
