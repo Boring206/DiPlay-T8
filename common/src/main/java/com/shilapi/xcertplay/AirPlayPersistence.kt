@@ -1576,6 +1576,13 @@ object AirPlayPersistence {
         return readLockdownRecord(prefs) { field -> "lockdown.$id.$field" }
     }
 
+    /** The most recently saved record: what releases up to 0.2.22 offered every iPhone. */
+    fun loadNewestLockdownRecord(context: Context): LockdownPairRecord? {
+        val prefs = lockdownPrefs(context)
+        val id = lockdownRecordIds(prefs).firstOrNull() ?: return null
+        return readLockdownRecord(prefs) { field -> "lockdown.$id.$field" }
+    }
+
     fun saveLockdownRecord(context: Context, record: LockdownPairRecord) {
         saveLockdownRecord(lockdownPrefs(context), record)
     }

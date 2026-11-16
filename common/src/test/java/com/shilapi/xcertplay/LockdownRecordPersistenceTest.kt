@@ -91,6 +91,21 @@ class LockdownRecordPersistenceTest {
         assertEquals("SECOND", load("a")?.hostId)
     }
 
+    // If an iPhone refuses the DevicePublicKey lookup, wired falls back to what 0.2.22 used for every iPhone.
+    @Test fun theNewestRecordIsTheLastOneSaved() {
+        assertNull(AirPlayPersistence.loadNewestLockdownRecord(context))
+        save(record("a"))
+        save(record("b"))
+        assertEquals("HOST-b", AirPlayPersistence.loadNewestLockdownRecord(context)?.hostId)
+        save(record("a"))
+        assertEquals("HOST-a", AirPlayPersistence.loadNewestLockdownRecord(context)?.hostId)
+    }
+
+    @Test fun aLegacyRecordIsTheNewest() {
+        writeLegacy(record("a"))
+        assertEquals("HOST-a", AirPlayPersistence.loadNewestLockdownRecord(context)?.hostId)
+    }
+
     private fun save(record: LockdownPairRecord) = AirPlayPersistence.saveLockdownRecord(context, record)
 
     private fun load(phone: String) = AirPlayPersistence.loadLockdownRecord(context, deviceKey(phone))

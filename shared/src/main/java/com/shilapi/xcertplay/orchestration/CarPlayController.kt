@@ -169,6 +169,8 @@ class CarPlayController(
     private val media: AirPlayMediaHandler,
     reportStatus: (CarPlayStatus) -> Unit,
     private val loadPairRecord: (devicePublicKeyPem: ByteArray) -> LockdownPairRecord? = { null },
+    /** The most recently saved record, for an iPhone whose DevicePublicKey could not be read. */
+    private val loadNewestPairRecord: () -> LockdownPairRecord? = { null },
     private val savePairRecord: (LockdownPairRecord) -> Unit = {},
     private val clearPairRecord: (devicePublicKeyPem: ByteArray) -> Unit = {},
     private val locationProvider: Iap2LocationProvider? = null,
@@ -2251,10 +2253,16 @@ class CarPlayController(
             debugLog("wired USBMUX host opened")
             onStatus(CarPlayStatus.Pairing)
             val pairingClient = LockdownPairingClient(mux)
-            val devicePublicKey = pairingClient.devicePublicKey(
-                config.label, DEVICE_PUBLIC_KEY_TIMEOUT_MILLIS, isCancelled = { closed },
-            )
-            val savedPairRecord = loadPairRecord(devicePublicKey)
+            val devicePublicKey = try {
+                pairingClient.devicePublicKey(config.label, DEVICE_PUBLIC_KEY_TIMEOUT_MILLIS, isCancelled = { closed })
+            } catch (error: Exception) {
+                if (closed) throw error
+                // Releases up to 0.2.22 never sent this lookup. If an iPhone refuses it, wired keeps working the way
+                // they did, with the newest record, and only loses the per-iPhone choice.
+                debugLog("wired DevicePublicKey lookup failed: ${error.javaClass.simpleName}; using the newest saved Lockdown pair record")
+                null
+            }
+            val savedPairRecord = if (devicePublicKey != null) loadPairRecord(devicePublicKey) else loadNewestPairRecord()
             var pairRecord = savedPairRecord ?: pairNewRecord(pairingClient)
             debugLog(
                 if (savedPairRecord != null) {
@@ -2303,7 +2311,7 @@ class CarPlayController(
                 val rejection = rejectedPairRecordError(error)
                 if (savedPairRecord == null || rejection == null) throw error
                 debugLog("saved Lockdown pair record rejected by Lockdown error=$rejection; clearing and pairing again")
-                clearPairRecord(devicePublicKey)
+                clearPairRecord(savedPairRecord.devicePublicKeyPem)
                 pairRecord = pairNewRecord(pairingClient)
                 carKitClient.open(pairRecord, config.label)
             }

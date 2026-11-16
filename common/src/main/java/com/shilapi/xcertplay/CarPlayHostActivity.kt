@@ -5700,6 +5700,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             media = media,
             reportStatus = createStatusReporter(controllerGeneration),
             loadPairRecord = { devicePublicKey -> AirPlayPersistence.loadLockdownRecord(this, devicePublicKey) },
+            loadNewestPairRecord = { AirPlayPersistence.loadNewestLockdownRecord(this) },
             savePairRecord = { record -> AirPlayPersistence.saveLockdownRecord(this, record) },
             clearPairRecord = { devicePublicKey -> AirPlayPersistence.clearLockdownRecord(this, devicePublicKey) },
             locationProvider = locationProvider,
