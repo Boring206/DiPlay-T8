@@ -1773,7 +1773,8 @@ private class AudioRenderer(
     voiceFilter: Boolean = false,
 ) : Closeable {
     private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long) {
-        var afterLoss = false
+        /** Packets Wi-Fi lost right before this one, by sequence number. */
+        var lostBefore = 0
     }
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
@@ -1789,7 +1790,8 @@ private class AudioRenderer(
     @Volatile private var newestRtpSample = 0
     private var lagRecoveryReports = 0
     private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
-    private var lastSequence = -1
+    private val sequenceGap = if (lostMusicFill != null) RtpSequenceGap() else null
+    private var underrunsAfterLastWrite = 0
     private var silence = ByteArray(0)
     private var lostFramesFilled = 0L
     @Volatile private var running = true
@@ -1879,7 +1881,7 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { afterLoss = followsLoss(rtp) })) {
+        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { lostBefore = sequenceGap?.lostBefore(rtp) ?: 0 })) {
             if (started) {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
@@ -1893,17 +1895,6 @@ private class AudioRenderer(
                 }
             }
         }
-    }
-
-    /** Whether RTP sequence numbers skip ahead before [rtp]; late and repeated packets do not count. */
-    private fun followsLoss(rtp: ByteArray): Boolean {
-        if (lostMusicFill == null || rtp.size < 4) return false
-        val sequence = ((rtp[2].toInt() and 0xff) shl 8) or (rtp[3].toInt() and 0xff)
-        val previous = lastSequence
-        val step = (sequence - previous) and 0xffff
-        if (previous >= 0 && (step == 0 || step >= 0x8000)) return false
-        lastSequence = sequence
-        return previous >= 0 && step > 1
     }
 
     override fun close() {
@@ -2268,7 +2259,7 @@ private class AudioRenderer(
         }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
-        if (packet.afterLoss && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs)
+        if (packet.lostBefore > 0 && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs, packet.lostBefore)
         when (format.codec) {
             AudioCodecKind.LPCM -> writePcm(byteSwapS16(rtp.copyOfRange(12, rtp.size)))
             AudioCodecKind.AAC_LC -> {
@@ -2405,15 +2396,23 @@ private class AudioRenderer(
                         codec.releaseOutputBuffer(index, false)
                     }
                     if (copied) {
-                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes) ?: 0
+                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes, fillLimitFrames()) ?: 0
                         if (fill > 0) writeSilence(fill)
                         writePcm(pcm, 0, size)
+                        if (lostMusicFill != null) underrunsAfterLastWrite = track?.underrunCount ?: 0
                     }
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
             }
         }
+    }
+
+    /** The start level while the track still plays what it held before this buffer's hole, else 0. */
+    private fun fillLimitFrames(): Int {
+        val track = track ?: return 0
+        if (!playbackStarted || track.underrunCount != underrunsAfterLastWrite) return 0
+        return startThresholdBytes / frameBytes
     }
 
     private fun writeSilence(frames: Int) {
