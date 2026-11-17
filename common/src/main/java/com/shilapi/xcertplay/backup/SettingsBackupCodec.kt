@@ -33,7 +33,7 @@ object SettingsBackupCodec {
         "ambient_delay_seconds",
         "speech_without_8_16_khz", "car_bluetooth_audio", "call_echo_cancellation", "call_voice_filter",
         "call_speakerphone",
-        "smooth_video", "direct_video_output", "low_latency_decoder", "mtk_decoder_tuning", "fps_counter",
+        "smooth_video", "direct_video_output", "low_latency_decoder", "mtk_decoder_tuning", "sprd_decoder_tuning", "fps_counter",
         "adb_cluster_activity_enabled", "platform21_cluster_enabled", "center_map_overlay", "center_map_auto_hide",
         "center_map_follows_dashboard", "settings_gesture_fingers", "display_width_physical_mm",
         "display_physical_size_basis", "right_hand_drive", "hide_top_bar", "hide_bottom_bar",

@@ -760,6 +760,8 @@
     <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上一段短延迟显示 CarPlay 主画面，而不是解码后立即显示。延迟会自动调整，让大多数帧能及时解码；仍未按时准备好的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。会重新连接 CarPlay。</string>
     <string name="settings_mtk_decoder_tuning">MTK 解码器低延迟（实验性）</string>
     <string name="settings_mtk_decoder_tuning_description">检测到所选视频格式可使用 %1$s。有专用 MTK 低延迟解码器时优先使用；旧版 OMX 解码器则先尝试无重排加低延迟，再尝试仅低延迟。解码器拒绝配置或运行失败时会自动回退。它可能降低画面延迟，但某些固件可能卡顿或解码失败。下次连接 CarPlay 时生效。</string>
+    <string name="settings_sprd_decoder_tuning">Spreadtrum 解码器调校（实验性）</string>
+    <string name="settings_sprd_decoder_tuning_description">检测到所选视频格式可使用 %1$s。以调校后的格式配置 Spreadtrum 解码器，并通过专用线程显示每个已解码帧。解码器拒绝配置或运行失败时会自动回退。它可能降低画面延迟，但某些固件可能卡顿或解码失败。下次连接 CarPlay 时生效。</string>
     <string name="settings_direct_video_output">直接视频输出（实验性）</string>
     <string name="settings_direct_video_output_description">将 CarPlay 画面直接交给车机的系统合成器，而不是在 DiPlay 窗口内绘制。可将延迟降低约一次屏幕刷新。画面调整不适用。会重新连接 CarPlay。</string>
     <string name="settings_low_latency_decoder">低延迟解码（实验性）</string>

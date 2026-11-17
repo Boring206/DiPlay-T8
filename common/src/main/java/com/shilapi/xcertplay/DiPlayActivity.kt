@@ -74,6 +74,7 @@ import com.shilapi.xcertplay.media.AmbientMusicController
 import com.shilapi.xcertplay.media.AmbientColorSource
 import com.shilapi.xcertplay.media.AmbientMusicSettings
 import com.shilapi.xcertplay.media.MtkDecoderTuning
+import com.shilapi.xcertplay.media.SprdDecoderTuning
 import com.shilapi.xcertplay.network.CarHotspotConfigRead
 import com.shilapi.xcertplay.network.CarHotspotConfigWrite
 import com.shilapi.xcertplay.network.CarHotspotSavedCredentials
@@ -211,6 +212,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         UsbPermissionSetup.Operation(it.applicationContext)
     }
     internal var selectedMtkDecoderName: (String) -> String? = MtkDecoderTuning::selectedDecoderName
+    internal var selectedSprdDecoderName: (String) -> String? = SprdDecoderTuning::selectedDecoderName
     private var navigationStreamType = 14
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
@@ -2005,6 +2007,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     getString(R.string.settings_mtk_decoder_tuning_description, mtkDecoder),
                     AirPlayPersistence.loadMtkDecoderTuning(this)) {
                     AirPlayPersistence.saveMtkDecoderTuning(this, it)
+                    markReconnectNeeded()
+                }
+            }
+            val sprdDecoder = selectedSprdDecoderName(selectedMime)
+            if (sprdDecoder != null) {
+                toggle(card, getString(R.string.settings_sprd_decoder_tuning),
+                    getString(R.string.settings_sprd_decoder_tuning_description, sprdDecoder),
+                    AirPlayPersistence.loadSprdDecoderTuning(this)) {
+                    AirPlayPersistence.saveSprdDecoderTuning(this, it)
                     markReconnectNeeded()
                 }
             }
@@ -5986,6 +5997,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
         appendLine("Media-key audio focus: ${if (AirPlayPersistence.loadDisableMediaKeyAudioFocus(appContext)) "disabled" else "enabled"}")
         appendLine("MTK decoder tuning preference: ${if (AirPlayPersistence.loadMtkDecoderTuning(appContext)) "enabled" else "disabled"}")
+        appendLine("SPRD decoder tuning preference: ${if (AirPlayPersistence.loadSprdDecoderTuning(appContext)) "enabled" else "disabled"}")
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
         appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")

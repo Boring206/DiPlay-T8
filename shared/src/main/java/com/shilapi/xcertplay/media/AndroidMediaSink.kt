@@ -219,6 +219,11 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    /**
+     * Opt-in Spreadtrum decoder tuning: a tuned configure attempt for the detected OMX.sprd
+     * decoder, with fallback to the default decoder in the same configure round.
+     */
+    private val sprdDecoderTuningEnabled: Boolean = false,
     /** Opt-in (#946): navigation prompts request duckable focus while the iPhone ducks audio. Needs [audioFocusEnabled]. */
     navigationPromptAudioFocus: Boolean = false,
 ) : MediaSink {
@@ -700,26 +705,30 @@ class AndroidMediaSink(
         }
     }
 
-    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true) = VideoDecoder(
-        type,
-        surface,
-        videoWidth,
-        videoHeight,
-        preferSoftwareHevcDecoder,
-        requestKeyFrame = { requestVideoRecovery(type) },
-        report = { videoDiagnosticHandlers[type]?.invoke(it) },
-        statsLabel = statsLabel,
-        onExit = ::onVideoDecoderExit,
-        // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
-        pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
-        operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
-        vendorLowLatency = vendorLowLatencyDecoder,
-        dedicatedOutputThread = vendorLowLatencyDecoder,
-        framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
-        // Keep the experimental MTK mode on the main CarPlay picture only. Mirrors and the
+    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true): VideoDecoder {
+        // Keep the experimental decoder tunings on the main CarPlay picture only. Mirrors and the
         // cluster have separate timing and must retain their established decoder configuration.
-        mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
-    ).also { if (startImmediately) it.start() }
+        val sprdTuning = sprdDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null
+        return VideoDecoder(
+            type,
+            surface,
+            videoWidth,
+            videoHeight,
+            preferSoftwareHevcDecoder,
+            requestKeyFrame = { requestVideoRecovery(type) },
+            report = { videoDiagnosticHandlers[type]?.invoke(it) },
+            statsLabel = statsLabel,
+            onExit = ::onVideoDecoderExit,
+            // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
+            pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
+            operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
+            vendorLowLatency = vendorLowLatencyDecoder,
+            dedicatedOutputThread = vendorLowLatencyDecoder || sprdTuning,
+            framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
+            mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
+            sprdDecoderTuningEnabled = sprdTuning,
+        ).also { if (startImmediately) it.start() }
+    }
 
     @Synchronized
     private fun audioRenderer(id: AudioStreamId, format: AudioFormat): AudioRenderer {
@@ -839,9 +848,12 @@ internal fun videoDecoderAttempts(
     softwareDecoder: String?,
     lowLatencyDecoder: String? = null,
     maximumMtkMode: MtkDecoderMode = MtkDecoderMode.NONE,
+    sprdDecoder: String? = null,
 ): List<DecoderAttempt> = buildList {
     if (operatingRate > 0) lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true, operatingRate)) }
     lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true)) }
+    if (operatingRate > 0) sprdDecoder?.let { add(DecoderAttempt(it, tuned = true, operatingRate)) }
+    sprdDecoder?.let { add(DecoderAttempt(it, tuned = true)) }
     val mtkModes = maximumMtkMode.attempts()
     if (operatingRate > 0) {
         mtkModes.forEach { add(DecoderAttempt(null, tuned = true, operatingRate, it)) }
@@ -919,6 +931,8 @@ private class VideoDecoder(
      */
     private val framesAtOnce: Boolean = false,
     private val mtkDecoderTuningEnabled: Boolean = false,
+    /** Try the detected Spreadtrum decoder with a tuned format first. */
+    private val sprdDecoderTuningEnabled: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -1211,6 +1225,9 @@ private class VideoDecoder(
             ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
         val requestedMtkMode = if (mtkDecoderTuningEnabled &&
             MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
+        val requestedSprdDecoder = if (sprdDecoderTuningEnabled) {
+            SprdDecoderTuning.selectedDecoderName(mime)
+        } else null
         var configured: ConfiguredVideoDecoder? = null
         var used: DecoderAttempt? = null
         for (attempt in videoDecoderAttempts(
@@ -1218,6 +1235,7 @@ private class VideoDecoder(
             softwareDecoderName(mime),
             requestedLowLatency,
             requestedMtkMode,
+            sprdDecoder = requestedSprdDecoder,
         )) {
             configured = tryConfigure(mime, csd, surface, attempt, atOnce)
             if (configured != null) { used = attempt; break }
@@ -1258,8 +1276,13 @@ private class VideoDecoder(
                     " mtkTuning=${configuredMtkMode.diagnosticName}"
                 else -> ""
             }
+            val sprd = when {
+                SprdDecoderTuning.isDecoderName(configured.codecName) ->
+                    " sprdTuning=${if (used?.tuned == true) "tuned" else "untuned"}"
+                else -> ""
+            }
             report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
-                "$rate$lowLatency$output$atOnceReport$mtk")
+                "$rate$lowLatency$output$atOnceReport$mtk$sprd")
             Log.i(
                 TAG,
                 "video decoder configured name=${configured.codecName} mime=$mime size=${width}x$height$mtk",

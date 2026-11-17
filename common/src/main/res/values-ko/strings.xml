@@ -794,6 +794,8 @@
     <string name="smooth_video_description">각 CarPlay 메인 화면 프레임을 디코딩 즉시 표시하지 않고, iPhone이 지정한 시각에 짧은 지연을 더해 표시합니다. 대부분의 프레임이 제시간에 디코딩되도록 지연이 자동 조정되며, 표시 시각까지 준비되지 않은 프레임은 즉시 표시됩니다. 스크롤이 더 부드러워 보일 수 있지만 터치 반응은 늦어집니다. 화면 보정은 적용되지 않습니다. CarPlay를 다시 연결합니다.</string>
     <string name="settings_mtk_decoder_tuning">MTK 디코더 저지연 (실험 기능)</string>
     <string name="settings_mtk_decoder_tuning_description">선택한 동영상 형식에서 %1$s을(를) 감지했습니다. 사용 가능한 경우 전용 MTK 저지연 디코더를 사용합니다. 레거시 OMX 디코더는 먼저 재정렬 방지와 저지연을 함께 시도한 다음 저지연만 시도합니다. 디코더가 거부하거나 실패하면 자동으로 대체 방식을 사용합니다. 동영상 지연이 줄어들 수 있지만 일부 펌웨어에서는 끊기거나 실패할 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
+    <string name="settings_sprd_decoder_tuning">Spreadtrum 디코더 조정 (실험 기능)</string>
+    <string name="settings_sprd_decoder_tuning_description">선택한 동영상 형식에서 %1$s을(를) 감지했습니다. Spreadtrum 디코더를 조정된 형식으로 설정하고 디코딩된 각 프레임을 전용 스레드에서 표시합니다. 디코더가 거부하거나 실패하면 자동으로 대체 방식을 사용합니다. 동영상 지연이 줄어들 수 있지만 일부 펌웨어에서는 끊기거나 실패할 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="settings_direct_video_output">직접 영상 출력 (실험 기능)</string>
     <string name="settings_direct_video_output_description">CarPlay 화면을 DiPlay 창 안에 그리는 대신 헤드 유닛의 컴포지터로 바로 보냅니다. 화면 새로고침 주기 약 한 번만큼 지연이 줄어들 수 있습니다. 화면 보정은 적용되지 않습니다. CarPlay를 다시 연결합니다.</string>
     <string name="settings_low_latency_decoder">저지연 디코딩 (실험 기능)</string>

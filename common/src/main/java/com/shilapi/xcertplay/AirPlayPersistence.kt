@@ -84,6 +84,7 @@ object AirPlayPersistence {
     private const val KEY_CALL_SPEAKERPHONE = "call_speakerphone"
     private const val KEY_SMOOTH_VIDEO = "smooth_video"
     private const val KEY_MTK_DECODER_TUNING = "mtk_decoder_tuning"
+    private const val KEY_SPRD_DECODER_TUNING = "sprd_decoder_tuning"
     private const val KEY_DIRECT_VIDEO_OUTPUT = "direct_video_output"
     private const val KEY_LOW_LATENCY_DECODER = "low_latency_decoder"
     private const val KEY_FPS_COUNTER = "fps_counter"
@@ -750,6 +751,15 @@ object AirPlayPersistence {
     fun saveMtkDecoderTuning(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_MTK_DECODER_TUNING, enabled).apply()
+    }
+
+    /** Spreadtrum's tuned decoder path; opt-in and applied at reconnect. */
+    fun loadSprdDecoderTuning(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SPRD_DECODER_TUNING, false)
+
+    fun saveSprdDecoderTuning(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_SPRD_DECODER_TUNING, enabled).apply()
     }
 
     fun loadDirectVideoOutput(context: Context): Boolean =

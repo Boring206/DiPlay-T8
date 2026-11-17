@@ -800,6 +800,8 @@
     <string name="smooth_video_description">CarPlayのフレームをデコード直後ではなく、iPhoneが記録した時刻に短い遅延を加えた時刻に表示します。ほとんどのフレームが間に合うよう遅延を自動調整し、予定時刻までに処理できなかったフレームは準備ができ次第表示します。スクロールが滑らかになる場合がありますが、タッチへの反応は遅くなります。映像調整は適用されません。CarPlayの再接続で反映されます。</string>
     <string name="settings_mtk_decoder_tuning">MTKデコーダーの低遅延化（実験的機能）</string>
     <string name="settings_mtk_decoder_tuning_description">選択した映像形式の検出結果：%1$s。利用可能な場合はMTK専用の低遅延デコーダーを使用します。旧OMXデコーダーではフレーム並べ替えなし＋低遅延を試し、次に低遅延のみを試します。デコーダーが拒否または失敗した場合は自動で通常方式に戻ります。映像遅延を減らせる可能性がありますが、車載端末によっては映像が途切れたり表示できなかったりします。次回のCarPlay接続から反映されます。</string>
+    <string name="settings_sprd_decoder_tuning">Spreadtrumデコーダーの調整（実験的機能）</string>
+    <string name="settings_sprd_decoder_tuning_description">選択した映像形式の検出結果：%1$s。Spreadtrumデコーダーを最適な形式で設定し、デコード済みの各フレームを専用スレッドから表示します。デコーダーが拒否または失敗した場合は自動で通常方式に戻ります。映像遅延を減らせる可能性がありますが、車載端末によっては映像が途切れたり表示できなかったりします。次回のCarPlay接続から反映されます。</string>
     <string name="settings_direct_video_output">映像の直接出力（実験的機能）</string>
     <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。CarPlayを再接続します。</string>
     <string name="settings_low_latency_decoder">低遅延デコード（実験的機能）</string>
