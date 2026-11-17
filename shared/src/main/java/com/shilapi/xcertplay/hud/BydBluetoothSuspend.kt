@@ -23,6 +23,10 @@ object BydBluetoothSuspend {
     private var lease: BluetoothSuspendLease? = null
     private var pending: ScheduledFuture<*>? = null
 
+    /** The last radio request went through the app BluetoothAdapter API, not the ADB shell. */
+    @Volatile
+    private var lastRequestViaAdapter = false
+
     private fun lease(context: Context): BluetoothSuspendLease = synchronized(gate) {
         lease ?: run {
             val app = context.applicationContext
@@ -35,8 +39,14 @@ object BydBluetoothSuspend {
                 },
                 readEnabled = { radioEnabled(app) },
                 requestEnabled = { enabled ->
-                    // A non-null shell reply is not evidence that the radio changed state.
-                    shell.run(app, if (enabled) "svc bluetooth enable" else "svc bluetooth disable")
+                    lastRequestViaAdapter = BluetoothRadioRequest.request(
+                        enabled,
+                        adapterRequest = { want -> requestRadioViaAdapter(app, want) },
+                        shellRequest = { want ->
+                            // A non-null shell reply is not evidence that the radio changed state.
+                            shell.run(app, if (want) "svc bluetooth enable" else "svc bluetooth disable")
+                        },
+                    )
                 },
                 awaitEnabled = { enabled -> awaitRadio(app, enabled) },
             ).also { lease = it }
@@ -65,7 +75,7 @@ object BydBluetoothSuspend {
                 val radioBefore = state.radioEnabled()
                 val paused = state.suspend(ticket)
                 val outcome = BluetoothPauseOutcome.describe(paused, radioBefore, paused || state.isCurrent(ticket),
-                    shell.lastAccess?.name)
+                    if (lastRequestViaAdapter) null else shell.lastAccess?.name)
                 if (paused) Log.i(TAG, outcome) else Log.w(TAG, "$outcome; recovery retained if needed")
                 log(outcome)
             }, delay, TimeUnit.MILLISECONDS)
@@ -122,6 +132,13 @@ object BydBluetoothSuspend {
             log("car Bluetooth back on")
         }
     }
+
+    /** App-level radio control (BLUETOOTH_ADMIN, no ADB): true when the request was issued. */
+    private fun requestRadioViaAdapter(context: Context, enabled: Boolean): Boolean = runCatching {
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+            ?: BluetoothAdapter.getDefaultAdapter() ?: return@runCatching false
+        if (enabled) adapter.enable() else adapter.disable()
+    }.getOrDefault(false)
 
     private fun radioEnabled(context: Context): Boolean? = runCatching {
         val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
