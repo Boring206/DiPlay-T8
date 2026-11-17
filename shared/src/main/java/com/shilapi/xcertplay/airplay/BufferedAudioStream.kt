@@ -58,6 +58,10 @@ internal class BufferedAudioStream(
     // Playback state, guarded by [lock].
     private var rate = 0
     private var flushUntil: Long? = null
+    // The FLUSHBUFFERED sequence frontier: unlike RTP timestamps, which restart at a random
+    // base per track, the sequence runs through the whole session, so it stays meaningful
+    // across a track change. Null when no flush has named one.
+    private var flushUntilSeq: Long? = null
     private var anchorRtp: Long? = null
     private var anchorNtp: BigInteger? = null
     private var feedStartTimestamp: Long? = null
@@ -112,14 +116,14 @@ internal class BufferedAudioStream(
                 var pacing = false
                 synchronized(lock) {
                     while (!closed.get() &&
-                        flushUntil?.let { before(frame.timestamp, it) } != true &&
+                        !isStaleLocked(frame) &&
                         (queuedBytes + frame.rtp.size > AUDIO_BUFFER_BYTES || queue.size + fed.size >= maxBufferedFrames)) {
                         // TCP backpressure preserves music rather than dropping an arbitrary part
                         // of a track. Close, playback and flush all wake the bounded receiver.
                         lock.wait()
                     }
                     if (closed.get()) return
-                    if (flushUntil?.let { before(frame.timestamp, it) } == true) return@synchronized
+                    if (isStaleLocked(frame)) return@synchronized
                     queue.addLast(frame)
                     queuedBytes += frame.rtp.size
                     lock.notifyAll()
@@ -234,11 +238,26 @@ internal class BufferedAudioStream(
     /** GETANCHOR: the current anchor, or null before the first SETRATE. */
     fun anchor(): Map<String, Any?>? = synchronized(lock) { anchorLocked() }
 
-    /** FLUSHBUFFERED: drop what was sent before [untilTimestamp] and restart the output there. */
-    fun flush(untilTimestamp: Long?) = synchronized(lock) {
+    /**
+     * FLUSHBUFFERED: drop what was sent before [untilTimestamp]/[untilSeq] and restart the output there.
+     *
+     * The sequence is the authority when the iPhone names one (#1031): every track restarts its
+     * RTP timestamps at a random 32-bit base, so when the new base jumps more than half the
+     * 32-bit range past the old frames, [before] reads the old frames as *after* the flush
+     * point and keeps them — the old song then plays from the socket backlog while the phone
+     * shows the new one. Sequences run through the whole session, so they cannot invert.
+     * Without a sequence the timestamp drop is kept as the fallback.
+     */
+    fun flush(untilTimestamp: Long?, untilSeq: Long? = null) = synchronized(lock) {
         if (closed.get()) return@synchronized
         restoreFedLocked()
-        if (untilTimestamp != null) dropBeforeLocked(untilTimestamp)
+        if (untilSeq != null) {
+            dropBeforeSeqLocked(untilSeq)
+            if (untilTimestamp != null) flushUntil = untilTimestamp
+        } else {
+            flushUntilSeq = null
+            if (untilTimestamp != null) dropBeforeLocked(untilTimestamp)
+        }
         restartOutputLocked()
         lock.notifyAll()
     }
@@ -278,6 +297,25 @@ internal class BufferedAudioStream(
             queuedBytes -= queue.pollFirst()!!.rtp.size
         }
         lock.notifyAll()
+    }
+
+    private fun dropBeforeSeqLocked(untilSeq: Long) {
+        flushUntilSeq = untilSeq
+        while (queue.peekFirst()?.let { seqBefore(it.sequence, untilSeq) } == true) {
+            queuedBytes -= queue.pollFirst()!!.rtp.size
+        }
+        lock.notifyAll()
+    }
+
+    /**
+     * Whether an arriving frame was sent before the last flush. The sequence frontier wins
+     * when one is known; the timestamp comparison is only the fallback for senders that do
+     * not name a sequence, and it cannot be trusted across a track change (see [flush]).
+     */
+    private fun isStaleLocked(frame: Frame): Boolean {
+        flushUntilSeq?.let { return seqBefore(frame.sequence, it) }
+        flushUntil?.let { return before(frame.timestamp, it) }
+        return false
     }
 
     private fun retireFedLocked() {
@@ -385,6 +423,19 @@ internal class BufferedAudioStream(
 
         /** Whether RTP timestamp [a] comes before [b], across the 32-bit wrap. */
         internal fun before(a: Long, b: Long): Boolean = ((a - b) and U32) >= 0x8000_0000L
+
+        /**
+         * Whether the raw 16-bit RTP sequence [seq] was sent before the extended sequence
+         * [untilSeq]. The sender's extended count keeps running past 65535 while a frame
+         * carries only the low 16 bits, so the frame is unwrapped to the extended value
+         * nearest [untilSeq]. A frame within half the 16-bit range behind it is stale; a
+         * frame ahead of it (or exactly at it) is kept. The buffered backlog never spans
+         * anywhere near 32767 frames — the queue caps at 5625 — so the unwrap is unambiguous.
+         */
+        internal fun seqBefore(seq: Int, untilSeq: Long): Boolean {
+            val delta = (untilSeq - seq.toLong()) and 0xffffL
+            return delta in 1..0x7fffL
+        }
 
         private fun u32(bytes: ByteArray, offset: Int): Long =
             ((bytes[offset].toLong() and 0xff) shl 24) or ((bytes[offset + 1].toLong() and 0xff) shl 16) or

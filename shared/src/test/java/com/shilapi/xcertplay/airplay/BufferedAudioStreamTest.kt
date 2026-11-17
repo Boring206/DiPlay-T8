@@ -381,6 +381,75 @@ class BufferedAudioStreamTest {
     }
 
     @Test
+    fun sequencesCompareAcrossThe16BitWrap() {
+        // The 16-bit frame sequence unwraps against the sender's extended count.
+        assertTrue(BufferedAudioStream.seqBefore(65_535, 65_540L))
+        assertTrue(BufferedAudioStream.seqBefore(65_535, 65_536L))
+        assertFalse(BufferedAudioStream.seqBefore(0, 65_536L))
+        assertFalse(BufferedAudioStream.seqBefore(4, 65_540L))
+        assertFalse(BufferedAudioStream.seqBefore(5, 65_540L))
+        assertTrue(BufferedAudioStream.seqBefore(1_010, 1_500L))
+        assertFalse(BufferedAudioStream.seqBefore(2_000, 1_500L))
+        assertFalse(BufferedAudioStream.seqBefore(1_500, 1_500L))
+    }
+
+    @Test
+    fun timestampsCannotTellOldFramesFromANewTrackAfterALargeJump() {
+        // Skip 4 of the 2026-11-17 diagnostic report: the old track's frames at RTP base
+        // 1390997214 sit more than half the 32-bit range behind the new track's base
+        // 4140849176, so `before` reads them as *after* the flush point and keeps them.
+        assertFalse(BufferedAudioStream.before(1_390_997_214L, 4_140_849_176L))
+        assertFalse(BufferedAudioStream.before(1_396_005_598L, 4_140_849_176L))
+    }
+
+    @Test
+    fun flushBySequenceDropsStaleFramesAcrossATrackChange() {
+        // Same skip as above: late old-track frames still arrive from the socket backlog
+        // after the skip, and the timestamp-only flush kept them, so the speaker played
+        // the old song while the phone showed the new one (#1031). The flush sequence
+        // runs through the whole session, so it cannot invert the way timestamps do.
+        val sink = RecordingSink()
+        val stream = BufferedAudioStream(key, format, sink)
+        try {
+            stream.start()
+            Socket(InetAddress.getLoopbackAddress(), stream.port).use { socket ->
+                val out = DataOutputStream(socket.getOutputStream())
+                // The old track, buffered ahead but not playing yet.
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 1000 + i, timestamp = 1_390_997_214L + i * 1_024L, payload = byteArrayOf(0x21, i.toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { queuedFrames(stream) == 10 }
+
+                // The skip: the flush names the sender's sequence frontier as well as its timestamp.
+                stream.flush(untilTimestamp = 1_396_005_598L, untilSeq = 1_500L)
+                assertEquals(0, queuedFrames(stream))
+
+                // The new track starts; late old frames still arrive from the socket backlog.
+                val now = BigInteger.valueOf(2_208_988_800L + 100L).shiftLeft(32)
+                stream.setRate(rtpTime = 4_140_849_176L, newRate = 1, nowNtp = now)
+                for (i in 0 until 3) {
+                    val body = seal(sequence = 1010 + i, timestamp = 1_391_007_454L + i * 1_024L, payload = byteArrayOf(0x21, (0x10 + i).toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 2000 + i, timestamp = 4_140_849_176L + i * 1_024L, payload = byteArrayOf(0x21, (0x20 + i).toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { sink.rtp.size >= 10 }
+                Thread.sleep(150)
+                // Only the new track reaches the speaker: the three late old frames are dropped.
+                assertEquals(10, sink.rtp.size)
+                assertEquals((0 until 10).map { 4_140_849_176L + it * 1_024L }, sink.rtp.map { it.toLong() and 0xffff_ffffL })
+            }
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
     fun setRateStartsPlaybackFromItsTimeAndPausesAndFlushesStopTheOutput() {
         val sink = RecordingSink()
         val stream = BufferedAudioStream(key, format, sink)
