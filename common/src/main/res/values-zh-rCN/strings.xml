@@ -985,6 +985,7 @@
     <string name="settings_write_settings_allow">允许权限</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay 期间暂停车机 Wi-Fi 搜索 · 需要 ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi 直连时，车机每隔几秒搜索一次 Wi-Fi 网络，每次搜索都会让音乐和画面卡顿。开启后，CarPlay 运行期间 DiPlay 会暂停这个搜索。这段时间车机也不会自动连接已知网络（例如手机热点），可以在车机 Wi-Fi 设置里手动连接；CarPlay 结束后恢复。关闭后车机可以自动连接。下次连接时生效。</string>
+    <string name="settings_car_hotspot_scan_pause_description">部分主机在车载热点运行时仍保持自身的 Wi-Fi 客户端开启，并每隔几秒搜索一次网络；每次搜索都会让音乐短暂中断。开启后，仅在这类主机上，CarPlay 运行期间 DiPlay 会暂停此搜索。在此期间，车辆也不会自动连接已知网络（例如手机热点），直到 CarPlay 结束。关闭此项可让车辆自动连接。下次连接时生效。</string>
     <string name="temporary_system_bars">临时显示系统栏（5 秒）</string>
     <string name="temporary_system_bars_description">开启后，使用与 DiPlay 设置手势相同数量的手指向上滑动，暂时显示车机状态栏和导航栏 5 秒；向下滑动仍打开 DiPlay 设置。如果与车机手势冲突，请关闭此功能。部分设备可能无法显示。</string>
     <string name="wheel_media_play_pause">方向盘播放／暂停按钮</string>

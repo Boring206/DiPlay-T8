@@ -2601,14 +2601,29 @@ class CarPlayController(
     // close() sets [closed] under this lock, so a lease is either taken first and released by
     // close, or never taken.
     private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(wirelessResourceLock) {
-        if (closed || !WifiScanPause.eligible(backend)) return@synchronized
+        val clientSearching = backend == WirelessHotspotBackend.MANUAL_HOTSPOT && wifiClientSearching()
+        if (closed || !WifiScanPause.eligible(backend, clientSearchingBesideHotspot = clientSearching)) return@synchronized
         // Settings → Connection lets a driver keep the car's automatic joining, e.g. for the phone's hotspot (#755).
         if (!appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
                 .getBoolean("wifi_direct_scan_pause", true)) {
             if (wifiScanPause == null) debugLog("Wi-Fi scan pause off in Settings; the car keeps searching and joining networks")
             return@synchronized
         }
+        if (clientSearching && wifiScanPause == null) debugLog("Wi-Fi client is on and searching beside the car hotspot; pausing its search")
         (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
+    }
+
+    /**
+     * Whether the car's Wi-Fi client (station) is on and joined to no network, so it keeps searching. Most
+     * units turn it off while their hotspot runs; a client joined to a network, such as a phone's hotspot
+     * used for the car's internet, is left alone.
+     */
+    @Suppress("DEPRECATION") // connectionInfo: the network ID needs no location permission.
+    private fun wifiClientSearching(): Boolean = try {
+        val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        wifi != null && wifi.isWifiEnabled && wifi.connectionInfo?.networkId == -1
+    } catch (_: SecurityException) {
+        false
     }
 
     private fun selectWirelessBluetoothDevice(adapter: BluetoothAdapter): BluetoothDevice {

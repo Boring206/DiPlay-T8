@@ -3,6 +3,7 @@ package com.shilapi.xcertplay.network
 import android.content.Context
 import com.shilapi.xcertplay.adb.LocalAdb
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,5 +87,13 @@ class WifiScanPauseTest {
         // A connected shell may have run the helper before the link dropped.
         assertEquals(WifiScanSwitchResult.UNKNOWN, WifiScanPause.unanswered(LocalAdb.Access.READY))
         assertEquals(WifiScanSwitchResult.UNKNOWN, WifiScanPause.unanswered(null))
+    }
+
+    @Test
+    fun theCarHotspotPausesTheSearchOnlyWhereTheClientKeepsSearchingBesideIt() {
+        assertTrue(WifiScanPause.eligible(WirelessHotspotBackend.MANUAL_HOTSPOT, 28, clientSearchingBesideHotspot = true))
+        assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.MANUAL_HOTSPOT, 28))
+        assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.EXISTING_WIFI, 28, clientSearchingBesideHotspot = true))
+        assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.MANUAL_HOTSPOT, 24, clientSearchingBesideHotspot = true))
     }
 }

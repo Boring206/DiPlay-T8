@@ -996,6 +996,7 @@
     <string name="settings_write_settings_allow">액세스 허용</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay 중 차량 Wi-Fi 검색 일시중지 · ADB 필요</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi Direct를 사용하면 차량이 몇 초마다 Wi-Fi 네트워크를 검색하며, 검색할 때마다 음악과 영상이 끊깁니다. 이 기능을 켜면 CarPlay가 실행되는 동안 DiPlay가 검색을 일시중지합니다. CarPlay가 끝날 때까지 차량은 휴대전화 핫스팟 같은 알려진 네트워크에도 자동으로 연결되지 않습니다. 차량 Wi-Fi 설정에서 직접 연결할 수 있습니다. 끄면 차량이 자동으로 연결됩니다. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_car_hotspot_scan_pause_description">일부 헤드 유닛은 차량 핫스팟과 함께 자체 Wi-Fi 클라이언트를 켜 둔 채 몇 초마다 네트워크를 검색하며, 검색할 때마다 음악이 잠시 끊깁니다. 켜면 그런 유닛에서만 CarPlay가 실행되는 동안 DiPlay가 이 검색을 일시 중지합니다. 그동안 차량은 휴대폰 핫스팟 같은 알려진 네트워크에도 자동으로 연결하지 않습니다. 자동 연결을 원하면 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="temporary_system_bars">시스템 표시줄 임시 표시(5초)</string>
     <string name="temporary_system_bars_description">선택 사항: 설정한 손가락 수로 위로 스와이프하면 숨겨진 차량 상태/탐색 표시줄을 5초 동안 표시합니다. 아래로 스와이프하면 계속 DiPlay 설정이 열립니다. 동작이 충돌하는 헤드 유닛에서는 비활성화하세요. 일부 펌웨어에서는 요청이 무시될 수 있습니다.</string>
     <string name="wheel_media_play_pause">핸들 재생/일시정지 키</string>

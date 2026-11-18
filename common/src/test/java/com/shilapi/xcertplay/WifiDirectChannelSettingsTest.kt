@@ -116,9 +116,16 @@ class WifiDirectChannelSettingsTest {
         assertFalse(prefs.getBoolean(AirPlayPersistence.KEY_WIFI_DIRECT_SCAN_PAUSE, true))
     }
 
-    @Test fun theScanPauseSwitchIsOnlyForWifiDirect() {
+    @Test fun theScanPauseSwitchIsForWifiDirectAndTheCarHotspotOnly() {
+        val title = activity.getString(R.string.settings_wifi_direct_scan_pause)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
-        assertNull(findSwitch(controls(), activity.getString(R.string.settings_wifi_direct_scan_pause)))
+        val switch = findSwitch(controls(), title)!!
+        // The car hotspot's own description: the pause only runs where the car keeps its client on beside it.
+        switch.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(AirPlayPersistence.loadWifiDirectScanPause(activity))
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.EXISTING_WIFI)
+        assertNull(findSwitch(controls(), title))
     }
 
     private fun findSwitch(view: View, title: String): android.widget.Switch? {
