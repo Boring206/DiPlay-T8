@@ -1034,7 +1034,7 @@
     <string name="settings_carplay_same_task">런처 카드에서 CarPlay 열기 (실험 기능)</string>
     <string name="settings_carplay_same_task_description">BYD DiYou 데스크톱처럼 DiPlay를 카드나 화면 속 화면 창으로 표시하는 런처용 설정입니다. 0.2.11 이전 버전처럼 별도의 전체 화면 대신 DiPlay 창 안에서 CarPlay를 엽니다. 연결을 끊지 않고 다음에 CarPlay 화면을 열 때 적용됩니다.</string>
     <string name="settings_call_at_call_rate">통화의 원래 샘플링 레이트 사용 (실험 기능)</string>
-    <string name="settings_call_at_call_rate_description">기본 CarPlay 수신기처럼 통화 오디오를 48 kHz Opus 대신 통화의 원래 샘플링 레이트(8, 16, 24 또는 32 kHz)의 PCM으로 제공합니다. 다음 연결부터 적용됩니다. 통화 소리가 들리지 않으면 끄세요.</string>
+    <string name="settings_call_at_call_rate_description">기본 CarPlay 수신기처럼 통화 오디오를 48 kHz Opus 대신 통화의 원래 샘플링 레이트(8, 16, 24 또는 32 kHz)의 PCM으로 제공합니다. USB 케이블 전용: Wi-Fi에서는 iPhone이 CarPlay 소리를 모두 자체에서 재생했기 때문에 무선 연결은 일반 형식을 제공합니다. 다음 연결부터 적용됩니다. 통화 소리가 들리지 않으면 끄세요.</string>
     <string name="chosen_iphone_not_paired">DiPlay에서 선택한 iPhone이 더 이상 차량과 페어링되어 있지 않습니다</string>
     <string name="connection_help_chosen_iphone_not_paired">iPhone을 차량의 Bluetooth와 다시 페어링하거나, DiPlay로 돌아가 iPhone 선택을 눌러 다른 기기를 선택하세요. 그런 다음 다시 시도하세요.</string>
     <string name="connection_help_choose_iphone">여러 기기가 차량과 페어링되어 있습니다. DiPlay로 돌아가 iPhone 선택을 누르고 사용할 iPhone을 선택한 뒤 다시 시도하세요.</string>
