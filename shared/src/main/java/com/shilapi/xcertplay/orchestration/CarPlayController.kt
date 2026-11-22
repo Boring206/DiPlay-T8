@@ -153,6 +153,27 @@ internal fun isWirelessHandoffInProgress(
 ): Boolean = handoffRequested || tunnelActive || sessionActive
 
 /**
+ * True when an RFCOMM EOF should keep the Wi-Fi tunnel instead of failing bring-up.
+ *
+ * A clean Bluetooth EOF is [Iap2LinkEngine.feedEof], which dies with no reason. The link
+ * pump then throws [IOException] "iAP2 link ended", so [Iap2WirelessControlClient.run]
+ * never returns [Iap2WirelessControlTerminal.CHANNEL_CLOSED]. Once an AirPlay session is
+ * up, a frame has rendered, or this generation has sent CarPlayStartSession and received the
+ * phone's session SETUP (deviceID) on an accepted AirPlay control connection. Before any of
+ * those, the bring-up failure path still runs. A SETUP-only keep-alive is provisional: the
+ * caller must fail the generation if no session arrives.
+ */
+internal fun isRfcommEofAfterAirPlaySession(
+    error: Throwable,
+    sessionActive: Boolean,
+    frameRendered: Boolean,
+    airPlaySetupReached: Boolean = false,
+): Boolean =
+    (sessionActive || frameRendered || airPlaySetupReached) &&
+        error is IOException &&
+        error.message?.contains("iAP2 link ended") == true
+
+/**
  * Wires the complete wired or wireless CarPlay path: MFi coprocessor discovery, iPhone bring-up,
  * iAP2 control, transport setup, and the AirPlay media/input sessions.
  *
@@ -311,6 +332,9 @@ class CarPlayController(
     private val wirelessHandoffFellBack = AtomicBoolean(false)
     private val wirelessGeneration = AtomicInteger(0)
     private val wirelessConnectionProof = WirelessConnectionProof<AirPlaySession>()
+    private val wirelessAirPlayHandshake = WirelessAirPlayHandshake()
+    @Volatile private var setupKeepAliveWatch: SetupKeepAliveWatch? = null
+    @Volatile private var setupKeepAliveTask: Runnable? = null
 
     private var permissionCloseable: Closeable? = null
     private var attachCloseable: Closeable? = null
@@ -722,6 +746,7 @@ class CarPlayController(
         }
         firstTcpWatchdog?.terminate()
         wiredStartWatchdog?.terminate()
+        cancelSetupKeepAlive()
         BydBluetoothSuspend.resume(appContext, this) { debugLog(it) }
         startupTimer.shutdownNow()
         (hotspot as? ManualHotspotManager)?.close()
@@ -1355,6 +1380,7 @@ class CarPlayController(
             wirelessConnectionProof.begin(generation) {
                 if (!isStaleWirelessRun(generation)) startedHotspot?.onCarPlayConfirmed()
             }
+            wirelessAirPlayHandshake.begin(generation)
             val preferredFamily = HotspotAddressPolicy.parseFamily(
                 appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
                     .getString(HOTSPOT_FAMILY_PREFERENCE_KEY, null),
@@ -1616,7 +1642,10 @@ class CarPlayController(
                 timeoutMillis = controlLoopTimeoutMillis(),
                 keepAliveAfterDeadline = { keepBluetoothControlAlive(generation) },
                 beforeStartSession = { startedHotspot?.validateReady() },
-                onStartSessionSent = { watchdog.startSessionSent(it.sentAtNanos) },
+                onStartSessionSent = {
+                    wirelessAirPlayHandshake.noteStartSession(generation)
+                    watchdog.startSessionSent(it.sentAtNanos)
+                },
                 onIncoming = ::onRouteFrame,
                 onProgress = { message ->
                     diagnostics.controlProgress(message)
@@ -1662,6 +1691,35 @@ class CarPlayController(
             }
         } catch (error: Throwable) {
             if (isStaleWirelessRun(generation)) {
+                return
+            }
+            // EOF throws instead of returning CHANNEL_CLOSED. After a session, a rendered
+            // frame, or this generation's deviceID SETUP, keep the Wi-Fi tunnel. wirelessActiveReported
+            // stays on its existing post-handoff path, and an early EOF still fails below.
+            val sessionActive = activeSession != null
+            val frameRendered = wirelessConnectionProof.hasRenderedFrame(generation)
+            val airPlaySetupReached = wirelessAirPlayHandshake.reachedSessionSetup(generation)
+            if (
+                !wirelessActiveReported.get() &&
+                isRfcommEofAfterAirPlaySession(
+                    error,
+                    sessionActive = sessionActive,
+                    frameRendered = frameRendered,
+                    airPlaySetupReached = airPlaySetupReached,
+                )
+            ) {
+                if (sessionActive || frameRendered) {
+                    debugLog(
+                        "wireless RFCOMM ended after AirPlay session started; " +
+                            "keeping the Wi-Fi AirPlay tunnel alive",
+                    )
+                } else {
+                    debugLog(
+                        "wireless RFCOMM ended after AirPlay SETUP; " +
+                            "keeping the Wi-Fi AirPlay tunnel alive pending session",
+                    )
+                    armSetupKeepAlive(generation)
+                }
                 return
             }
             if (wirelessActiveReported.get() && error !is Error) {
@@ -1756,17 +1814,32 @@ class CarPlayController(
 
             override fun onTcpAccepted(event: AirPlayTcpAccepted) {
                 if (isStaleWirelessRun(generation)) return
-                if (watchdog.accepted(event)) wirelessDiagnostics?.connectionAccepted()
+                if (watchdog.accepted(event)) {
+                    wirelessAirPlayHandshake.noteTcpAccepted(generation)
+                    wirelessDiagnostics?.connectionAccepted()
+                }
+            }
+
+            override fun onDeviceInfo(session: AirPlaySession, info: AirPlayDeviceInfo) {
+                if (!isStaleWirelessRun(generation) && info.deviceId.isNotEmpty()) {
+                    wirelessAirPlayHandshake.noteSessionSetup(generation)
+                }
+                sessionListener.onDeviceInfo(session, info)
             }
 
             override fun onTransportError(message: String) {
                 if (isStaleWirelessRun(generation)) return
                 watchdog.terminate()
+                failSetupKeepAliveIfWaiting(
+                    generation,
+                    "Wireless CarPlay AirPlay control connection failed: $message",
+                )
                 sessionListener.onTransportError(message)
             }
 
             override fun onSessionActive(session: AirPlaySession) {
                 if (isStaleWirelessRun(generation) || !watchdog.sessionEstablished()) return
+                cancelSetupKeepAlive()
                 wirelessDiagnostics?.let {
                     it.sessionActive()
                     it.close()
@@ -1779,8 +1852,15 @@ class CarPlayController(
 
             override fun onSessionEnded(session: AirPlaySession) {
                 if (isStaleWirelessRun(generation)) return
+                val wasActive = activeSession === session
                 wirelessConnectionProof.end(generation, session)
                 sessionListener.onSessionEnded(session)
+                if (!wasActive) {
+                    failSetupKeepAliveIfWaiting(
+                        generation,
+                        "Wireless CarPlay AirPlay control connection closed before the session",
+                    )
+                }
             }
 
             override fun onVideoFrameRendered(session: AirPlaySession) {
@@ -1852,6 +1932,61 @@ class CarPlayController(
         !closed && phase == Phase.WIRELESS && generation == wirelessGeneration.get() &&
             !wirelessFailureReported.get() && activeSession != null &&
             wirelessConnectionProof.hasRenderedFrame(generation)
+    }
+
+    /**
+     * SETUP arrived and RFCOMM already ended, but RECORD has not. [FirstTcpWatchdog] has already
+     * stopped at the TCP accept, and TCP keepalive does not call [fail]. This deadline does.
+     */
+    private fun armSetupKeepAlive(generation: Int) {
+        cancelSetupKeepAlive()
+        val watch = SetupKeepAliveWatch(generation)
+        watch.arm()
+        setupKeepAliveWatch = watch
+        val task = Runnable {
+            if (setupKeepAliveWatch !== watch) return@Runnable
+            val failed = watch.onDeadline(
+                currentGeneration = wirelessGeneration.get(),
+                sessionActive = activeSession != null,
+                frameRendered = wirelessConnectionProof.hasRenderedFrame(generation),
+            )
+            if (!failed) return@Runnable
+            debugLog(
+                "wireless AirPlay SETUP did not reach a session within " +
+                    "${WirelessStartupPolicy.SETUP_SESSION_WAIT_MILLIS}ms",
+            )
+            Thread(
+                { failSetupKeepAlive(generation, "Wireless CarPlay AirPlay SETUP did not reach a session") },
+                "diplay-setup-session-timeout",
+            ).apply {
+                isDaemon = true
+                start()
+            }
+        }
+        setupKeepAliveTask = task
+        mainHandler.postDelayed(task, WirelessStartupPolicy.SETUP_SESSION_WAIT_MILLIS)
+    }
+
+    private fun cancelSetupKeepAlive() {
+        setupKeepAliveTask?.let { mainHandler.removeCallbacks(it) }
+        setupKeepAliveTask = null
+        setupKeepAliveWatch?.cancel()
+        setupKeepAliveWatch = null
+    }
+
+    private fun failSetupKeepAliveIfWaiting(generation: Int, message: String) {
+        val watch = setupKeepAliveWatch ?: return
+        if (setupKeepAliveWatch !== watch) return
+        if (!watch.onControlLost(wirelessGeneration.get(), activeSession != null)) return
+        cancelSetupKeepAlive()
+        failSetupKeepAlive(generation, message)
+    }
+
+    private fun failSetupKeepAlive(generation: Int, message: String) {
+        if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get()) return
+        if (activeSession != null || wirelessConnectionProof.hasRenderedFrame(generation)) return
+        fail(IOException(message), generation)
+        closeWirelessStack(generation = generation)
     }
 
     private fun armWirelessHandoffWatchdog(generation: Int) {
@@ -2797,6 +2932,8 @@ class CarPlayController(
             wirelessDiagnostics = null
             diagnostics?.close()
             wirelessConnectionProof.clear()
+            wirelessAirPlayHandshake.clear()
+            cancelSetupKeepAlive()
             media.setIapTunnelHandler(null)
             val activeTunnel = wirelessTunnelChannel
             wirelessTunnelChannel = null
