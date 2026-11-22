@@ -18,4 +18,11 @@ class RtpClockProbeTest {
         probe.observe(-24_000, 0L)
         assertEquals(48_000, probe.observe(24_000, 1_000_000_000L))
     }
+
+    @Test fun anImplausibleDeltaRestartsTheWindowInsteadOfReportingAHugeClock() {
+        val probe = RtpClockProbe(windowNs = 2_000_000_000L)
+        probe.observe(0, 0L)
+        assertNull(probe.observe(-1, 2_000_000_000L))
+        assertEquals(16_000, probe.observe(-1 + 32_000, 4_000_000_000L))
+    }
 }
