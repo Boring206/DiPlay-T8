@@ -1932,6 +1932,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             ) { label, checked, onChanged ->
                 toggle(card, getString(label), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), checked, save = onChanged)
             }
+            // Phones and tablets used as head units; car screens report neither a notch nor rounded corners.
+            val fitScreenShape = AirPlayPersistence.loadFitScreenShape(this)
+            if (fitScreenShape || AndroidScreenShape.present(this)) {
+                toggle(card, getString(R.string.settings_fit_screen_shape),
+                    getString(R.string.settings_fit_screen_shape_description), fitScreenShape) {
+                    AirPlayPersistence.saveFitScreenShape(this, it)
+                    markReconnectNeeded()
+                }
+            }
             toggle(card, getString(R.string.adapt_pip_resolution), getString(R.string.adapt_pip_resolution_description), AirPlayPersistence.loadAdaptPipResolution(this)) {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }

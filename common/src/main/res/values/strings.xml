@@ -1057,4 +1057,7 @@
     <string name="cluster_projection_shape_description">Half screen keeps the speed and status readouts the cluster normally shows beside the map; full screen lets the map fill the cluster. DiPlay sets the shape whenever the CarPlay map appears, which otherwise overrides the shape picked on the car. Needs ADB over network on the head unit.</string>
     <string name="settings_cluster_speedometer_album_color">Use album color for speedometer background</string>
     <string name="settings_cluster_speedometer_album_color_description">Match the album frame color with smooth transitions. Keeps the selected opacity.</string>
+    <string name="settings_fit_screen_shape">Fit around notch and rounded corners</string>
+    <string name="settings_fit_screen_shape_description">For a phone or tablet used as a head unit. Keeps CarPlay\'s buttons and dock clear of the camera notch and the rounded corners; maps still fill the screen. A safe area set in the in-session menu takes priority. Applies at the next connection.</string>
+    <string name="settings_safe_area_fitted_summary">Safe area: fitted to the notch and corners, %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
 </resources>

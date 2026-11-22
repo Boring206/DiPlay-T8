@@ -1056,4 +1056,7 @@
     <string name="cluster_projection_shape_description">小画面ではメーター本来の車速や状態表示が地図の横に残ります。全画面では地図がメーター全体を覆います。CarPlayの地図が表示されるとDiPlayがこの形態を設定するため、クルマ側で選んだナビモードは上書きされます。車載機のネットワークADBが必要です。</string>
     <string name="settings_cluster_speedometer_album_color">速度計の背景にアルバムの色を使用</string>
     <string name="settings_cluster_speedometer_album_color_description">アルバムの枠の色に滑らかに切り替わります。選択した不透明度は維持されます。</string>
+    <string name="settings_fit_screen_shape">ノッチと角丸を避ける</string>
+    <string name="settings_fit_screen_shape_description">車載端末として使うスマートフォンやタブレット向けです。CarPlayのボタンとDockをカメラのノッチと画面の角丸から離します。地図は画面全体に表示されたままです。接続中のメニューで設定したセーフエリアが優先されます。次回の接続から反映されます。</string>
+    <string name="settings_safe_area_fitted_summary">セーフエリア：ノッチと角に合わせて調整、%5$d×%6$d内の(%3$d, %4$d)に%1$d×%2$d</string>
 </resources>

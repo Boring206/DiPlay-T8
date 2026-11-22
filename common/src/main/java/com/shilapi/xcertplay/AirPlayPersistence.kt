@@ -127,6 +127,7 @@ object AirPlayPersistence {
     private const val KEY_SAFE_AREA_DRAW_OUTSIDE = "safe_area_draw_outside"
     private const val KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA = "main_display_disable_safe_area"
     private const val KEY_BLACK_CORNER_RADIUS = "black_corner_radius_dp"
+    private const val KEY_FIT_SCREEN_SHAPE = "fit_screen_shape"
     private const val KEY_ADAPT_PIP_RESOLUTION = "adapt_pip_resolution"
     private const val KEY_AUTO_START_ON_BOOT = "auto_start_on_boot"
     private const val KEY_BT_SUSPEND_DURING_CARPLAY = "bt_suspend_during_carplay"
@@ -1479,6 +1480,17 @@ object AirPlayPersistence {
         require(value in CarPlayBlackCornerOverlay.RADII_DP)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_BLACK_CORNER_RADIUS, value).apply()
+    }
+
+    /** Off by default: fits CarPlay's safe area around a phone or tablet's notch and rounded corners. */
+    fun loadFitScreenShape(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FIT_SCREEN_SHAPE, false)
+
+    fun saveFitScreenShape(context: Context, fit: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_FIT_SCREEN_SHAPE, fit)
+            .apply()
     }
 
     fun loadSafeAreaRect(context: Context, widthPixels: Int, heightPixels: Int): SafeAreaRect? {
