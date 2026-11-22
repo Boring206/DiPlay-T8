@@ -15,12 +15,18 @@ class BydHudArrivalTest {
 
     @Test fun onlyTheDenzaN9GetsAnArrivalTime() {
         // #301: no other HUD has been sent a non-empty field 26, so they keep it empty.
-        assertTrue(BydHudArrival.enabled(BydHudArrival.DENZA_N9_FINGERPRINT))
+        for (fingerprint in listOf(
+            "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys", // N9 OTA V1.8
+            "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260902.221210:user/release-keys", // N9 OTA V1.9
+        )) {
+            assertTrue("fingerprint=$fingerprint", BydHudArrival.enabled(fingerprint))
+        }
         for (fingerprint in listOf(
             "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys", // DiLink 5.1
             "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.021352:user/release-keys", // Leopard 5
             "BYD-AUTO/DiLink5.0/DiLink5.0:12/SKQ1.230128.001/eng.build.20251111.182747:user/release-keys",
             BydHudArrival.DENZA_N9_FINGERPRINT.replace("011226", "011227"),
+            BydHudArrival.DENZA_N9_V19_FINGERPRINT.replace("221210", "221211"),
             "",
             null,
         )) {

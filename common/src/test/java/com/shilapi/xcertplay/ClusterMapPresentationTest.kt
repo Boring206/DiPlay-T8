@@ -135,8 +135,10 @@ class ClusterMapPresentationTest {
 
     @Test fun sideMapViewportFollowsTheClusterWidth() {
         assertSideViewport(DiLink51ClusterLayout.FINGERPRINT, "w1920dp-h720dp-mdpi", left = 1320, width = 600)
-        // #301: the N9 box stops short of the top-right icons and the bottom power/P/trip readouts.
-        assertSideViewport(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT, "w2560dp-h720dp-mdpi", left = 1760, width = 800, top = 96, height = 528)
+        // #301: the stock N9 mini map is 600x720 at x=1960 (launchermap dumps, OTA V1.8 and V1.9).
+        for (n9 in DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS) {
+            assertSideViewport(n9, "w2560dp-h720dp-mdpi", left = 1960, width = 600)
+        }
     }
 
     private fun assertSideViewport(fingerprint: String, spec: String, left: Int, width: Int, top: Int = 0, height: Int = 720) {
@@ -158,16 +160,19 @@ class ClusterMapPresentationTest {
     }
 
     @Test fun theDenzaN9SelectsItsWideSharedLayers() {
-        val original = android.os.Build.FINGERPRINT
-        org.robolectric.shadows.ShadowBuild.setFingerprint(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT)
-        val (base, full, side) = listOf(DiLink51ClusterLayout.BASE, DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.SIDE)
-            .map { display(it, "w2560dp-h720dp-mdpi") }
-        try {
-            assertEquals(side, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.SCENARIO)?.displayId)
-            assertEquals(full, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.MAP)?.displayId)
-        } finally {
-            listOf(side, full, base).forEach { ShadowDisplayManager.removeDisplay(it) }
-            org.robolectric.shadows.ShadowBuild.setFingerprint(original)
+        // OTA V1.8 and V1.9 (#301): with only V1.8 listed, a V1.9 car got the plain layer again.
+        for (n9 in DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS) {
+            val original = android.os.Build.FINGERPRINT
+            org.robolectric.shadows.ShadowBuild.setFingerprint(n9)
+            val (base, full, side) = listOf(DiLink51ClusterLayout.BASE, DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.SIDE)
+                .map { display(it, "w2560dp-h720dp-mdpi") }
+            try {
+                assertEquals(n9, side, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.SCENARIO)?.displayId)
+                assertEquals(n9, full, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.MAP)?.displayId)
+            } finally {
+                listOf(side, full, base).forEach { ShadowDisplayManager.removeDisplay(it) }
+                org.robolectric.shadows.ShadowBuild.setFingerprint(original)
+            }
         }
     }
 

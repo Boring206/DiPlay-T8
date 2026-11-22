@@ -21,13 +21,15 @@ object BydHudArrival {
     internal const val TEMPLATE = "%s"
 
     /**
-     * Same firmware as `DiLink51ClusterLayout.DENZA_N9_FINGERPRINT` in :common; a :common test keeps the
-     * two equal, so the HUD and cluster gates cannot drift apart.
+     * The same N9 firmware (OTA V1.8 and V1.9) as `DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS` in :common;
+     * a :common test keeps the two equal, so the HUD and cluster gates cannot drift apart. Exact builds
+     * only: an N9 OTA that isn't listed here gets the empty field 26 again.
      */
-    const val DENZA_N9_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys"
-    private val FINGERPRINTS = setOf(DENZA_N9_FINGERPRINT)
+    const val DENZA_N9_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys" // OTA V1.8
+    const val DENZA_N9_V19_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260902.221210:user/release-keys" // OTA V1.9
+    val DENZA_N9_FINGERPRINTS = setOf(DENZA_N9_FINGERPRINT, DENZA_N9_V19_FINGERPRINT)
 
-    internal fun enabled(fingerprint: String? = Build.FINGERPRINT): Boolean = fingerprint in FINGERPRINTS
+    internal fun enabled(fingerprint: String? = Build.FINGERPRINT): Boolean = fingerprint in DENZA_N9_FINGERPRINTS
 
     /**
      * The field text: the iPhone's arrival time when it sends one, otherwise the route time left added to

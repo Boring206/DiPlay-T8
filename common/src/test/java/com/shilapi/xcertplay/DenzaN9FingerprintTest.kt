@@ -10,6 +10,8 @@ import org.junit.Test
  */
 class DenzaN9FingerprintTest {
     @Test fun theHudAndClusterGatesUseTheSameN9Firmware() {
+        assertEquals(DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS, BydHudArrival.DENZA_N9_FINGERPRINTS)
         assertEquals(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT, BydHudArrival.DENZA_N9_FINGERPRINT)
+        assertEquals(DiLink51ClusterLayout.DENZA_N9_V19_FINGERPRINT, BydHudArrival.DENZA_N9_V19_FINGERPRINT)
     }
 }

@@ -75,12 +75,24 @@ class DiLink51ClusterLayoutTest {
     }
 
     @Test fun theDenzaN9FirmwareUsesTheSharedLayers() {
-        // #301: like the Leopard 5, the N9 cluster never shows the plain layer.
-        val n9 = DiLink51ClusterLayout.DENZA_N9_FINGERPRINT
-        assertTrue(DiLink51ClusterLayout.supported(n9))
-        assertEquals(DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.displayName(names, n9, Theme.MAP))
-        assertEquals(DiLink51ClusterLayout.SIDE, DiLink51ClusterLayout.displayName(names, n9, Theme.SCENARIO))
-        assertFalse(DiLink51ClusterLayout.supported(n9.replace("011226", "011227")))
+        // #301: like the Leopard 5, the N9 cluster never shows the plain layer. OTA V1.9 changed the build,
+        // and with only V1.8 listed DiPlay gave the updated car the plain layer and a 1920x720 stream.
+        assertEquals(
+            setOf(
+                "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys", // V1.8
+                "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260902.221210:user/release-keys", // V1.9
+            ),
+            DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS,
+        )
+        for (n9 in DiLink51ClusterLayout.DENZA_N9_FINGERPRINTS) {
+            assertTrue(n9, DiLink51ClusterLayout.supported(n9))
+            assertEquals(DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.displayName(names, n9, Theme.MAP))
+            assertEquals(DiLink51ClusterLayout.SIDE, DiLink51ClusterLayout.displayName(names, n9, Theme.SCENARIO))
+            assertEquals(2560 to 720, DiLink51ClusterLayout.streamSize(n9))
+        }
+        val v18 = DiLink51ClusterLayout.DENZA_N9_FINGERPRINT
+        assertFalse(DiLink51ClusterLayout.supported(v18.replace("011226", "011227")))
+        assertFalse(DiLink51ClusterLayout.supported(DiLink51ClusterLayout.DENZA_N9_V19_FINGERPRINT.replace("221210", "221211")))
     }
 
     @Test fun the1920ClustersKeepTheirMeasuredPlans() {
@@ -101,31 +113,30 @@ class DiLink51ClusterLayoutTest {
         assertEquals(measured.height, wide.height)
     }
 
-    @Test fun theN9SideMapClearsTheTopRightIconsAndTheBottomReadouts() {
-        // #301: the 4/3-scaled box (x=1760..2560, full height) ran under both rows. Positions on the
-        // 2560x720 cluster, read from the owner's photos.
-        val statusIcons = Box(1428, 15, 2010, 71) // car, temperature, P, seat belt, ..., lamp icons
-        val readouts = Box(1805, 651, 2354, 694) // power bar, P, trip distance
-        val stockNavigationCard = Box(2070, 274, 2245, 507) // arrow and road name, no map outside China
-        val clearance = 20
+    @Test fun theN9SideMapIsTheStockMiniMapBox() {
+        // #301: BYD's launchermap dumps on N9 OTA V1.8 and V1.9. MeterSmallScreenActivity fills the 2560x720
+        // cluster; its card (small_screen_son_layout, with the 720 px mask_layout) starts at x=1900 and its
+        // map surface (small_map_layout, MapSurfaceView) is 600x720 at x=1960..2560.
+        val stockCard = Box(1900, 0, 2560, 720)
+        val stockMap = Box(1960, 0, 2560, 720)
+        val measured1920 = DiLink51ClusterLayout.plan(1920, 720, Theme.SCENARIO)!!
         for (theme in listOf(Theme.SCENARIO, Theme.SIMPLE)) {
             val plan = DiLink51ClusterLayout.plan(2560, 720, theme)!!
-            assertEquals(Plan(1760, 96, 800, 528, false, 2560, 720), plan)
+            assertEquals(Plan(1960, 0, 600, 720, false, 2560, 720), plan)
             val side = Box(plan.left, plan.top, plan.left + plan.width, plan.top + plan.height)
-            assertTrue(side.left >= 0 && side.right <= 2560 && side.top >= 0 && side.bottom <= 720)
-            assertFalse(side.overlaps(statusIcons.grow(clearance)))
-            assertFalse(side.overlaps(readouts.grow(clearance)))
-            assertTrue(side.contains(stockNavigationCard))
-            val cardCentre = (stockNavigationCard.left + stockNavigationCard.right) / 2
-            assertTrue(kotlin.math.abs((side.left + side.right) / 2 - cardCentre) <= 10)
-            // Smaller than the 4/3-scaled box it replaces.
-            assertTrue(plan.width * plan.height < 800 * 720)
+            assertEquals(stockMap, side)
+            assertTrue(stockCard.contains(side))
+            // Not scaled with the wider cluster: the measured 1920 box's size, against the right edge.
+            assertEquals(measured1920.width, plan.width)
+            assertEquals(measured1920.height, plan.height)
+            assertEquals(1920 - measured1920.left, 2560 - plan.left)
         }
     }
 
     @Test fun theN9StreamSizeIsKnownBeforeItsClusterDisplayAppears() {
         // The cluster stream is negotiated before the display exists (#981), so the size comes from the firmware.
         assertEquals(2560 to 720, DiLink51ClusterLayout.streamSize(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT))
+        assertEquals(2560 to 720, DiLink51ClusterLayout.streamSize(DiLink51ClusterLayout.DENZA_N9_V19_FINGERPRINT))
         assertEquals(1920 to 720, DiLink51ClusterLayout.streamSize(firmware))
         assertEquals(1920 to 720, DiLink51ClusterLayout.streamSize(DiLink51ClusterLayout.LEOPARD5_FINGERPRINT))
         val (width, height) = DiLink51ClusterLayout.streamSize(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT)
@@ -152,14 +163,16 @@ class DiLink51ClusterLayoutTest {
             assertTrue(1280 in plan.sourceLeft until plan.sourceLeft + plan.width)
             assertTrue(640 in plan.sourceTop until plan.sourceTop + plan.height)
         }
-        assertEquals(880, DiLink51ClusterLayout.plan(2560, 720, Theme.SIMPLE)!!.sourceLeft)
+        assertEquals(980, DiLink51ClusterLayout.plan(2560, 720, Theme.SIMPLE)!!.sourceLeft)
         assertEquals(240, DiLink51ClusterLayout.plan(2560, 720, Theme.MAP)!!.sourceTop)
     }
 
-    @Test fun theN9SideCropIsCentredAndBottomAligned() {
+    @Test fun theN9SideCropIsCentredAtFullHeight() {
+        // Like the 1920 side crop (source 660,0): the middle 600 columns of the stream, every row.
         val plan = DiLink51ClusterLayout.plan(2560, 720, Theme.SCENARIO)!!
-        assertEquals(880, plan.sourceLeft)
-        assertEquals(192, plan.sourceTop)
+        assertEquals(980, plan.sourceLeft)
+        assertEquals(1280, plan.sourceLeft + plan.width / 2)
+        assertEquals(0, plan.sourceTop)
         assertEquals(720, plan.sourceTop + plan.height)
     }
 
@@ -170,8 +183,6 @@ class DiLink51ClusterLayoutTest {
     }
 
     private data class Box(val left: Int, val top: Int, val right: Int, val bottom: Int) {
-        fun grow(by: Int) = Box(left - by, top - by, right + by, bottom + by)
-        fun overlaps(other: Box) = left < other.right && other.left < right && top < other.bottom && other.top < bottom
         fun contains(other: Box) = other.left >= left && other.right <= right && other.top >= top && other.bottom <= bottom
     }
 }
