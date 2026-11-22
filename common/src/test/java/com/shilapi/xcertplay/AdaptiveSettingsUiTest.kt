@@ -801,6 +801,19 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    // #1327: off BYD units the DiLink 4 routes find no projection display and only cost a stream nobody sees.
+    @Test fun diLink4ClusterRoutesLiveInAdvancedOnlyOnBydHeadUnits() {
+        val screen = openSettings()
+        val routes = listOf(R.string.adb_cluster_activity_mode, R.string.platform21_cluster_mode).map(screen::getString)
+        fun index() = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(
+            screen, "buildSettingsSearchIndex")
+
+        AirPlayPersistence.saveAdbClusterEnabled(context, true)
+        routes.forEach { title -> assertFalse(title, index().any { it.title == title }) }
+        installBydSettingsPackage()
+        routes.forEach { title -> assertEquals(title, SettingsCategory.ADVANCED, index().single { it.title == title }.category) }
+    }
+
     @Test fun navigationAttenuationSliderSavesAndUpdatesActiveAudioWithoutReconnect() {
         val screen = openSettings()
         val session = mock(CarPlayController::class.java)

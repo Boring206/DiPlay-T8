@@ -328,7 +328,10 @@ internal object ClusterActivityOutput {
     }
 
     /** Settings may change while the projection host is paused. Stop its old lease immediately. */
-    fun stopForSettings() { closeRoute() }
+    fun stopForSettings() {
+        AdbClusterRouter.forgetMissingTarget()
+        closeRoute()
+    }
 
     fun stop(owner: Any) {
         if (hostOwner !== owner) return
