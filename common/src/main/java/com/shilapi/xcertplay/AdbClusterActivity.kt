@@ -78,7 +78,7 @@ class AdbClusterActivity : Activity() {
             dimOutside = false
         }
         root.addView(safeAreaPreview, FrameLayout.LayoutParams(-1, -1))
-        setContentView(root)
+        setContentView(ClusterDashboardView(this, root, onPlayerShown = { ClusterActivityOutput.presented(this) }, legacyBounds = legacy))
         root.post {
             val attached = root.display?.displayId ?: -1
             if (attached > 0 && !legacy) confirmDisplay(token, attached)
@@ -120,6 +120,8 @@ class AdbClusterActivity : Activity() {
         }
         routeStatus = getString(R.string.adb_cluster_routed)
         surface?.let { ClusterActivityOutput.attach(this, it) }
+        if (com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(this))
+            window.decorView.post { ClusterActivityOutput.presented(this) }
         updateStream()
     }
 
@@ -161,7 +163,9 @@ internal object ClusterActivityOutput {
     /** Texture updates confirm an output frame, rather than only a successful shell reply. */
     fun presented(window: AdbClusterActivity) {
         if (legacyPresented || activity.get() !== window || !AirPlayPersistence.loadLegacyClusterEnabled(window) ||
-            !streamActive || surfaceOwner !== window || surface?.isValid != true || !hasConfirmedRoute()) return
+            !hasConfirmedRoute()) return
+        val player = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(window)
+        if (!player && (!streamActive || surfaceOwner !== window || surface?.isValid != true)) return
         legacyPresented = true
         main.removeCallbacks(retryTick)
     }

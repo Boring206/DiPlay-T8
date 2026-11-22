@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_background_motion">움직이는 배경</string>
+    <string name="settings_cluster_background_motion_description">기본값은 꺼짐입니다. 재생 중 배경을 천천히 움직입니다. 꺼져 있어도 곡 전환 페이드는 유지됩니다.</string>
+</resources>

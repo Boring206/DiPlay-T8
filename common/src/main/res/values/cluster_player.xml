@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">View</string>
+    <string name="settings_cluster_player_map">Map</string>
+    <string name="settings_cluster_player">Player (experimental)</string>
+    <string name="settings_cluster_player_description">Switches instantly between the map and player, using the saved dashboard map shape. Player pauses the map and its center-screen copies; cluster turn-by-turn guidance is unavailable in Player. Native indicators remain controlled by the car.</string>
+    <string name="settings_cluster_player_speed">Show speed in player</string>
+    <string name="settings_cluster_player_speed_description">Vehicle speed in km/h, without a box. Requires vehicle reading over ADB; shows — without recent data.</string>
+    <string name="settings_cluster_player_idle">Nothing playing</string>
+    <string name="settings_cluster_player_vehicle">Show vehicle information in player</string>
+    <string name="settings_cluster_player_vehicle_description">Gear, battery percentage and electric range, read through ADB. Unavailable or stale readings show —. Native warning lights and alerts are still required.</string>
+    <string name="cluster_player_vehicle_readout">Gear %1$s   ·   Battery %2$s   ·   Range %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Fit player between native strips</string>
+    <string name="settings_cluster_player_fit_visible_description">Temporary layout for clusters with top and bottom vehicle strips. Keeps the cover, song, speed and progress inside the visible area; the background still fills the projection. Applies immediately and does not hide native indicators.</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Вигляд</string>
+    <string name="settings_cluster_player_map">Карта</string>
+    <string name="settings_cluster_player">Програвач (експериментально)</string>
+    <string name="settings_cluster_player_description">Миттєво перемикає карту й програвач зі збереженим форматом проєкції. Програвач призупиняє карту та її центральні копії; підказки поворотів на панелі недоступні. Штатними індикаторами керує автомобіль.</string>
+    <string name="settings_cluster_player_speed">Швидкість у програвачі</string>
+    <string name="settings_cluster_player_speed_description">Швидкість автомобіля в км/год без рамки. Потрібне читання через ADB; без свіжих даних показується —.</string>
+    <string name="settings_cluster_player_idle">Немає відтворення</string>
+    <string name="settings_cluster_player_vehicle">Дані автомобіля у програвачі</string>
+    <string name="settings_cluster_player_vehicle_description">Передача, заряд батареї та запас ходу на електротязі через ADB. Недоступні або застарілі дані відображаються як —. Штатні індикатори й попередження залишаються необхідними.</string>
+    <string name="cluster_player_vehicle_readout">Передача %1$s   ·   Батарея %2$s   ·   Запас ходу %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Розмістити програвач між штатними смугами</string>
+    <string name="settings_cluster_player_fit_visible_description">Тимчасове компонування для панелей зі штатними смугами зверху та знизу. Обкладинка, пісня, швидкість і прогрес уміщуються у видиму область; тло заповнює всю проєкцію. Застосовується одразу й не приховує штатні індикатори.</string>
+</resources>

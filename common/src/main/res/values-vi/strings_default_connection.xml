@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_connection_mode">Chế độ kết nối mặc định</string>
+    <string name="default_connection_last_used">Dùng gần nhất</string>
+    <string name="default_connection_wireless">Không dây</string>
+    <string name="default_connection_usb">USB</string>
+    <string name="default_connection_description">Dùng chế độ kết nối mặc định và iPhone đã chọn khi mở DiPlay. Các nút kết nối thủ công dùng chế độ bạn chọn.</string>
+</resources>

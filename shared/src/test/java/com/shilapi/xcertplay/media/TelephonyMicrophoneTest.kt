@@ -388,7 +388,7 @@ class TelephonyMicrophoneTest {
         registerCallDownlink()
         sink.onMicrophoneStarted(telephony, config("telephony"))
         assertEquals(AudioRecord.RECORDSTATE_RECORDING, awaitCapture().recordingState)
-        assertTrue(microphoneLog(), microphoneLog().contains("microphone echo canceller enabled=false"))
+        assertTrue(microphoneLog(), microphoneLog().contains("Microphone: type=telephony echo canceller enabled=false"))
         sink.onMicrophoneStopped(telephony)
     }
 
@@ -451,7 +451,7 @@ class TelephonyMicrophoneTest {
             assertEquals(2, ShadowAudioEffect.getAudioEffects().size)
             assertTrue(ShadowAudioEffect.getAudioEffects().all { it.enabled })
             assertTrue(microphoneLog().contains("platform AEC could not be disabled"))
-            assertTrue(microphoneLog().contains("microphone echo canceller enabled=false"))
+            assertTrue(microphoneLog().contains("Microphone: type=telephony echo canceller enabled=false"))
         } finally { uplink.close() }
     }
 
@@ -538,6 +538,36 @@ class TelephonyMicrophoneTest {
             return succeeds
         }
         override fun close() { closed = true }
+    }
+
+    // #1237: which echo canceller and which platform effects ran during a call reached logcat only.
+    @Test fun callEchoAndNoiseDecisionsReachTheAudioDiagnosticCallback() {
+        val diagnostics = CopyOnWriteArrayList<String>()
+        val fake = FakeCallEchoCanceller()
+        provideCallFrame()
+        val uplink = MicrophoneUplink(config("telephony"), onDiagnostic = diagnostics::add,
+            echoReference = EchoReference(16_000), echoCancellerFactory = { _, _, _ -> fake })
+        try {
+            assertTrue(uplink.start())
+            awaitCapture()
+            assertTrue(fake.processed.await(5, TimeUnit.SECONDS))
+        } finally { uplink.close() }
+        assertEquals(listOf(
+            "Microphone: type=telephony platform effect=AEC enabled=false",
+            "Microphone: type=telephony platform effect=NS enabled=false",
+            "Microphone: type=telephony echo canceller enabled=true tail=250ms",
+        ), diagnostics.filter { it.startsWith("Microphone: type=") })
+    }
+
+    @Test fun platformCallEffectsReachTheAudioDiagnosticCallback() {
+        val diagnostics = recordDiagnostics()
+        sink.onMicrophoneStarted(telephony, config("telephony"))
+        awaitCapture()
+        sink.onMicrophoneStopped(telephony)
+        assertEquals(listOf(
+            "Microphone: type=telephony platform effect=AEC enabled=true",
+            "Microphone: type=telephony platform effect=NS enabled=true",
+        ), diagnostics.filter { it.startsWith("Microphone: type=") })
     }
 
     @Test fun speechRecognitionNeverStartsTheEchoCanceller() {

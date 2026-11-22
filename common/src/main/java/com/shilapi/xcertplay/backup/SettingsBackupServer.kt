@@ -186,6 +186,9 @@ class SettingsBackupServer(
     private fun readRequest(input: InputStream): RtspMessage.Request? {
         val buffer = ByteArrayOutputStream()
         val chunk = ByteArray(8192)
+        // < 0 until a full \r\n\r\n is seen; then the byte count (header + Content-Length) at which
+        // RtspMessage.parseMessages can return the first message.
+        var needed = -1
         while (buffer.size() <= MAX_REQUEST) {
             val read = try { input.read(chunk) } catch (_: SocketTimeoutException) { break } ?: break
             if (read <= 0) break
@@ -193,7 +196,27 @@ class SettingsBackupServer(
             // lets it fall back to HTTP now, not after the read timeout.
             if (buffer.size() == 0 && chunk[0] == TLS_HANDSHAKE) return null
             buffer.write(chunk, 0, read)
-            val parsed = RtspMessage.parseMessages(buffer.toByteArray())
+            // Copy and parse only when the request may be complete. parseMessages rejects a
+            // Content-Length over 1 MiB (RtspMessage.kt:35, :75) on the read that finishes the
+            // header, so the largest request it accepts has ~1 MiB of body: at full 8 KiB reads
+            // that is ~128 reads and ~130 MB of whole-buffer copies (toByteArray plus parseMessages'
+            // rest copy), not O(n^2) parsing. The case that really hurts is a peer on the car's
+            // network dripping the body in tiny segments while the page stays open: reads then
+            // approach one per byte, and the two whole-buffer copies on each of them grow
+            // quadratically, on up to 16 connections at once (MAX_CONNECTIONS). So:
+            //  - while the header is incomplete, keep checking after every read (parseMessages still
+            //    fails an over-long header, and a request with no Content-Length is still answered
+            //    the moment its header ends);
+            //  - on the read that completes the header, always parse once, so an oversized or
+            //    ill-formed Content-Length is rejected there (parseMessages throws) instead of
+            //    leaving the connection to hang;
+            //  - afterwards, wait until header + Content-Length bytes have arrived before copying.
+            // The header phase still copies and scans the buffer from byte 0 on every read; it is
+            // capped at 16 KiB, so that is acceptable, and this change does not remove it.
+            if (needed >= 0 && buffer.size() < needed) continue
+            val bytes = buffer.toByteArray()
+            if (needed < 0) needed = requiredBytes(bytes) ?: -1
+            val parsed = RtspMessage.parseMessages(bytes)
             if (parsed.messages.isNotEmpty()) return parsed.messages.first()
         }
         return null
@@ -282,6 +305,37 @@ class SettingsBackupServer(
         private const val TLS_HANDSHAKE: Byte = 0x16
         /** Short, the same four keys, and no browser refuses it. Unprivileged apps cannot use 80. */
         const val TYPED_PORT = 8888
+
+        /**
+         * Byte count at which [RtspMessage.parseMessages] can return the first message, or null while
+         * the header has no terminating \r\n\r\n. Content-Length is read exactly the way parseMessages
+         * reads it, so a complete request is never mistaken for an incomplete one (left unanswered),
+         * nor the reverse. [data] may also contain body bytes; only the part before the first \r\n\r\n
+         * is looked at. Uses no instance state, so it lives in the companion and is pinned to
+         * parseMessages by a table test.
+         */
+        internal fun requiredBytes(data: ByteArray): Int? {
+            var headerEnd = -1
+            for (i in 0..data.size - 4) {
+                if (data[i] == 0x0d.toByte() && data[i + 1] == 0x0a.toByte() &&
+                    data[i + 2] == 0x0d.toByte() && data[i + 3] == 0x0a.toByte()) {
+                    headerEnd = i
+                    break
+                }
+            }
+            if (headerEnd < 0) return null
+            val bodyStart = headerEnd + 4
+            val headerText = String(data, 0, headerEnd, Charsets.US_ASCII)
+            var contentLength = 0
+            for (line in headerText.split("\r\n").drop(1)) {
+                val separator = line.indexOf(':')
+                if (separator == -1) continue
+                if (line.substring(0, separator).trim().lowercase() == "content-length") {
+                    contentLength = line.substring(separator + 1).trim().toIntOrNull()?.coerceAtLeast(0) ?: 0
+                }
+            }
+            return (bodyStart.toLong() + contentLength).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        }
 
         fun addressCandidates(preferredPrefix: String? = null): List<String> = runCatching {
             NetworkInterface.getNetworkInterfaces().toList().asSequence()

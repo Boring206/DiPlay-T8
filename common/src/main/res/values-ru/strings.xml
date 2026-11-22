@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Существующая Wi-Fi / Одна LAN</string>
     <string name="existing_wifi_description">Используйте существующий роутер или мобильную точку Wi-Fi. iPhone и автомобиль остаются в одной сети с доступом в Интернет.</string>
     <string name="existing_wifi_hint">Существующая Wi-Fi · Подключите оба устройства к одной Wi-Fi и включите Bluetooth. Точка доступа автомобиля не нужна.</string>
-    <string name="existing_wifi_instructions">В системных настройках подключите автомобиль и iPhone к одной внешней Wi-Fi. Введите её точное имя и пароль WPA2; оставьте пароль пустым только для открытой сети. Используйте WPA2 или смешанный режим WPA2/WPA3 и отключите изоляцию клиентов на роутере. DiPlay сохраняет это подключение и не создаёт точку доступа.</string>
+    <string name="existing_wifi_instructions">В системных настройках подключите автомобиль и iPhone к одной внешней Wi-Fi. Введите её точное имя и пароль WPA2; открытая сеть без пароля не подойдёт: iPhone запускает беспроводной CarPlay только в сети с паролем. Используйте WPA2 или смешанный режим WPA2/WPA3 и отключите изоляцию клиентов на роутере. DiPlay сохраняет это подключение и не создаёт точку доступа.</string>
     <string name="existing_wifi_details">Данные внешней Wi-Fi</string>
     <string name="existing_wifi_ssid">Имя внешней Wi-Fi (SSID)</string>
     <string name="existing_wifi_password">Пароль внешней Wi-Fi</string>
@@ -186,7 +186,6 @@
     <string name="could_not_save_image">Не удалось сохранить изображение</string>
     <string name="could_not_save_the_report">Не удалось сохранить отчёт</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не удалось запустить CarPlay. Вернитесь в DiPlay и проверьте разрешения приложения.</string>
-    <string name="custom_1_1_icon">Пользовательский значок 1:1</string>
     <string name="debug_logs">Отладочные журналы</string>
     <string name="default_icon">Значок по умолчанию</string>
     <string name="default_placeholder_icon">Значок-заглушка по умолчанию</string>
@@ -525,6 +524,8 @@
     <string name="wheel_speed_for_tunnels_description">Если включено «Передавать местоположение на iPhone», DiPlay также передаёт скорость колёс и передачу, чтобы Apple Карты продолжали вести вашу позицию в тоннелях и на парковках. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
     <string name="video_while_parked">Видео на стоянке</string>
     <string name="video_while_parked_description">iOS 27: видео, которое вы отправляете в CarPlay с iPhone, показывается на экране машины, пока включён P. Плеер закрывается, когда вы выходите из P; без ADB видео выключено и iPhone играет только звук. Обычное видео по HTTPS (например, из Safari) работает; видео под защитой FairPlay, как Apple TV+, требует лицензированного приёмника и здесь не воспроизводится. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
+    <string name="video_off_gear_unreadable">Видео не воспроизводится на экране автомобиля: DiPlay не может прочитать передачу.</string>
+    <string name="video_gear_no_reply">ADB головного устройства не ответил на чтение передачи.</string>
     <string name="cluster_song">Песня на приборной панели</string>
     <string name="cluster_song_description">Название и исполнитель песни из CarPlay показываются в музыкальной карточке на приборной панели, вместе с воспроизведением и паузой. Карточка отображается как источник BYD «другое», потому что панель не рисует собственный источник CarPlay. Применяется сразу. Нужен ADB по сети на головном устройстве.</string>
     <string name="cluster_song_gate">Автоактивация музыкальной карточки</string>
@@ -637,8 +638,9 @@
     <string name="settings_usb_charging">Зарядка iPhone</string>
     <string name="settings_usb_charging_normal">Обычная (2,4 А)</string>
     <string name="settings_usb_charging_reduced">Пониженная (1,5 А)</string>
+    <string name="settings_usb_charging_medium">Средняя (1 А)</string>
     <string name="settings_usb_charging_low">Низкая (0,5 А)</string>
-    <string name="settings_usb_charging_description">Ток зарядки, который DiPlay разрешает iPhone по USB. Если проводной CarPlay обрывается каждые несколько секунд и iPhone сам переподключается, USB-порт автомобиля может не выдавать достаточно питания: попробуйте «Пониженная», затем «Низкая». iPhone будет заряжаться медленнее. Применяется при следующем USB-подключении.</string>
+    <string name="settings_usb_charging_description">Ток зарядки, который DiPlay разрешает iPhone по USB. Если проводной CarPlay обрывается каждые несколько секунд и iPhone сам переподключается, USB-порт автомобиля может не выдавать достаточно питания: попробуйте «Пониженная», затем «Средняя», затем «Низкая». iPhone будет заряжаться медленнее. Применяется при следующем USB-подключении.</string>
     <string name="wheel_joystick_auto_off">Джойстик выключается сам</string>
     <string name="wheel_joystick_auto_off_description">Через 15 секунд без нажатий и когда начинается маршрут кнопки снова управляют музыкой и громкостью.</string>
     <string name="wheel_joystick_on">Джойстик включён</string>
@@ -712,6 +714,17 @@
     <string name="car_button_name">Название</string>
     <string name="car_button_description">CarPlay показывает этот значок и название в списке приложений. Нажмите его, чтобы вернуться на экран автомобиля. Изменения применятся при следующем подключении CarPlay.</string>
     <string name="car_button_saved_next_connection">Сохранено. CarPlay покажет новый значок и название при следующем подключении.</string>
+    <string name="settings_car_brand_title">Значок бренда</string>
+    <string name="settings_car_brand_summary">Выберите значок серии BYD, который CarPlay показывает в списке приложений. Название обновляется, только если оно по умолчанию или совпадает с названием значка. Выбор значка заменяет пользовательское изображение.</string>
+    <string name="settings_car_brand_default">По умолчанию (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Сбросить на фирменный значок</string>
+<string name="settings_car_brand_reset">Восстановить значок и название по умолчанию</string>
     <string name="this_head_unit_has_no_image_picker">На этом головном устройстве нет выбора изображений.</string>
     <string name="settings_interface_size">Размер интерфейса</string>
     <string name="settings_interface_size_auto">Автоматически</string>
@@ -898,10 +911,13 @@
     <string name="connection_help_usb_device_not_iphone">Используйте кабель данных USB и порт данных USB или порт CarPlay автомобиля, отключите другие USB-устройства и разблокируйте iPhone.</string>
     <string name="car_hotspot_details_differ">Настройки точки доступа автомобиля отличаются от сохранённых в DiPlay</string>
     <string name="connection_help_car_hotspot_details_differ">В разделе «Настройка подключения» нажмите «Изменить сохранённую точку доступа», скопируйте имя и пароль из настроек точки доступа автомобиля и повторите попытку.</string>
+    <string name="existing_wifi_needs_password">Для общей Wi-Fi нужен пароль</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhone запускает беспроводной CarPlay только в сети Wi-Fi с паролем. Введите пароль WPA2 роутера в разделе «Настройка подключения». Если у роутера нет пароля, задайте его и заново подключите к сети автомобиль и iPhone. Затем повторите попытку.</string>
     <string name="hotspot_interface_not_found">Интерфейс точки доступа, сохранённый в DiPlay, отсутствует в этом автомобиле</string>
     <string name="connection_help_hotspot_interface_not_found">В разделе «Настройка подключения» нажмите «Изменить сохранённую точку доступа», очистите поле «Интерфейс точки доступа (необязательно)» и повторите попытку.</string>
     <string name="connection_help_car_hotspot_off">Включите точку доступа автомобиля в настройках автомобиля и повторите попытку.</string>
     <string name="last_connection_attempt">Последняя попытка подключения (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Последнее подключение CarPlay (%1$s): %2$s</string>
     <string name="connection_help_hotspot">Убедитесь, что точка доступа автомобиля включена, а имя и пароль совпадают с настройками DiPlay. Если возможно, выберите 5 ГГц и повторите попытку.</string>
     <string name="connection_help_iphone_wifi">Включите Wi-Fi и Bluetooth. Подключите iPhone к точке доступа автомобиля и включите автоподключение. Повторите попытку; при сбое сохраните отчёт.</string>
     <string name="connection_help_permissions">Разрешите DiPlay доступ к USB, устройствам поблизости или геолокации на головном устройстве, если требуется, и повторите попытку.</string>
@@ -918,6 +934,8 @@
     <string name="settings_navigation_attenuation">Громкость навигационных подсказок</string>
     <string name="settings_navigation_attenuation_value">%1$d дБ</string>
     <string name="settings_navigation_attenuation_description">Уменьшает только громкость навигационных подсказок CarPlay, не меняя музыку и звонки. Применяется сразу; регулировка громкости навигации на устройстве сохраняется.</string>
+    <string name="settings_call_attenuation">Уровень голоса в звонках</string>
+    <string name="settings_call_attenuation_description">Уменьшает громкость голоса собеседника в звонках CarPlay, не меняя громкость звонков в автомобиле. Применяется сразу, какой бы выход ни использовал звонок. Оставьте 0 дБ, если звонки не звучат с шумом или нечётко. На одном BYD Han (DiLink 3) при прослушивании звонок звучал чисто на уровне около -12…-16 дБ.</string>
     <string name="settings_car_hotspot_control">Точка доступа автомобиля</string>
     <string name="settings_auto_car_hotspot_system_description">Включает сохранённую точку доступа при открытии DiPlay и перед беспроводным подключением. Нужен доступ Android «Изменение системных настроек»; ADB не требуется. Чтобы точка доступа появлялась и после полного перезапуска, включите открытие DiPlay после запуска автомобиля. Точка доступа автоматически не выключается.</string>
     <string name="settings_write_settings_granted">Доступ «Изменение системных настроек»: разрешён</string>
@@ -954,4 +972,7 @@
     <string name="cluster_projection_shape_description">При половине экрана скорость и состояние, которые панель обычно показывает, остаются рядом с картой; на весь экран карта занимает всю панель. DiPlay задаёт этот вид при каждом появлении карты CarPlay и иначе перекрывает вид, выбранный в машине. Требуется ADB по сети на головном устройстве.</string>
     <string name="settings_cluster_speedometer_album_color">Цвет альбома для фона спидометра</string>
     <string name="settings_cluster_speedometer_album_color_description">Плавно меняет фон на цвет рамки альбома. Сохраняет выбранную непрозрачность.</string>
+    <string name="settings_fit_screen_shape">Обходить вырез и скруглённые углы</string>
+    <string name="settings_fit_screen_shape_description">Для телефона или планшета в роли головного устройства. Отодвигает кнопки и панель приложений CarPlay от выреза камеры и скруглённых углов; карты по-прежнему занимают весь экран. Безопасная область, заданная в меню во время сеанса, важнее. Применяется со следующего подключения.</string>
+    <string name="settings_safe_area_fitted_summary">Безопасная область: по вырезу и углам, %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
 </resources>
