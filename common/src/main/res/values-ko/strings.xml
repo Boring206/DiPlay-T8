@@ -1050,4 +1050,7 @@
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>
     <string name="last_connection_attempt">마지막 연결 시도(%1$s): %2$s</string>
+    <string name="settings_fit_screen_shape">노치와 둥근 모서리 피하기</string>
+    <string name="settings_fit_screen_shape_description">헤드 유닛으로 사용하는 휴대폰이나 태블릿용 기능입니다. CarPlay 버튼과 도크를 카메라 노치와 둥근 모서리에서 떨어뜨립니다. 지도는 계속 화면 전체에 표시됩니다. 세션 메뉴에서 설정한 안전 영역이 우선합니다. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_safe_area_fitted_summary">안전 영역: 노치와 모서리에 맞춤, %1$d x %2$d, (%3$d, %4$d) 위치, 전체 크기 %5$d x %6$d</string>
 </resources>

@@ -127,6 +127,7 @@ object AirPlayPersistence {
     private const val KEY_SAFE_AREA_DRAW_OUTSIDE = "safe_area_draw_outside"
     private const val KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA = "main_display_disable_safe_area"
     private const val KEY_BLACK_CORNER_RADIUS = "black_corner_radius_dp"
+    private const val KEY_FIT_SCREEN_SHAPE = "fit_screen_shape"
     private const val KEY_ADAPT_PIP_RESOLUTION = "adapt_pip_resolution"
     private const val KEY_AUTO_START_ON_BOOT = "auto_start_on_boot"
     private const val KEY_BT_SUSPEND_DURING_CARPLAY = "bt_suspend_during_carplay"
@@ -237,13 +238,20 @@ object AirPlayPersistence {
             .apply()
     }
 
+    // Legacy key: routing moved to navigation_audio_channel in #64 (v0.2.8); the only live consumer
+    // is loadNavigationAudioChannel(), which inherits this value when the new key is absent and
+    // clamps out-of-range imports to 0. loadNavigationStreamType() feeds unused plumbing and
+    // saveNavigationStreamType() has no production caller, but backup imports write this key
+    // directly, so both ends validate against AUDIO_CHANNELS. The two readers fall back differently
+    // (14 here, 0 on the inheritance path); writes clamp to 0 to match the latter, not 14.
     fun loadNavigationStreamType(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt(KEY_NAVIGATION_STREAM_TYPE, 14)
+            .takeIf { it in AUDIO_CHANNELS } ?: 14
 
     fun saveNavigationStreamType(context: Context, streamType: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_NAVIGATION_STREAM_TYPE, streamType)
+            .putInt(KEY_NAVIGATION_STREAM_TYPE, streamType.takeIf { it in AUDIO_CHANNELS } ?: 0)
             .apply()
     }
 
@@ -1472,6 +1480,17 @@ object AirPlayPersistence {
         require(value in CarPlayBlackCornerOverlay.RADII_DP)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_BLACK_CORNER_RADIUS, value).apply()
+    }
+
+    /** Off by default: fits CarPlay's safe area around a phone or tablet's notch and rounded corners. */
+    fun loadFitScreenShape(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_FIT_SCREEN_SHAPE, false)
+
+    fun saveFitScreenShape(context: Context, fit: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_FIT_SCREEN_SHAPE, fit)
+            .apply()
     }
 
     fun loadSafeAreaRect(context: Context, widthPixels: Int, heightPixels: Int): SafeAreaRect? {

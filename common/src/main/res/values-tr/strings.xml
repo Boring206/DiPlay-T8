@@ -1042,4 +1042,7 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="settings_fit_screen_shape">Çentik ve yuvarlak köşelerden kaçın</string>
+    <string name="settings_fit_screen_shape_description">Ana ünite olarak kullanılan bir telefon veya tablet içindir. CarPlay\'in düğmelerini ve dock\'unu kamera çentiğinden ve yuvarlak köşelerden uzak tutar; haritalar yine tüm ekranı doldurur. Oturum menüsünde ayarlanan güvenli alan önceliklidir. Sonraki bağlantıda geçerli olur.</string>
+    <string name="settings_safe_area_fitted_summary">Güvenli alan: çentiğe ve köşelere uyarlandı, %5$d x %6$d içinde (%3$d, %4$d) konumunda %1$d x %2$d</string>
 </resources>

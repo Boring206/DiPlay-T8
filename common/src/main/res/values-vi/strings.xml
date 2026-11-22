@@ -1051,4 +1051,7 @@
     <string name="cluster_projection_shape_description">Nửa màn hình giữ lại các chỉ số tốc độ và trạng thái mà cụm đồng hồ thường hiện bên cạnh bản đồ; toàn màn hình để bản đồ lấp đầy cụm đồng hồ. DiPlay đặt hình dạng mỗi khi bản đồ CarPlay xuất hiện, nếu không bản đồ sẽ ghi đè hình dạng được chọn trên xe. Cần ADB qua mạng trên hệ thống giải trí.</string>
     <string name="settings_cluster_speedometer_album_color">Dùng màu album làm nền đồng hồ tốc độ</string>
     <string name="settings_cluster_speedometer_album_color_description">Khớp với màu khung album, chuyển đổi mượt mà. Giữ độ mờ đục đã chọn.</string>
+    <string name="settings_fit_screen_shape">Tránh tai thỏ và góc bo tròn</string>
+    <string name="settings_fit_screen_shape_description">Dành cho điện thoại hoặc máy tính bảng dùng làm hệ thống giải trí. Giữ các nút và thanh dock của CarPlay tránh khỏi tai thỏ camera và các góc bo tròn; bản đồ vẫn lấp đầy màn hình. Vùng an toàn đặt trong menu của phiên được ưu tiên. Áp dụng ở lần kết nối tiếp theo.</string>
+    <string name="settings_safe_area_fitted_summary">Vùng an toàn: tránh tai thỏ và góc bo, %1$d x %2$d tại (%3$d, %4$d) trong %5$d x %6$d</string>
 </resources>

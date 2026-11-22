@@ -93,6 +93,7 @@ import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.CarPlayMediaEngine
 import com.shilapi.xcertplay.airplay.SafeAreaRect
+import com.shilapi.xcertplay.airplay.ScreenShapeSafeArea
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.location.AndroidCarPlayLocationProvider
 import com.shilapi.xcertplay.media.AndroidMediaSink
@@ -2917,6 +2918,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val panel = FrameLayout(this).apply {
             background = swipeMenuChrome()
+            // Keep the outer stroke above opaque scrolling navigation backgrounds.
+            foreground = swipeMenuChrome().apply {
+                colors = intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT)
+            }
             clipToOutline = true
             elevation = dp(SWIPE_PANEL_ELEVATION_DP).toFloat()
         }
@@ -3392,10 +3397,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) bottomMargin = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
@@ -3408,10 +3413,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    marginEnd = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) marginEnd = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
@@ -4996,9 +5001,15 @@ open class CarPlayHostActivity : ComponentActivity() {
         appendLog("CarPlay size=${CarPlayUiScale.label(uiScalePercent)} canvas=${scaledDisplay.widthPixels}x${scaledDisplay.heightPixels}")
         val nativeMasks = blackCornerRadiusDp == CarPlayBlackCornerOverlay.IPHONE_MASK
         val disableSafeArea = mainDisplayDisableSafeArea || nativeMasks
+        val savedSafeArea = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
+        val fittedSafeArea = if (savedSafeArea == null && !disableSafeArea) fittedSafeArea(size) else null
+        if (fittedSafeArea != null) {
+            appendLog("Safe area fitted to the notch and rounded corners: ${fittedSafeArea.width}x${fittedSafeArea.height} " +
+                "at (${fittedSafeArea.left}, ${fittedSafeArea.top}) in ${size.width}x${size.height}")
+        }
         val display = scaledDisplay.copy(
             safeArea = if (disableSafeArea) null else AirPlaySafeArea.toInsets(
-                mapping = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height),
+                mapping = savedSafeArea ?: fittedSafeArea,
                 activityWidthPixels = size.width,
                 activityHeightPixels = size.height,
                 displayWidthPixels = scaledDisplay.widthPixels,
@@ -5200,7 +5211,13 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val size = currentActivitySize() ?: return getString(R.string.safe_area_waiting_for_activity_size)
         val mapping = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
-        return if (mapping == null) {
+        val fitted = if (mapping == null) fittedSafeArea(size) else null
+        return if (fitted != null) {
+            getString(
+                R.string.settings_safe_area_fitted_summary,
+                fitted.width, fitted.height, fitted.left, fitted.top, size.width, size.height,
+            )
+        } else if (mapping == null) {
             "${getString(R.string.safe_area_full_screen_at)}${size.width} x ${size.height}"
         } else {
             getString(
@@ -5208,6 +5225,20 @@ open class CarPlayHostActivity : ComponentActivity() {
                 mapping.width, mapping.height, mapping.left, mapping.top, size.width, size.height,
             )
         }
+    }
+
+    /**
+     * With Settings → Display → Fit around notch and rounded corners on, the safe area of the video view
+     * at [size] clear of them; null when it is off, the iPhone corner mask omits the safe area, the view has
+     * another size or nothing is in the way.
+     */
+    private fun fittedSafeArea(size: DisplaySize): SafeAreaRect? {
+        if (!AirPlayPersistence.loadFitScreenShape(this)) return null
+        if (blackCornerRadiusDp == CarPlayBlackCornerOverlay.IPHONE_MASK) return null
+        val view = videoView ?: return null
+        if (view.width != size.width || view.height != size.height) return null
+        val shape = AndroidScreenShape.over(view) ?: return null
+        return ScreenShapeSafeArea.fit(shape, size.width, size.height)
     }
 
     private fun updateSafeAreaSummary() {
@@ -5222,6 +5253,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val editorView = safeAreaEditorView ?: return
         val initial = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
+            ?: fittedSafeArea(size)
             ?: AirPlaySafeArea.default(size.width, size.height)
         safeAreaEditSize = size
         safeAreaEditorActive = true
@@ -6122,6 +6154,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return
         val size = activeDisplaySize ?: return
         startupRetryBudget.disconnected()
+        // Every caller starts a new attempt, a display change or a switch to USB included, so the stop of the
+        // last one no longer holds: its failure must be shown and a lost session reconnected.
+        startupRetryStopped = false
         startupRetryButton?.visibility = View.GONE
         appendLog(reason)
         activeScreenStreamTypes.clear()

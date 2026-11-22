@@ -954,4 +954,7 @@
     <string name="cluster_projection_shape_description">При половине экрана скорость и состояние, которые панель обычно показывает, остаются рядом с картой; на весь экран карта занимает всю панель. DiPlay задаёт этот вид при каждом появлении карты CarPlay и иначе перекрывает вид, выбранный в машине. Требуется ADB по сети на головном устройстве.</string>
     <string name="settings_cluster_speedometer_album_color">Цвет альбома для фона спидометра</string>
     <string name="settings_cluster_speedometer_album_color_description">Плавно меняет фон на цвет рамки альбома. Сохраняет выбранную непрозрачность.</string>
+    <string name="settings_fit_screen_shape">Обходить вырез и скруглённые углы</string>
+    <string name="settings_fit_screen_shape_description">Для телефона или планшета в роли головного устройства. Отодвигает кнопки и панель приложений CarPlay от выреза камеры и скруглённых углов; карты по-прежнему занимают весь экран. Безопасная область, заданная в меню во время сеанса, важнее. Применяется со следующего подключения.</string>
+    <string name="settings_safe_area_fitted_summary">Безопасная область: по вырезу и углам, %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
 </resources>

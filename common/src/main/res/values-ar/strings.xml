@@ -1003,4 +1003,7 @@
     <string name="cluster_projection_shape_description">يُبقي وضع نصف الشاشة السرعة وحالة السيارة اللتين تعرضهما اللوحة عادةً بجانب الخريطة؛ أما ملء الشاشة فتغطي الخريطة اللوحة بالكامل. يضبط DiPlay هذا الشكل عند ظهور خريطة CarPlay، وإلا فإنه يلغي الشكل المختار في السيارة. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="settings_cluster_speedometer_album_color">استخدام لون الألبوم لخلفية عداد السرعة</string>
     <string name="settings_cluster_speedometer_album_color_description">يطابق لون إطار الألبوم بانتقالات سلسة مع الحفاظ على التعتيم المحدد.</string>
+    <string name="settings_fit_screen_shape">تجنّب النتوء والزوايا المستديرة</string>
+    <string name="settings_fit_screen_shape_description">للهاتف أو الجهاز اللوحي المستخدم كوحدة في السيارة. يُبعد أزرار CarPlay وشريط التطبيقات عن نتوء الكاميرا والزوايا المستديرة، وتبقى الخرائط تملأ الشاشة. المنطقة الآمنة المضبوطة من قائمة الجلسة لها الأولوية. يُطبَّق عند الاتصال التالي.</string>
+    <string name="settings_safe_area_fitted_summary">المنطقة الآمنة: مضبوطة حول النتوء والزوايا، %1$d x %2$d عند (%3$d، %4$d) ضمن %5$d x %6$d</string>
 </resources>

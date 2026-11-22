@@ -571,7 +571,7 @@ class AdaptiveSettingsUiTest {
         assertFalse(index.any { it.title == screen.getString(R.string.auto_car_hotspot_title) })
     }
 
-    @Test fun cardControlsShareOneHeightAndGap() {
+    @Test fun cardControlsShareOneMinimumHeightAndGap() {
         val screen = openSettings()
         descendants(screen.window.decorView)
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
@@ -588,7 +588,8 @@ class AdaptiveSettingsUiTest {
         assertTrue(buttons.size >= 4)
         buttons.forEach { button ->
             val lp = button.layoutParams as LinearLayout.LayoutParams
-            assertEquals(button.text.toString(), dp(60), lp.height)
+            assertEquals(button.text.toString(), ViewGroup.LayoutParams.WRAP_CONTENT, lp.height)
+            assertEquals(button.text.toString(), dp(60), button.minHeight)
             assertEquals(button.text.toString(), 0, lp.topMargin)
             assertTrue(button.text.toString(), lp.bottomMargin in setOf(0, dp(6), dp(12)))
         }

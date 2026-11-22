@@ -179,6 +179,65 @@ class Iap2WirelessControlClientTest {
         }
     }
 
+    @Test fun repeatedCarPlayAvailabilityIsCappedAtMaximumStartSessionSends() {
+        val cap = Iap2WirelessControlClient.MAX_CARPLAY_START_SESSION_SENDS
+        val flood = cap * 4
+        val traces = mutableListOf<String>()
+        val progress = mutableListOf<String>()
+        var beforeStartSessionCalls = 0
+        var startSessionSentEvents = 0
+        val session = Iap2ControlClientTestHarness.scriptedSession(flood) { traces += it }
+        val result = Iap2WirelessControlClient(session, Iap2ControlClientTestHarness.fakeMfi()).run(
+            identification = identification(),
+            endpoint = endpoint(),
+            timeoutMillis = 500L, // bounded, so the scripted loop exits via TIMED_OUT
+            beforeStartSession = { beforeStartSessionCalls++ },
+            onStartSessionSent = { startSessionSentEvents++ },
+            onProgress = { progress += it },
+        )
+        // Actual 0x4301 writes, the send event and the beforeStartSession hook are all capped.
+        assertEquals(cap, traces.count { it.startsWith("IAP2 TX [test] 0x4301") })
+        assertEquals(cap, startSessionSentEvents)
+        assertEquals(cap, beforeStartSessionCalls)
+        assertEquals(cap, result.carPlayStartSessionsSent)
+        assertEquals(
+            flood - cap,
+            progress.count { "ignored: maximum CarPlay StartSession sends reached" in it },
+        )
+    }
+
+    @Test fun singleCarPlayAvailabilityStillSendsStartSession() {
+        val traces = mutableListOf<String>()
+        val progress = mutableListOf<String>()
+        var beforeStartSessionCalls = 0
+        var startSessionSentEvents = 0
+        val session = Iap2ControlClientTestHarness.scriptedSession(1) { traces += it }
+        val result = Iap2WirelessControlClient(session, Iap2ControlClientTestHarness.fakeMfi()).run(
+            identification = identification(),
+            endpoint = endpoint(),
+            timeoutMillis = 500L, // bounded, so the scripted loop exits via TIMED_OUT
+            beforeStartSession = { beforeStartSessionCalls++ },
+            onStartSessionSent = { startSessionSentEvents++ },
+            onProgress = { progress += it },
+        )
+        assertEquals(1, traces.count { it.startsWith("IAP2 TX [test] 0x4301") })
+        assertEquals(1, startSessionSentEvents)
+        assertEquals(1, beforeStartSessionCalls)
+        assertEquals(1, result.carPlayStartSessionsSent)
+        assertEquals(Iap2WirelessControlStage.CARPLAY_START_SENT, result.stage)
+        assertEquals(0, progress.count { "ignored: maximum CarPlay StartSession sends reached" in it })
+    }
+
+    private fun identification(): Iap2IdentificationConfig = Iap2IdentificationConfig(
+        name = "LIVI",
+        modelIdentifier = "LIVI",
+        manufacturer = "LIVI",
+        serialNumber = "0123456",
+        firmwareVersion = "1.0.0",
+        hardwareVersion = "1.0",
+        wireless = Iap2WirelessIdentification(bluetoothMac = "AA:BB:CC:DD:EE:FF", ssid = "LIVI"),
+    )
+
     private fun endpoint(ap: ByteArray? = null): Iap2WirelessCarPlayEndpoint = Iap2WirelessCarPlayEndpoint(
         ssid = "LIVI",
         passphrase = "secret123",
