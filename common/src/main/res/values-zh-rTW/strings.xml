@@ -1014,4 +1014,6 @@
     <string name="cluster_projection_shape_description">半螢幕會在儀表板地圖旁保留儀表原本的車速與狀態資訊；全螢幕則讓地圖佔滿整個儀表板。CarPlay 地圖出現時 DiPlay 會設定該形態，否則會覆蓋你在車機上選好的導航模式。需要車機已授權網路 ADB。</string>
     <string name="settings_cluster_speedometer_album_color">速度表背景使用專輯顏色</string>
     <string name="settings_cluster_speedometer_album_color_description">平滑過渡至專輯邊框的顏色，並保留所選的不透明度。</string>
+    <string name="settings_wifi_direct_unavailable">無法使用</string>
+    <string name="settings_wifi_direct_unsupported_help">請在「連線設定」選擇「車載熱點」或「現有 Wi-Fi / 同一區域網路」，再重試。</string>
 </resources>

@@ -966,4 +966,6 @@
     <string name="cluster_projection_shape_description">На пів екрана швидкість і стан, які панель зазвичай показує, залишаються поруч із картою; на весь екран карта займає всю панель. DiPlay задає цей вигляд щоразу, коли з&#8217;являється карта CarPlay, інакше він перекриває вигляд, вибраний в автомобілі. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="settings_cluster_speedometer_album_color">Колір альбому для тла спідометра</string>
     <string name="settings_cluster_speedometer_album_color_description">Плавно змінює тло на колір рамки альбому. Зберігає вибрану непрозорість.</string>
+    <string name="settings_wifi_direct_unavailable">Недоступно</string>
+    <string name="settings_wifi_direct_unsupported_help">У розділі «Налаштування підключення» виберіть «Вбудована точка доступу автомобіля» або «Наявна Wi-Fi / Одна LAN» і повторіть спробу.</string>
 </resources>

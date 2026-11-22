@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Looper
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.network.*
@@ -34,9 +35,12 @@ class WirelessStartupControllerTest {
     private fun controller(
         chosenIphone: String? = null,
         mode: WirelessHotspotMode = WirelessHotspotMode.WIFI_P2P,
+        p2pService: Boolean = true,
     ) = CarPlayController(object : ContextWrapper(RuntimeEnvironment.getApplication()) {
         override fun getApplicationContext(): Context = this
         override fun bindService(service: Intent, conn: ServiceConnection, flags: Int): Boolean = false
+        override fun getSystemService(name: String): Any? =
+            if (!p2pService && name == Context.WIFI_P2P_SERVICE) null else super.getSystemService(name)
     },
         CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, transport = CarPlayTransport.WIRELESS,
             identification = Iap2IdentificationConfig(name = "test", modelIdentifier = "test", manufacturer = "test",
@@ -113,8 +117,11 @@ class WirelessStartupControllerTest {
         } finally { controller.close(); controller.awaitClosed(2_000) }
     }
 
-    private fun hotspotStartFailure(): WirelessStartupException {
-        val controller = controller(mode = WirelessHotspotMode.MANUAL)
+    private fun hotspotStartFailure(
+        mode: WirelessHotspotMode = WirelessHotspotMode.MANUAL,
+        p2pService: Boolean = true,
+    ): WirelessStartupException {
+        val controller = controller(mode = mode, p2pService = p2pService)
         try {
             return assertThrows(InvocationTargetException::class.java) {
                 controller.javaClass.getDeclaredMethod("startWirelessHotspot", Int::class.javaPrimitiveType)
@@ -130,6 +137,29 @@ class WirelessStartupControllerTest {
         assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
         assertEquals("The car hotspot is off. Turn it on in the car settings and connect again.", failure.message)
         assertEquals(ConnectionFailureCause.CAR_HOTSPOT_OFF, failure.knownCause)
+    }
+
+    // #1256: firmware without Wi-Fi Direct used to fail with no reason, so it was retried forever unnamed.
+    @Test fun aHeadUnitWithoutWifiDirectIsNamedAndNotRetried() {
+        val packageManager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
+        for ((feature, service) in listOf(false to true, true to false, false to false)) {
+            packageManager.setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, feature)
+            val failure = hotspotStartFailure(WirelessHotspotMode.WIFI_P2P, p2pService = service)
+            assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
+            assertFalse(failure.reason.retryable)
+            assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, failure.knownCause)
+        }
+    }
+
+    @Test fun theFailureOfAHeadUnitWithoutWifiDirectReachesTheScreenWithItsCause() {
+        val controller = controller()
+        try {
+            fail(controller, 0, WifiDirectSupport.unsupported())
+            shadowOf(Looper.getMainLooper()).idle()
+            val failure = statuses.single() as CarPlayStatus.Failed
+            assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.startupFailure)
+            assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, failure.knownCause)
+        } finally { controller.close(); controller.awaitClosed(2_000) }
     }
 
     @Test @Config(shadows = [Tethering::class])

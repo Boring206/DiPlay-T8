@@ -1050,4 +1050,6 @@
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>
     <string name="last_connection_attempt">마지막 연결 시도(%1$s): %2$s</string>
+    <string name="settings_wifi_direct_unavailable">사용할 수 없음</string>
+    <string name="settings_wifi_direct_unsupported_help">연결 설정에서 차량 내장 핫스팟 또는 기존 Wi-Fi / 동일 LAN을 선택한 뒤 다시 시도하세요.</string>
 </resources>

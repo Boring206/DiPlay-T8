@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
@@ -275,6 +276,21 @@ class WirelessStartupRecoveryTest {
             activity.getString(R.string.wireless_startup_retries_exhausted), stage.text.toString())
         assertEquals(0, budget().retries)
         assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    // #1256: a head unit without Wi-Fi Direct looped on "Connection interrupted. Retrying…" with no cause.
+    @Test fun aHeadUnitWithoutWifiDirectSaysSoAndDoesNotRetry() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val failure = WifiDirectSupport.unsupported()
+        report(status = CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: ${failure.message}",
+            startupFailure = failure.reason, knownCause = failure.knownCause))
+        assertEquals(activity.getString(R.string.this_head_unit_does_not_support_wi_fi_direct) + "\n" +
+            activity.getString(R.string.wireless_startup_retries_exhausted), stage.text.toString())
+        assertEquals(0, budget().retries)
+        assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
         assertEquals(View.VISIBLE, retry.visibility)
     }
 

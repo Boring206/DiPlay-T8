@@ -2535,8 +2535,11 @@ class CarPlayController(
             pastOffReport = state == false
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
-            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
-                preferredChannel = config.wifiP2pPreferredChannel)
+            WirelessHotspotMode.WIFI_P2P -> if (com.shilapi.xcertplay.network.WifiDirectSupport.available(appContext)) {
+                WifiP2pGroupManager(appContext, ::debugLog, preferredChannel = config.wifiP2pPreferredChannel)
+            } else {
+                throw com.shilapi.xcertplay.network.WifiDirectSupport.unsupported()
+            }
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 LocalOnlyHotspotManager(appContext, ::debugLog)
             } else {

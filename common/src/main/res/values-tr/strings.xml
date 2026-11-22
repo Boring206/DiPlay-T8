@@ -1042,4 +1042,6 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="settings_wifi_direct_unavailable">Kullanılamıyor</string>
+    <string name="settings_wifi_direct_unsupported_help">Bağlantı kurulumunda Aracın dahili erişim noktası veya Mevcut Wi-Fi / Aynı Yerel Ağ seçeneğini seçin, ardından tekrar deneyin.</string>
 </resources>
