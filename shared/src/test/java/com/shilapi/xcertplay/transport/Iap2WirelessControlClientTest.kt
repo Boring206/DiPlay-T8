@@ -46,8 +46,18 @@ class Iap2WirelessControlClientTest {
         assertFalse(diagnostic.contains("Jane"))
     }
 
-    @Test
-    fun accessoryWiFiConfigurationMatchesLiviVector() {
+    @Test fun aTransportIdentifierWithAnEmbeddedNulIsOnlyLoggedAsFailed() {
+        val body = Iap2ParameterList.of(
+            Iap2Parameter(0, "AA\u0000BB\u0000".encodeToByteArray()),
+        ).encode()
+        val frame = Iap2Frame(0x4e0e, body)
+        val diagnostic = Iap2WirelessControlClient.deviceTransportIdentifierDiagnostic(frame)
+        assertTrue(diagnostic, diagnostic.contains("decode=failed"))
+        assertFalse(diagnostic, diagnostic.contains("AA"))
+        assertFalse(diagnostic, diagnostic.contains("BB"))
+    }
+
+    @Test fun accessoryWiFiConfigurationMatchesLiviVector() {
         val frame = Iap2WirelessControlClient.accessoryWiFiConfiguration(endpoint())
 
         assertEquals(
