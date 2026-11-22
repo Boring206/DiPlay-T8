@@ -3,6 +3,7 @@ package com.shilapi.xcertplay.transport
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -47,6 +48,25 @@ class BluetoothAdapterProofTest {
         assertTrue(proof.record(unit, store))
         assertFalse(proof.record(unit, store))
         assertFalse(proof.record(unit, store))
+        assertEquals(1, store.writes)
+    }
+
+    // The report says whether this process saw the adapter carry data or only an earlier run did.
+    @Test fun theSourceTellsThisProcessFromAnEarlierRun() {
+        val store = MemoryStore()
+        val first = BluetoothAdapterProof()
+        assertNull(first.source(unit, store))
+        first.record(unit, store)
+        assertEquals(BluetoothAdapterProof.Source.MEMORY, first.source(unit, store))
+
+        val restarted = BluetoothAdapterProof()
+        assertEquals(BluetoothAdapterProof.Source.STORE, restarted.source(unit, store))
+        assertEquals(BluetoothAdapterProof.Source.STORE, restarted.source(unit, store))
+
+        // Once a link in this process carries a byte, the proof is this process's own; the store already has it.
+        assertTrue(restarted.record(unit, store))
+        assertEquals(BluetoothAdapterProof.Source.MEMORY, restarted.source(unit, store))
+        assertFalse(restarted.record(unit, store))
         assertEquals(1, store.writes)
     }
 

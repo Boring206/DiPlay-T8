@@ -287,6 +287,8 @@ class CarPlayController(
     private val wirelessResourceLock = Any()
     private val wirelessFailureReported = AtomicBoolean(false)
     @Volatile private var instantBluetoothLink: InstantBluetoothLink? = null
+    /** Times the unreal-Bluetooth control connect; tests replace it so the 50 ms gate does not depend on the machine. */
+    @Volatile private var bluetoothLinkCheckNanos: () -> Long = { System.nanoTime() }
     @Volatile private var firstTcpWatchdog: FirstTcpWatchdog? = null
     @Volatile private var wiredStartWatchdog: WiredStartWatchdog? = null
     @Volatile private var wiredSessionActive = false
@@ -2704,19 +2706,21 @@ class CarPlayController(
     private fun unrealBluetoothFailure(link: InstantBluetoothLink, trigger: BluetoothLinkCheck.Trigger): IOException? {
         val received = link.stream.bytesReceived
         if (!BluetoothLinkCheck.looksUnreal(link.connectMillis, received)) return null
-        val adapterProven = bluetoothAdapterProof.proven(link.adapter, bluetoothAdapterStore())
-        val started = System.nanoTime()
+        val proofSource = bluetoothAdapterProof.source(link.adapter, bluetoothAdapterStore())
+        val adapterProven = proofSource != null
+        val clock = bluetoothLinkCheckNanos
+        val started = clock()
         val control = runCatching {
             link.device.createRfcommSocketToServiceRecord(UUID.randomUUID())
                 .use { connectBluetoothSocket(it, link.device.address) }
         }
-        val controlMillis = elapsedMillis(started)
+        val controlMillis = ((clock() - started) / 1_000_000L).coerceAtLeast(0)
         val verdict = BluetoothLinkCheck.verdict(control.isSuccess, controlMillis, adapterProven)
         connectionDiagnostic(
             "Bluetooth link check trigger=${trigger.label} connectMs=${link.connectMillis} receivedBytes=$received " +
                 "controlConnect=${if (control.isSuccess) "succeeded" else "failed"} " +
                 "controlMs=$controlMillis unreal=${verdict == BluetoothLinkCheck.Verdict.UNREAL} " +
-                "adapterProven=$adapterProven verdict=$verdict",
+                "adapterProven=$adapterProven source=${proofSource?.label ?: "none"} verdict=$verdict",
         )
         if (verdict == BluetoothLinkCheck.Verdict.ADAPTER_PROVEN) {
             debugLog(

@@ -20,7 +20,6 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import org.junit.After
 import org.junit.Assert.*
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,7 +65,7 @@ class BluetoothLinkCheckControllerTest {
 
     @Test fun anAdapterThatNeverCarriedAByteStillStops() {
         val (failure, line) = checkInstant(newAdapter(), BluetoothLinkCheck.Trigger.SILENCE)
-        assertTrue(line, line.contains("unreal=true adapterProven=false verdict=UNREAL"))
+        assertTrue(line, line.contains("unreal=true adapterProven=false source=none verdict=UNREAL"))
         assertTrue(failure is WirelessStartupException)
         assertEquals(WirelessStartupFailure.BLUETOOTH_UNUSABLE, (failure as WirelessStartupException).reason)
         assertTrue(failure.message!!.contains(BluetoothLinkCheck.UNREAL_MARK))
@@ -78,7 +77,7 @@ class BluetoothLinkCheckControllerTest {
         recordProof(adapter)
 
         val (silence, line) = checkInstant(adapter, BluetoothLinkCheck.Trigger.SILENCE)
-        assertTrue(line, line.contains("unreal=false adapterProven=true verdict=ADAPTER_PROVEN"))
+        assertTrue(line, line.contains("unreal=false adapterProven=true source=memory verdict=ADAPTER_PROVEN"))
         assertNotNull(silence)
         assertFalse(silence is WirelessStartupException)
         assertFalse(silence!!.message!!.contains(BluetoothLinkCheck.UNREAL_MARK))
@@ -86,17 +85,20 @@ class BluetoothLinkCheckControllerTest {
 
         // A failed attempt keeps its own failure, which is retried.
         val (failure, failureLine) = checkInstant(adapter, BluetoothLinkCheck.Trigger.FAILURE)
-        assertTrue(failureLine, failureLine.contains("verdict=ADAPTER_PROVEN"))
+        assertTrue(failureLine, failureLine.contains("source=memory verdict=ADAPTER_PROVEN"))
         assertNull(failure)
     }
 
     // Whatever the control connect took, a proven adapter is never reported as unusable.
     @Test fun aProvenAdapterIsNeverReportedUnusable() {
         val adapter = newAdapter().also(::recordProof)
-        repeat(3) {
+        for (controlMillis in listOf(4L, BluetoothLinkCheck.INSTANT_CONNECT_MILLIS, 200L)) {
+            controlConnectTakes(controlMillis)
             for (trigger in BluetoothLinkCheck.Trigger.entries) {
                 assertFalse(check(link(adapter), trigger) is WirelessStartupException)
-                assertTrue(diagnostic(trigger).contains("adapterProven=true"))
+                val line = diagnostic(trigger)
+                assertTrue(line, line.contains("controlMs=$controlMillis "))
+                assertTrue(line, line.contains("adapterProven=true source=memory"))
             }
         }
     }
@@ -110,8 +112,10 @@ class BluetoothLinkCheckControllerTest {
         // As if DiPlay had been restarted: only the saved key knows.
         val saved = newAdapter()
         prefs().edit().putString("proven_bluetooth_adapter", saved).commit()
-        assertFalse(check(link(saved), BluetoothLinkCheck.Trigger.SILENCE) is WirelessStartupException)
-        assertTrue(diagnostic(BluetoothLinkCheck.Trigger.SILENCE).contains("adapterProven=true"))
+        val (silence, line) = checkInstant(saved, BluetoothLinkCheck.Trigger.SILENCE)
+        assertTrue(line, line.contains("unreal=false adapterProven=true source=store verdict=ADAPTER_PROVEN"))
+        assertNotNull(silence)
+        assertFalse(silence is WirelessStartupException)
     }
 
     // A real stack refuses a service no phone offers: the link passes, as it did before.
@@ -133,18 +137,23 @@ class BluetoothLinkCheckControllerTest {
     private fun log(prefix: String): String = synchronized(logs) { logs.last { it.contains(prefix) } }
 
     /**
-     * Runs the check until its control connect is measured as instant, as it is on the head units;
-     * the first mocked connect can take longer than [BluetoothLinkCheck.INSTANT_CONNECT_MILLIS].
+     * Runs the check with a control connect measured at 4 ms, as on the head units, whatever the
+     * mocked connect takes on this machine.
      */
     private fun checkInstant(adapter: String, trigger: BluetoothLinkCheck.Trigger): Pair<IOException?, String> {
-        repeat(10) {
-            val failure = check(link(adapter), trigger)
-            val line = diagnostic(trigger)
-            val controlMillis = Regex("controlMs=(\\d+)").find(line)!!.groupValues[1].toLong()
-            if (controlMillis < BluetoothLinkCheck.INSTANT_CONNECT_MILLIS) return failure to line
-        }
-        assumeTrue("the control connect was never instant on this machine", false)
-        error("unreachable")
+        controlConnectTakes(4L)
+        val failure = check(link(adapter), trigger)
+        val line = diagnostic(trigger)
+        assertTrue(line, line.contains("controlMs=4 "))
+        return failure to line
+    }
+
+    /** Makes the controller measure every control connect as taking [millis]. */
+    private fun controlConnectTakes(millis: Long) {
+        var calls = 0L
+        val clock: () -> Long = { calls++ * millis * 1_000_000L }
+        controller.javaClass.getDeclaredField("bluetoothLinkCheckNanos")
+            .apply { isAccessible = true }.set(controller, clock)
     }
 
     /** The report line of the last check that [trigger] set off. */

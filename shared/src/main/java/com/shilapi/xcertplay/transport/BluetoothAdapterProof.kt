@@ -23,21 +23,37 @@ class BluetoothAdapterProof {
         fun write(adapter: String)
     }
 
-    private val proven = ConcurrentHashMap.newKeySet<String>()
+    /** Where the proof that an adapter is real came from. */
+    enum class Source(val label: String) {
+        /** A link in this process carried a byte. */
+        MEMORY("memory"),
+
+        /** Only the [Store] knows: a link carried a byte in an earlier run. */
+        STORE("store"),
+    }
+
+    private val proven = ConcurrentHashMap<String, Source>()
 
     /** Notes that a link on [adapter] has carried a byte; true the first time in this process. */
     fun record(adapter: String, store: Store?): Boolean {
-        if (!proven.add(adapter)) return false
-        runCatching { store?.write(adapter) }
+        val previous = proven.put(adapter, Source.MEMORY)
+        if (previous == Source.MEMORY) return false
+        if (previous == null) runCatching { store?.write(adapter) }
         return true
     }
 
     /** True when a link on [adapter] has carried a byte, in this process or, per [store], before. */
-    fun proven(adapter: String, store: Store?): Boolean {
-        if (adapter in proven) return true
+    fun proven(adapter: String, store: Store?): Boolean = source(adapter, store) != null
+
+    /**
+     * Where the proof for [adapter] came from: [Source.MEMORY] once a link in this process has
+     * carried a byte, [Source.STORE] when only an earlier run's saved key vouches for it, or null.
+     */
+    fun source(adapter: String, store: Store?): Source? {
+        proven[adapter]?.let { return it }
         val saved = runCatching { store?.read() }.getOrNull() == adapter
-        if (saved) proven.add(adapter)
-        return saved
+        if (!saved) return null
+        return proven.putIfAbsent(adapter, Source.STORE) ?: Source.STORE
     }
 
     companion object {
