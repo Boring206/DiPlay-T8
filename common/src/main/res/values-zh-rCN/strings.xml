@@ -942,6 +942,8 @@
     <string name="settings_speech_without_low_rates_description">USB 连接时，iPhone 可能以 8 kHz 电话音质发送导航播报和 Siri 的语音回答。开启后不再为这类声音提供 8 和 16 kHz，让 iPhone 选择更高的采样率。如果播报没有声音，请关闭。会重新连接 CarPlay。</string>
     <string name="settings_call_at_call_rate">通话使用其自身采样率（实验性）</string>
     <string name="settings_call_at_call_rate_description">以通话自身的采样率（8、16、24 或 32 kHz）的 PCM 提供通话音频，而不是 48 kHz 的 Opus，与原厂 CarPlay 接收器一致。仅限 USB 数据线：通过 Wi-Fi 时 iPhone 会把所有 CarPlay 声音留在手机上，因此无线连接提供常规格式。下次连接时生效。如果通话没有声音，请关闭此项。</string>
+    <string name="settings_wheel_long_press_seek">长按下一首/上一首快进快退（实验性）</string>
+    <string name="settings_wheel_long_press_seek_description">在方向盘为长按“下一首”和“上一首”发送单独按键的车机上（比亚迪 DiLink 3），长按会快进或快退约 2.5 秒，而不是没有反应。尚未在 iPhone 上测试。下次连接时生效。</string>
     <string name="bluetooth_connections_not_real">此车机的系统蓝牙回报“已连接”，但实际上没有连到 iPhone：连一个不存在的服务也回报成功。这里的蓝牙由厂商自己的模块处理，应用无法使用，所以此车机无法使用无线 CarPlay。请尝试 USB 连接。</string>
     <string name="bluetooth_cannot_open_connections">此车机的系统蓝牙无法为应用建立连接：固件没有提供应用连接要用的那一部分。车机自己的蓝牙通话和音乐不受影响，但此车机无法使用无线 CarPlay。请尝试 USB 连接。</string>
     <string name="bluetooth_will_not_stay_on_hint">如果蓝牙在那里打不开，或打开后又自己关闭，说明这台车机的蓝牙只供它自己的通话和音乐使用，应用无法使用。这种情况下无法使用无线 CarPlay，请改用 USB 线。</string>

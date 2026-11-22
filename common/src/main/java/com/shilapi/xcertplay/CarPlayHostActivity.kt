@@ -5158,6 +5158,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             speechWithout8And16Khz = AirPlayPersistence.loadSpeechWithout8And16Khz(this),
             callAtCallRate = AirPlayPersistence.loadCallAtCallRate(this),
             disableAudioOutput = carBluetoothAudio,
+            mediaSeekKeys = AirPlayPersistence.loadWheelLongPressSeek(this),
         )
     }
 

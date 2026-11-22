@@ -379,6 +379,11 @@ class AirPlaySession(
         sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
     }
 
+    /** Presses [index] and keeps it down until [releaseMedia]; the iPhone seeks while Fast Forward or Rewind is held. */
+    fun holdMedia(index: Int) = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(index))
+
+    fun releaseMedia() = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
+
     fun sendTelephony(index: Int) {
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(index))
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(0))

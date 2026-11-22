@@ -116,6 +116,64 @@ class WheelKeyLogTest {
         )
     }
 
+    // #1190: the release of a key left to the head unit goes on its press's line.
+    @Test fun tapsReleasedAtOnceStayOneEntryWithTheirCount() {
+        WheelKeyLog.bound(0)
+        for (at in 100L..400L step 100) {
+            assertTrue(press(KeyEvent.KEYCODE_VOLUME_UP, at = at))
+            WheelKeyLog.keyReleased(KeyEvent.KEYCODE_VOLUME_UP, 0, 3, "; released at +0 s")
+        }
+        assertEquals(
+            listOf(
+                "Wheel keys since DiPlay started: presses=4 kept=0 leftToHeadUnit=4 textKeysNotListed=0 boundForMs=800",
+                "Wheel keys: 00:00:00.100  key 24/0 device 3 left to the head unit; released at +0 s x4, last 00:00:00.400",
+            ),
+            WheelKeyLog.report(bound = true, nowMillis = 800),
+        )
+    }
+
+    @Test fun aHeldReleaseGoesOnItsOwnPressEvenAfterOtherLines() {
+        WheelKeyLog.bound(0)
+        assertTrue(press(401, at = 100))
+        // The media session sees the same key between its press and its release.
+        WheelKeyLog.noteAwaitingRelease("media 401", "media key 401 not used by CarPlay", 101)
+        WheelKeyLog.released("media 401", "; released at +4.2 s")
+        WheelKeyLog.keyReleased(401, 0, 3, "; released at +4.2 s")
+        assertTrue(press(401, at = 9_000))
+        assertEquals(
+            listOf(
+                "key 401/0 device 3 left to the head unit; released at +4.2 s",
+                "media key 401 not used by CarPlay; released at +4.2 s",
+                "key 401/0 device 3 left to the head unit",
+            ),
+            WheelKeyLog.report(bound = true, nowMillis = 10_000).drop(1).map { it.substringAfter("  ") },
+        )
+    }
+
+    @Test fun onlyAKeyLeftAloneWaitsForItsRelease() {
+        WheelKeyLog.bound(0)
+        assertFalse(press(292, kept = true, at = 100))
+        assertFalse(press(KeyEvent.KEYCODE_VOLUME_UP, detail = "navigation volume not used: its setting is off", at = 200))
+        assertFalse(press(KeyEvent.KEYCODE_A, at = 300))
+        WheelKeyLog.keyReleased(292, 0, 3, "; released at +0 s")
+        WheelKeyLog.keyReleased(KeyEvent.KEYCODE_VOLUME_UP, 0, 3, "; released at +0 s")
+        WheelKeyLog.keyReleased(KeyEvent.KEYCODE_A, 0, 3, "; released at +0 s")
+        // A release whose press was already given one, or never seen, adds nothing.
+        assertTrue(press(KeyEvent.KEYCODE_F7, at = 400))
+        WheelKeyLog.keyReleased(KeyEvent.KEYCODE_F7, 0, 3, "; released at +0 s")
+        WheelKeyLog.keyReleased(KeyEvent.KEYCODE_F7, 0, 3, "; released at +9.0 s")
+        WheelKeyLog.keyReleased(KeyEvent.KEYCODE_F8, 0, 3, "; released at +0 s")
+        WheelKeyLog.released("media 401", "; released at +0 s")
+        assertEquals(
+            listOf(
+                "key 292/0 device 3 kept",
+                "key 24/0 device 3 left to the head unit: navigation volume not used: its setting is off",
+                "key 137/0 device 3 left to the head unit; released at +0 s",
+            ),
+            WheelKeyLog.report(bound = true, nowMillis = 1_000).drop(1).map { it.substringAfter("  ") },
+        )
+    }
+
     @Test fun keepsTheNewestEntriesAndEveryCount() {
         WheelKeyLog.bound(0)
         val total = WheelKeyLog.ENTRIES * 3

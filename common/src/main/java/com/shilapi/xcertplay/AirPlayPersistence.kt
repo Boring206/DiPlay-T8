@@ -80,6 +80,7 @@ object AirPlayPersistence {
     private const val KEY_MAIN_BUFFERED_AUDIO = "main_buffered_audio"
     private const val KEY_SPEECH_WITHOUT_8_16_KHZ = "speech_without_8_16_khz"
     private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
+    private const val KEY_WHEEL_LONG_PRESS_SEEK = "wheel_long_press_seek"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
@@ -766,6 +767,17 @@ object AirPlayPersistence {
 
     fun saveCallAtCallRate(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_AT_CALL_RATE, enabled).apply()
+    }
+
+    /**
+     * DiLink 3's wheel long press seeks: Fast Forward and Rewind declared to the iPhone (#1190). Experimental;
+     * the declaration applies at reconnect.
+     */
+    fun loadWheelLongPressSeek(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WHEEL_LONG_PRESS_SEEK, false)
+
+    fun saveWheelLongPressSeek(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_WHEEL_LONG_PRESS_SEEK, enabled).apply()
     }
 
     /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */
