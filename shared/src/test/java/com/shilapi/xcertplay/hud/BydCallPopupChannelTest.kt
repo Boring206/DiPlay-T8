@@ -96,6 +96,50 @@ class BydCallPopupChannelTest {
         }
     }
 
+    // #1237: the guard kept HIDDEN, RESTORED and its failures in memory, so a report could not show them.
+    @Test fun hideRequestsAndStatusChangesReachTheReport() {
+        val f = Fixture()
+        val guard = BydCallPopupGuard
+        val context: Context = RuntimeEnvironment.getApplication()
+        val owner = Any()
+        val lines = java.util.concurrent.CopyOnWriteArrayList<String>()
+        ReflectionHelpers.setField(guard, "running", true)
+        ReflectionHelpers.setField(guard, "status", "OFF")
+        try {
+            guard.update(context, owner, true, log = { lines += it }) { true }
+            f.afterStart = { guard.update(context, owner, false, log = { lines += it }) { true } }
+            guard.runPrepared(ReflectionHelpers.getField(guard, "generation"), f.channel())
+            // The helper answers every heartbeat with HIDDEN; only a change is a line.
+            repeat(3) {
+                ReflectionHelpers.callInstanceMethod<Unit>(guard, "setStatus",
+                    ReflectionHelpers.ClassParameter.from(String::class.java, "RESTORED"),
+                    ReflectionHelpers.ClassParameter.from(String::class.java, null))
+            }
+            assertEquals(listOf(
+                "BYD call popup: hide requested",
+                "BYD call popup: hide no longer requested",
+                "BYD call popup: status=HIDDEN previous=OFF",
+                "BYD call popup: status=RESTORED previous=HIDDEN",
+            ), lines)
+            assertEquals("RESTORED", guard.status)
+        } finally {
+            guard.update(context, owner, false) { true }
+            ReflectionHelpers.setField(guard, "leased", false)
+            ReflectionHelpers.setField(guard, "running", false)
+            // The owner already let go above, so update() leaves these alone: reset them for later tests.
+            ReflectionHelpers.setField(guard, "diagnostic", { _: String -> })
+            ReflectionHelpers.setField(guard, "status", "OFF")
+        }
+    }
+
+    @Test fun aFailureReasonIsTheHelperCodeOrTheExceptionTypeOnly() {
+        assertEquals("HELPER_TIMEOUT", BydCallPopupGuard.reason(IOException("HELPER_TIMEOUT")))
+        assertEquals("ERROR_BUSY", BydCallPopupGuard.reason(IOException("ERROR BUSY")))
+        assertEquals("IOException", BydCallPopupGuard.reason(IOException("/data/local/tmp/diplay/0a1b failed")))
+        assertEquals("IOException", BydCallPopupGuard.reason(IOException()))
+        assertEquals("SecurityException", BydCallPopupGuard.reason(SecurityException("uid 10123 is not allowed")))
+    }
+
     @Test fun malformedTerminalAcknowledgementIsRejected() {
         val channel = BydCallPopupChannel.prepare("/data/app/base.apk") {
             when {

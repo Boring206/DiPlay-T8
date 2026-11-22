@@ -49,6 +49,8 @@ internal class PhoneAudioRouteController(
     private val now: () -> Long = System::currentTimeMillis,
     private val releaseDelayMillis: Long = RELEASE_DELAY_MILLIS,
     private val failureBackoffMillis: Long = FAILURE_BACKOFF_MILLIS,
+    /** Receives each state change for the diagnostic report; logcat gets it too. */
+    private val report: (String) -> Unit = {},
 ) {
     private val lock = Any()
     private val wanted = mutableSetOf<PhoneAudioReason>()
@@ -81,10 +83,11 @@ internal class PhoneAudioRouteController(
                     held = false
                     if (backend.start()) {
                         held = true
-                        Log.i(TAG, "car phone audio state on")
+                        info("car phone audio state on")
                     } else {
                         failedAt = now()
-                        Log.w(TAG, "Telecom refused the call that selects the car's phone audio state")
+                        Log.w(TAG, REFUSED)
+                        runCatching { report(REFUSED) }
                     }
                 }
             } else if (held && cancelRelease == null) {
@@ -93,16 +96,22 @@ internal class PhoneAudioRouteController(
                     if (!needed()) {
                         backend.stop()
                         held = false
-                        Log.i(TAG, "car phone audio state off")
+                        info("car phone audio state off")
                     }
                 }
             }
         }
     }
 
+    private fun info(message: String) {
+        Log.i(TAG, message)
+        runCatching { report(message) }
+    }
+
     companion object {
         private const val TAG = "DiPlay-PhoneAudio"
         private const val NEVER = Long.MIN_VALUE
+        private const val REFUSED = "Telecom refused the call that selects the car's phone audio state"
 
         /** Bridges the gap between two calls, or a call and call waiting, without leaving and re-entering the state. */
         const val RELEASE_DELAY_MILLIS = 2_000L
@@ -130,6 +139,23 @@ object PhoneAudioRoute {
     private var watcher: VoipCallWatcher? = null // guarded by this
     @Volatile private var carPlayCallActive = false
 
+    /**
+     * Where phone audio lines go besides logcat. The CarPlay screen points it at its session log, so a
+     * diagnostic report shows whether a call had the car's phone audio state next to its microphone lines (#1214).
+     */
+    @Volatile var diagnostics: ((String) -> Unit)? = null
+
+    /** Sends [message] to [diagnostics]; callers log it to logcat themselves. */
+    internal fun report(message: String) {
+        val sink = diagnostics ?: return
+        runCatching { sink("Phone audio: $message") }
+    }
+
+    internal fun reportWarning(message: String, error: Throwable? = null) {
+        Log.w(TAG, message, error)
+        report(if (error == null) message else "$message error=${error.javaClass.simpleName}")
+    }
+
     /** Safe to call often; the first call sets everything up and later ones re-read the settings. */
     @Synchronized
     fun attach(context: Context) {
@@ -139,12 +165,12 @@ object PhoneAudioRoute {
                 backend = TelecomPhoneAudioBackend(app),
                 scheduler = object : RouteScheduler {
                     override fun execute(block: () -> Unit) {
-                        executor.execute { runCatching(block).onFailure { Log.w(TAG, "phone audio step failed", it) } }
+                        executor.execute { runCatching(block).onFailure { reportWarning("phone audio step failed", it) } }
                     }
 
                     override fun schedule(delayMillis: Long, block: () -> Unit): () -> Unit {
                         val task = executor.schedule(
-                            { runCatching(block).onFailure { Log.w(TAG, "phone audio step failed", it) } },
+                            { runCatching(block).onFailure { reportWarning("phone audio step failed", it) } },
                             delayMillis,
                             TimeUnit.MILLISECONDS,
                         )
@@ -152,6 +178,7 @@ object PhoneAudioRoute {
                     }
                 },
                 enabled = { reason -> enabledFor(app, reason) },
+                report = ::report,
             )
         }
         syncWatcher(app)
@@ -195,6 +222,7 @@ object PhoneAudioRoute {
         if (wantWatcher && watcher == null) {
             watcher = VoipCallWatcher(context) { active -> voipApp(active) }.also { it.start() }
             Log.i(TAG, "watching for voice-over-IP calls in other apps")
+            report("watching for voice-over-IP calls in other apps")
         } else if (!wantWatcher && watcher != null) {
             watcher?.stop()
             watcher = null

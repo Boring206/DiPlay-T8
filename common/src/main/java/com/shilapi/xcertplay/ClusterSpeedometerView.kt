@@ -53,6 +53,7 @@ internal class ClusterSpeedometerView(
 ) : View(context), ClusterOutputVisibility {
 
     private var speedKmh: Int? = null
+    private var stopPlayerSettings: (() -> Unit)? = null
     private var animatedBackground = false
     private var motion = false
     private var playing = false
@@ -108,11 +109,13 @@ internal class ClusterSpeedometerView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        stopPlayerSettings = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.observe(context) { applySettings() }
         stopObservingSettings = AirPlayPersistence.observeClusterSpeedometer(context) { applySettings() }
         applySettings()
     }
 
     override fun onDetachedFromWindow() {
+        stopPlayerSettings?.invoke(); stopPlayerSettings = null
         stopObservingSettings?.invoke()
         stopObservingSettings = null
         stopSpeed()
@@ -156,7 +159,8 @@ internal class ClusterSpeedometerView(
             AirPlayPersistence.loadClusterSpeedometerY(context), AirPlayPersistence.loadClusterSpeedometerSize(context))
         setOpacity(AirPlayPersistence.loadClusterSpeedometerOpacity(context))
         useAlbumColor = AirPlayPersistence.loadClusterSpeedometerAlbumColor(context)
-        val enabled = AirPlayPersistence.loadClusterSpeedometerEnabled(context)
+        val enabled = AirPlayPersistence.loadClusterSpeedometerEnabled(context) &&
+            !com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(context)
         if (enabled && (useAlbumColor || animatedBackground)) {
             if (stopObservingArtwork == null) {
                 stopObservingArtwork = ClusterMusicState.observe { snapshot ->

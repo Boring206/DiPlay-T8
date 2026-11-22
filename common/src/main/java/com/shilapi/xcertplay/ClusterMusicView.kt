@@ -51,6 +51,10 @@ internal class ClusterMusicView(context: Context) : View(context) {
             updateVisibility()
         }
         stopState = ClusterMusicState.observe {
+            val visualChanged = snapshot.artwork !== it.artwork || snapshot.info.title != it.info.title ||
+                snapshot.info.artist != it.info.artist || snapshot.info.album != it.info.album ||
+                snapshot.info.playing != it.info.playing || snapshot.revision != it.revision
+            if (!visualChanged) { snapshot = it; return@observe }
             val now = SystemClock.elapsedRealtime()
             if (snapshot.artwork !== it.artwork) {
                 previousArtwork = snapshot.artwork

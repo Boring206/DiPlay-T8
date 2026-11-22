@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Chế độ xem</string>
+    <string name="settings_cluster_player_map">Bản đồ</string>
+    <string name="settings_cluster_player">Trình phát (thử nghiệm)</string>
+    <string name="settings_cluster_player_description">Chuyển ngay giữa bản đồ và trình phát, dùng hình dạng bản đồ cụm đồng hồ đã lưu. Trình phát tạm dừng bản đồ và các bản sao trên màn hình trung tâm; chỉ dẫn từng chặng trên cụm đồng hồ không có trong Trình phát. Các đèn báo gốc vẫn do xe điều khiển.</string>
+    <string name="settings_cluster_player_speed">Hiện tốc độ trong trình phát</string>
+    <string name="settings_cluster_player_speed_description">Tốc độ xe tính bằng km/h, không có khung. Cần đọc dữ liệu xe qua ADB; hiện — khi không có dữ liệu gần đây.</string>
+    <string name="settings_cluster_player_idle">Không có gì đang phát</string>
+    <string name="settings_cluster_player_vehicle">Hiện thông tin xe trong trình phát</string>
+    <string name="settings_cluster_player_vehicle_description">Số, phần trăm pin và quãng đường điện, đọc qua ADB. Số đọc không có hoặc đã cũ hiện —. Vẫn cần các đèn cảnh báo và thông báo gốc của xe.</string>
+    <string name="cluster_player_vehicle_readout">Số %1$s   ·   Pin %2$s   ·   Quãng đường %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Đặt trình phát giữa các dải gốc</string>
+    <string name="settings_cluster_player_fit_visible_description">Bố cục tạm thời cho cụm đồng hồ có dải thông tin xe ở trên và dưới. Giữ ảnh bìa, bài hát, tốc độ và tiến trình trong vùng nhìn thấy; nền vẫn phủ kín vùng chiếu. Áp dụng ngay và không ẩn các đèn báo gốc.</string>
+</resources>

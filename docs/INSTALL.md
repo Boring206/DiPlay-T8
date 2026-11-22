@@ -40,7 +40,7 @@ Optional square-canvas rotation, split-screen areas and the side panel are under
 
 Independent experimental **CarPlay call keys** and **CarPlay calls on the dashboard** remain off by default. They appear under **Settings → Navigation → BYD navigation**, or under **Settings → Advanced → Advanced vehicle data** when the BYD navigation card is unavailable. The dashboard card needs authorized ADB and target firmware. Review [0.2.18 limits](RELEASE-NOTES-0.2.18.md) before opting in.
 
-The app includes eleven languages, including Italian, Japanese, Korean, Turkish and Traditional Chinese (Taiwan); the website has eight. Android 13+ app-language selection is synchronized with Android settings; Android 7.0–12 retain a saved context override. Hong Kong/Macao and Hant use the Taiwan app translation, not separate regional editions. See the [Traditional Chinese installation guide](INSTALL.zh-TW.md).
+The app and the website both include eleven languages, including Italian, Japanese, Korean, Turkish and Traditional Chinese (Taiwan). Android 13+ app-language selection is synchronized with Android settings; Android 7.0–12 retain a saved context override. Hong Kong/Macao and Hant use the Taiwan app translation, not separate regional editions. See the [Traditional Chinese installation guide](INSTALL.zh-TW.md).
 
 ## Connection recovery and reports
 
