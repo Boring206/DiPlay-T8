@@ -1670,6 +1670,8 @@ private class VideoDecoder(
         synchronized(outputLock) {
             codec = decoder
             decoder = null
+            // A failure reported for this codec must not retire its replacement.
+            outputFailure = null
             // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
             awaitNotDequeuing(codec)
         }
