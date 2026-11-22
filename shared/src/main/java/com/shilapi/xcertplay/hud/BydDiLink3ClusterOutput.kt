@@ -27,7 +27,14 @@ internal object BydDiLink3ClusterOutput {
     }
 
     fun setDesired(appContext: Context, mapShown: Boolean, guidanceActive: Boolean) {
-        desiredMode = when {
+        desiredMode = requestedMode(appContext, mapShown, guidanceActive)
+        initialize(appContext)
+        requestApply()
+    }
+
+    /** Both pages respect the driver's saved projection shape. */
+    internal fun requestedMode(appContext: Context, mapShown: Boolean, guidanceActive: Boolean): BydDiLink3ClusterMode.Mode? {
+        return when {
             mapShown -> if (BydOutputSettings.clusterProjectionShape(appContext) == BydClusterProjectionShape.FULL) {
                 BydDiLink3ClusterMode.Mode.FULL_PROJECTION
             } else {
@@ -36,8 +43,6 @@ internal object BydDiLink3ClusterOutput {
             guidanceActive -> BydDiLink3ClusterMode.Mode.SIMPLE_NAVIGATION
             else -> null
         }
-        initialize(appContext)
-        requestApply()
     }
 
     fun prepareDisplay(appContext: Context, displayPresent: () -> Boolean) {

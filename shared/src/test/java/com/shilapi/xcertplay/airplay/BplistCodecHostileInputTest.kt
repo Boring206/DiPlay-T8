@@ -97,6 +97,19 @@ class BplistCodecHostileInputTest {
         assertThrows(IllegalArgumentException::class.java) { BplistCodec.decode(plist(listOf(array), offsetSize = 4)) }
     }
 
+    @Test(timeout = 60_000) fun aDictionaryThatContainsItselfDoesNotSizeItsTableForTheFullCountAtEveryLevel() {
+        // Entry 0 ("k" -> true) is stored before entry 1 recurses into the dictionary itself, so each of the 32 levels
+        // that store an entry before the depth limit would allocate a table for 8 million entries: about 1 GB from a 16 MB plist.
+        val count = 8_000_000
+        val values = ByteArray(count).also { it[0] = 2 } // value 0 is `true`; every other value is object 0, the dictionary
+        val dictionary = byteArrayOf(0xdf.toByte(), 0x12) + intBytes(count) + ByteArray(count) { 1 } + values
+        val key = byteArrayOf(0x51, 'k'.code.toByte())
+        val value = byteArrayOf(0x09)
+        assertThrows(IllegalArgumentException::class.java) {
+            BplistCodec.decode(plist(listOf(dictionary, key, value), offsetSize = 4))
+        }
+    }
+
     @Test fun moreThanAHundredThousandObjectReadsAreRejected() {
         // 250,000 references to one empty array: 250,001 object reads from 250 KB.
         val outer = byteArrayOf(0xaf.toByte(), 0x12) + intBytes(250_000) + ByteArray(250_000) { 1 }
@@ -170,5 +183,25 @@ class BplistCodecHostileInputTest {
         var decoded: Any? = BplistCodec.decode(BplistCodec.encode(nested))
         repeat(20) { decoded = (decoded as List<*>).single() }
         assertEquals(true, decoded)
+    }
+
+    @Test fun aNormalSmallDictionaryStillDecodesItsKeysAndValues() {
+        val dictionary = byteArrayOf(0xd2.toByte(), 1, 2, 3, 4) // keys 1, 2; values 3, 4
+        val firstKey = byteArrayOf(0x51, 'a'.code.toByte())
+        val secondKey = byteArrayOf(0x52, 'b'.code.toByte(), 'b'.code.toByte())
+        val number = byteArrayOf(0x10, 42)
+        val flag = byteArrayOf(0x09)
+        val decoded = BplistCodec.decode(plist(listOf(dictionary, firstKey, secondKey, number, flag))) as Map<*, *>
+        assertEquals(mapOf("a" to 42L, "bb" to true), decoded)
+    }
+
+    @Test fun aDictionaryLargerThanTheInitialCapacityStillDecodesEveryEntry() {
+        // minOf(count, INITIAL_CAPACITY) starts this 100-key dictionary at 64, so the table has to grow.
+        // Growing must not change the decoded keys, values, or their insertion order.
+        val expected = LinkedHashMap<String, Any?>()
+        repeat(100) { expected["key-$it"] = it.toLong() }
+        val decoded = BplistCodec.decode(BplistCodec.encode(expected)) as Map<*, *>
+        assertEquals(expected, decoded)
+        assertEquals(expected.keys.toList(), decoded.keys.toList())
     }
 }

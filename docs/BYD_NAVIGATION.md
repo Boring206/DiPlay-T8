@@ -171,10 +171,17 @@ that every vehicle feature id/value or partial-write outcome is correct on a par
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
 
-BYD plays a third-party call as media, so the car's own echo canceller never sees it and the amplifier's bass applies to the voice. Two experimental call settings, off by default and applied at the next connection, can compensate inside DiPlay:
+How the car plays a third-party call depends on the route:
+
+- **On the voice-call output.** DiPlay's default call track uses `USAGE_VOICE_COMMUNICATION`. On a BYD Han (DiLink 3) that lands on a `DIRECT|VOIP_RX` output with the "Volume listener for voice call" effect (measured with `dumpsys media.audio_flinger`). There the mixer applies 0 dB, and the call is louder than music at the same volume step on that car.
+- **As media.** With the car Bluetooth paused DiPlay plays the call on the media output (`AudioChannelMapper.playCallOnSpeaker`), and some firmware reclassifies DiPlay's voice stream as music (`BydCarPlayCall.kt`). The car's own echo canceller never sees such a call and the amplifier's bass applies to the voice.
+
+Two experimental call settings, off by default and applied at the next connection, can compensate inside DiPlay:
 
 - **Call echo cancellation** runs SpeexDSP's echo canceller (250 ms tail, BSD licensed, `shared/src/main/jni/speexdsp`) on the call microphone, using what DiPlay itself just played as the reference. It needs mono capture at the downlink sample rate; otherwise the call continues with the platform effects only (`microphone echo canceller enabled=false` in the log).
-- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback.
+- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback. It targets the calls that play as media.
+
+**Call voice level** (Settings → Audio → Audio routing) is a separate slider from 0 to -20 dB, default 0 dB, next to **Navigation guidance volume**. It lowers the caller's voice in the PCM itself (`NavigationAudioGain.scalePcm16`), whichever output the call uses, and applies to a running call without a reconnect. Evidence from one Han, measured without a DiPlay build: the voice-call output needed about 13 dB less than music for the same speech file, and a real caller read a median of -17.9 dBFS (90th percentile -10.4, peak -6.5) in the 50 ms `Signal power history` that `dumpsys media.audio_flinger` prints for that output, against -22.4 / -17.0 / -13.9 for a -20 dBFS reference speech file. A listening comparison, played from a separate test app (not DiPlay) at the same volume step with the same speech file, found the call at 0 and -6 dB the least clear and -12 to -16 dB clean, which is the range the setting text quotes. Choose the level by ear; owners of cars that play calls as media usually want 0 dB.
 
 With **CarPlay calls on the dashboard** on, DiPlay arms the call watcher when a CarPlay session starts, so the first call's caller name reaches the cluster and HUD without waiting for the watcher to launch. An armed watcher makes no vehicle writes; it is cancelled when the session ends or the setting is turned off.
 

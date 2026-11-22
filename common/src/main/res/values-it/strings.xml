@@ -190,7 +190,6 @@
     <string name="could_not_save_image">Impossibile salvare l’immagine</string>
     <string name="could_not_save_the_report">Impossibile salvare il report</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Impossibile avviare CarPlay. Torna a DiPlay e controlla i permessi dell’app.</string>
-    <string name="custom_1_1_icon">Icona 1:1 personalizzata</string>
     <string name="debug_logs">Log di debug</string>
     <string name="default_icon">Icona predefinita</string>
     <string name="default_placeholder_icon">Icona segnaposto predefinita</string>
@@ -698,8 +697,9 @@
     <string name="settings_usb_charging">Ricarica dell’iPhone</string>
     <string name="settings_usb_charging_normal">Normale (2,4 A)</string>
     <string name="settings_usb_charging_reduced">Ridotta (1,5 A)</string>
+    <string name="settings_usb_charging_medium">Media (1 A)</string>
     <string name="settings_usb_charging_low">Bassa (0,5 A)</string>
-    <string name="settings_usb_charging_description">Quanta corrente di ricarica DiPlay offre all’iPhone via USB. Se CarPlay cablato si interrompe ogni pochi secondi e l’iPhone si riconnette da solo, la porta USB dell’auto potrebbe non fornire abbastanza potenza: prova Ridotta, poi Bassa. L’iPhone si caricherà più lentamente. Si applica alla prossima connessione USB.</string>
+    <string name="settings_usb_charging_description">Quanta corrente di ricarica DiPlay offre all’iPhone via USB. Se CarPlay cablato si interrompe ogni pochi secondi e l’iPhone si riconnette da solo, la porta USB dell’auto potrebbe non fornire abbastanza potenza: prova Ridotta, poi Media, poi Bassa. L’iPhone si caricherà più lentamente. Si applica alla prossima connessione USB.</string>
     <string name="wheel_joystick_auto_off">Il joystick si spegne da solo</string>
     <string name="wheel_joystick_auto_off_description">Dopo 15 secondi senza pressioni, e quando parte un percorso, i tasti tornano a musica e volume.</string>
     <string name="wheel_joystick_on">Joystick attivo</string>
@@ -791,6 +791,17 @@
     <string name="car_button_name">Nome</string>
     <string name="car_button_description">CarPlay mostra questa icona e questo nome nel suo elenco di app. Toccala per tornare alla schermata dell’auto. Le modifiche si applicano alla prossima connessione di CarPlay.</string>
     <string name="car_button_saved_next_connection">Salvato. CarPlay mostrerà la nuova icona e il nuovo nome alla prossima connessione.</string>
+    <string name="settings_car_brand_title">Logo del marchio</string>
+    <string name="settings_car_brand_summary">Scegli il logo della serie BYD che CarPlay mostra nell’elenco app. Il nome viene aggiornato solo se resta quello predefinito o il nome di un logo. La scelta di un logo sostituisce l’immagine personalizzata.</string>
+    <string name="settings_car_brand_default">Predefinito (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Reimposta al logo del marchio</string>
+<string name="settings_car_brand_reset">Ripristina logo e nome predefiniti</string>
     <string name="this_head_unit_has_no_image_picker">Questa head unit non ha un selettore di immagini.</string>
 
     <!-- Optional BYD ambient lighting. -->
@@ -980,6 +991,8 @@
     <string name="settings_navigation_attenuation">Volume delle indicazioni di navigazione</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Riduce le indicazioni di navigazione di CarPlay senza cambiare il volume di musica o chiamate. Si applica subito; il volume di navigazione della head unit continua a funzionare.</string>
+    <string name="settings_call_attenuation">Livello della voce nelle chiamate</string>
+    <string name="settings_call_attenuation_description">Abbassa la voce di chi chiama nelle chiamate CarPlay senza cambiare il volume delle chiamate dell’auto. Si applica subito, qualunque sia l’uscita usata dalla chiamata. Lascialo a 0 dB a meno che le tue chiamate suonino disturbate o poco chiare. Su una BYD Han (DiLink 3), la chiamata suonava chiara con circa -12/-16 dB in un test d’ascolto.</string>
     <string name="settings_car_hotspot_control">Hotspot dell’auto</string>
     <string name="settings_auto_car_hotspot_system_description">Accende l’hotspot dell’auto salvato quando DiPlay si apre e prima di una connessione wireless. DiPlay richiede l’accesso “Modifica impostazioni di sistema” di Android; ADB non è necessario. Per avere l’hotspot dopo un riavvio completo, attiva anche l’apertura di DiPlay dopo l’avvio dell’auto. L’hotspot non viene spento automaticamente.</string>
     <string name="settings_car_hotspot_config_title">Importa i dati dell’hotspot dell’auto (sperimentale)</string>
@@ -1047,4 +1060,7 @@
     <string name="cluster_projection_shape_description">Mezza schermata mantiene accanto alla mappa la velocità e lo stato che il quadro strumenti mostra normalmente; schermo intero lascia che la mappa occupi tutto il quadro. DiPlay imposta questa forma ogni volta che appare la mappa di CarPlay, che altrimenti annulla la forma scelta nell’auto. Richiede ADB in rete sull’unità principale.</string>
     <string name="settings_cluster_speedometer_album_color">Usa il colore dell’album per lo sfondo del tachimetro</string>
     <string name="settings_cluster_speedometer_album_color_description">Abbina il colore della cornice dell’album con transizioni fluide. Mantiene l’opacità selezionata.</string>
+    <string name="settings_fit_screen_shape">Evita notch e angoli arrotondati</string>
+    <string name="settings_fit_screen_shape_description">Per un telefono o un tablet usato come head unit. Tiene i pulsanti e il dock di CarPlay lontani dal notch della fotocamera e dagli angoli arrotondati; le mappe riempiono comunque lo schermo. Un’area sicura impostata nel menu della sessione ha la precedenza. Si applica alla prossima connessione.</string>
+    <string name="settings_safe_area_fitted_summary">Area sicura: adattata a notch e angoli, %1$d x %2$d a (%3$d, %4$d) in %5$d x %6$d</string>
 </resources>

@@ -2,7 +2,9 @@ package com.shilapi.xcertplay
 
 import com.shilapi.xcertplay.transport.VehicleGear
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EcarxWheelSpeedTest {
@@ -23,5 +25,21 @@ class EcarxWheelSpeedTest {
         assertNull(EcarxWheelSpeed.metersPerSecond(-1f))
         assertNull(EcarxWheelSpeed.metersPerSecond(Float.NaN))
         assertNull(EcarxWheelSpeed.metersPerSecond(500f))
+    }
+
+    @Test fun aSensorThatAnsweredNoIsAskedAgainAfterFiveSeconds() {
+        assertFalse(ecarxStillDenied(null, 1_000L)) // never asked
+        assertTrue(ecarxStillDenied(1_000L, 1_000L))
+        assertTrue(ecarxStillDenied(1_000L, 5_999L))
+        assertFalse(ecarxStillDenied(1_000L, 6_000L))
+    }
+
+    @Test fun theSensorManagerIsLookedUpAgainOnlyWhenNothingHasAnsweredThroughItForHalfAMinute() {
+        assertFalse(ecarxReconnectDue(2, 60_000L)) // one or two failed reads may be a glitch
+        assertTrue(ecarxReconnectDue(3, 60_000L))
+        assertTrue(ecarxReconnectDue(10, 30_000L))
+        // Something answered moments ago (or the manager is new): the service is up, a sensor that
+        // keeps throwing does not make DiPlay rebind.
+        assertFalse(ecarxReconnectDue(10, 29_999L))
     }
 }
