@@ -43,6 +43,7 @@ Example: auto car hotspot needs ADB but appears only for car-hotspot users, so i
 
 Mark an experimental setting or card with the title suffix ` (experimental)`, never `· experimental`, a dash, or an `Experimental …` prefix.
 Each locale MUST use its existing form: `(تجريبي)`, `(experimental)`, `(sperimentale)`, `(экспериментально)`, `(експериментально)`, `(deneysel)`, `（实验性）`, `（實驗性）`, `（実験的機能）`, `(실험 기능)`.
+`SettingsTranslationsTest` enforces this list; keep its suffix table in sync with these ten forms so the two lists do not drift.
 
 ### Add the code
 

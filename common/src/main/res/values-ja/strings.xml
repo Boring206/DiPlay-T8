@@ -969,7 +969,7 @@
     <string name="settings_hotspot_name_non_english">中国語など英数字以外の文字を含むホットスポット名では、CarPlayが「準備中」のままになる場合があります。一部の車載端末がiPhoneから検出できない形式で送信するためです。その場合はホットスポット名を英数字に変更してください。</string>
     <string name="settings_speech_without_low_rates">USBナビ案内の音声を明瞭にする（実験的機能）</string>
     <string name="settings_speech_without_low_rates_description">USBではiPhoneのナビ案内やSiriの応答が電話品質の8 kHz音声で送信される場合があります。8 kHzと16 kHzを使用候補から外し、より高い音質を選ばせます。案内音声が出なくなったらオフにしてください。CarPlayを再接続します。</string>
-    <string name="settings_call_at_call_rate">通話を通話本来のレートで再生（試験的）</string>
+    <string name="settings_call_at_call_rate">通話を通話本来のレートで再生（実験的機能）</string>
     <string name="settings_call_at_call_rate_description">通話を48 kHzのOpusではなく、通話本来のレート（8・16・24・32 kHz）のPCMとして提示します。純正のCarPlayレシーバーと同じ方式です。次回の接続から有効になります。通話に音が出ない場合はオフにしてください。</string>
     <string name="bluetooth_connections_not_real">この車載端末のAndroid Bluetoothは接続中と報告しますが、iPhoneには実際の通信が届きません。存在しないサービスへの接続さえ成功と表示されます。メーカー独自のBluetoothモジュールをアプリが利用できないため、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>
     <string name="bluetooth_cannot_open_connections">この車載端末のAndroid Bluetoothはアプリからの接続を開始できません。アプリが接続に使う部分がファームウェアにありません。車載Bluetoothの通話と音楽には影響しませんが、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>

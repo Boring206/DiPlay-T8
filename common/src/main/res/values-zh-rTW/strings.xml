@@ -593,7 +593,7 @@
     <string name="launcher_map_sharing">與其他啟動器共用即時地圖</string>
     <string name="launcher_map_sharing_description">支援 DiPlay 的啟動器可以在自己的主螢幕中顯示即時儀表板地圖。預設關閉，因為開啟後車機上的任何App都可以請求該地圖。詳見 docs/LAUNCHER_INTEGRATION.md。</string>
     <string name="adb_cluster_activity_label">儀表地圖</string>
-    <string name="adb_cluster_activity_mode">DiLink 4 儀表影片（ADB，實驗性）</string>
+    <string name="adb_cluster_activity_mode">透過 ADB 的 DiLink 4 儀表影片（實驗性）</string>
     <string name="adb_cluster_activity_description">透過內建ADB直接在已驗證儀表副螢幕啟動地圖。請先授權ADB，再重新連線iPhone。</string>
     <string name="adb_cluster_authorize">授權 ADB / 再試一次儀表移動</string>
     <string name="adb_cluster_open">再試一次儀表地圖</string>
