@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.content.Context
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
+import com.shilapi.xcertplay.setup.DiLinkGeneration
 import java.io.File
 
 /** Strict projection target, discovered afresh through the authorized shell. */
@@ -16,11 +17,30 @@ internal object AdbClusterRouter {
         val public = ClusterMapPresentation.findDisplay(context)
         if (AirPlayPersistence.loadLegacyClusterEnabled(context)) {
             // Only the measured projection may use the independent task; public 5/5.1 wins.
-            return public == null || DiLink4ClusterDisplay.matches(public.name,
-                ClusterMapPresentation.sizeOf(public).x, ClusterMapPresentation.sizeOf(public).y)
+            return (public == null || DiLink4ClusterDisplay.matches(public.name,
+                ClusterMapPresentation.sizeOf(public).x, ClusterMapPresentation.sizeOf(public).y)) && bydHeadUnit(context)
         }
-        return AirPlayPersistence.loadAdbClusterEnabled(context) && public == null
+        // A switch saved before it was BYD-only must not ask another unit's iPhone for video nobody sees (#1327).
+        return AirPlayPersistence.loadAdbClusterEnabled(context) && public == null && bydHeadUnit(context)
     }
+
+    /**
+     * Both DiLink 4 routes look for BYD's xdja projection display, which other head units do not have (#1327).
+     * Firmware that names its DiLink generation counts too, so a BYD unit without the usual packages keeps them.
+     */
+    fun bydHeadUnit(context: Context): Boolean = CarHotspotSetup.isBydHeadUnit(context) ||
+        DiLinkGeneration.detect().source == DiLinkGeneration.Source.SYSTEM_VERSION
+
+    /**
+     * The last probe in this process read the display list and found no projection display. Until a probe
+     * finds one or the route settings change, the next connection does not ask for the 1920x720 stream
+     * (#1327). A display that appears later still confirms the route, and that asks for the native stream.
+     */
+    @Volatile var targetMissing = false
+        private set
+
+    /** Settings changed: the next connection asks for the native stream again. */
+    fun forgetMissingTarget() { targetMissing = false }
 
     // Match only the base logical display, not a device's layer-stack number or override record.
     internal fun displayId(dump: String): Int? {
@@ -31,6 +51,13 @@ internal object AdbClusterRouter {
             Regex("displayId (\\d+)\"").find(line)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
         }.distinct().toList()
         return candidates.singleOrNull()
+    }
+
+    /** The projection display in [dump], remembering whether a real display list had none. */
+    internal fun probe(dump: String): Int? = displayId(dump).also { display ->
+        // Every display list has the built-in screen's base record; without one the dump failed and proves nothing.
+        if (display != null) targetMissing = false
+        else if (dump.contains("mBaseDisplayInfo=DisplayInfo{")) targetMissing = true
     }
 
     // Direct shell launch, following Hanxu4131's legacy platform-21 adapter.
@@ -75,7 +102,7 @@ internal object AdbClusterRouter {
                     val access = adb.connect(mayAsk = false)
                     appendLine("adbAccess=$access")
                     if (access != LocalAdb.Access.READY) return@use
-                    val display = displayId(adb.shell("dumpsys display").orEmpty())
+                    val display = probe(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
                     if (display == null || !enabled(context) || !prepare(display)) return@use
                     val held = AirPlayPersistence.loadLegacyClusterEnabled(context) || !holdStockMap || com.shilapi.xcertplay.hud.BydOemClusterNavi.holdForLaunch(context, token) {

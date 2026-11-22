@@ -38,6 +38,7 @@ class CarPlayHostClusterStartupTest {
 
     @Before fun setUp() {
         activity = Robolectric.buildActivity(CarPlayHostActivity::class.java).get()
+        installBydCarSettings(activity)
         AirPlayPersistence.saveClusterMapEnabled(activity, true)
         controller = mock(CarPlayController::class.java)
         sink = mock(AndroidMediaSink::class.java)

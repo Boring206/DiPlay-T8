@@ -1575,8 +1575,12 @@ open class CarPlayHostActivity : ComponentActivity() {
         clusterStreamOnDisplay = false
         requestedSmallWindowForStream = null
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
+        // A route that found no projection display this run gets the stream a unit without one gets (#1327).
+        val adbTargetMissing = AdbClusterRouter.targetMissing && AdbClusterRouter.enabled(this)
+        if (adbTargetMissing) appendLog("Cluster activity: the last route probe found no cluster display " +
+            "(routeTarget=none); not requesting the 1920x720 stream")
         // 已选择的 ADB 路由使用固定尺寸，无需启动仪表 Activity 才能准备流参数。
-        if (AdbClusterRouter.enabled(this)) {
+        if (!adbTargetMissing && AdbClusterRouter.enabled(this)) {
             adbClusterConfigured = true
             clusterStreamOnDisplay = true
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),

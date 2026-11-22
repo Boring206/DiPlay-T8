@@ -2161,16 +2161,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             // DiLink 3 makes its own dashboard display; either DiLink 4 route stops that, so offer them only to
             // turn off, as the setup guide does (#722).
             val diLink3 = DiLinkGeneration.current(this) == DiLinkGeneration.DILINK_3
+            // Both DiLink 4 routes need BYD's projection display; elsewhere they only cost a hidden stream (#1327).
+            val bydRoutes = AdbClusterRouter.bydHeadUnit(this)
             if (diLink3) {
                 if (AirPlayPersistence.loadDiLink4ClusterRouteEnabled(this)) clusterRouteConflict(card)
             } else {
-                reconnectingToggle(card, getString(R.string.adb_cluster_activity_mode),
+                if (bydRoutes) reconnectingToggle(card, getString(R.string.adb_cluster_activity_mode),
                     getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                     AirPlayPersistence.saveAdbClusterEnabled(this, it)
                     ClusterActivityOutput.stopForSettings()
                     render()
                 }
-                reconnectingToggle(card, getString(R.string.platform21_cluster_mode),
+                if (bydRoutes) reconnectingToggle(card, getString(R.string.platform21_cluster_mode),
                     getString(R.string.platform21_cluster_description), AirPlayPersistence.loadLegacyClusterEnabled(this)) {
                     AirPlayPersistence.saveLegacyClusterEnabled(this, it)
                     ClusterActivityOutput.stopForSettings()
@@ -3438,7 +3440,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     render()
                 }
-                SetupGuide.Feature.DILINK4_ADB_CLUSTER -> reconnectingToggle(card,
+                SetupGuide.Feature.DILINK4_ADB_CLUSTER -> if (AdbClusterRouter.bydHeadUnit(this)) reconnectingToggle(card,
                     getString(R.string.adb_cluster_activity_mode), getString(R.string.adb_cluster_activity_description),
                     AirPlayPersistence.loadAdbClusterEnabled(this)) {
                     AirPlayPersistence.saveAdbClusterEnabled(this, it)
@@ -6000,6 +6002,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine()
         appendLine("--- ADB cluster activity routing ---")
         appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
+        appendLine("adbClusterRouteActive=${runCatching { AdbClusterRouter.enabled(appContext) }.getOrNull()} " +
+            "routeTargetMissing=${AdbClusterRouter.targetMissing}")
         appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
         AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
             DiagnosticRedactor.redact(line)?.let { appendLine(it) }
