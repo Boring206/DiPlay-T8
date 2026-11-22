@@ -451,7 +451,7 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        var accumulated = ByteArray(0)
+        val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -475,10 +475,8 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                accumulated += plaintext
-                val parsed = RtspMessage.parseMessages(accumulated)
-                accumulated = parsed.rest
-                for (request in parsed.messages) {
+                frames.append(plaintext)
+                for (request in frames.drain()) {
                     val cseq = request.headers["cseq"] ?: "-"
                     val path = request.path.lowercase()
                     val showInDebugOverlay =
@@ -920,7 +918,7 @@ class AirPlaySession(
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
             var encrypted = ByteArray(0)
-            var plaintext = ByteArray(0)
+            val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
@@ -934,10 +932,8 @@ class AirPlaySession(
                     break
                 }
                 encrypted = decrypted.rest
-                plaintext += decrypted.data
-                val parsed = RtspMessage.parseMessages(plaintext)
-                plaintext = parsed.rest
-                for (message in parsed.messages) {
+                frames.append(decrypted.data)
+                for (message in frames.drain()) {
                     if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
                     debugLog(
                         "airplay event rx ${message.method} ${message.path} cseq=${message.headers["cseq"] ?: "-"} body=${message.body.size}",
