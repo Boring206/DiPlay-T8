@@ -722,7 +722,7 @@
     <string name="settings_usb_charging_normal">Bình thường (2.4 A)</string>
     <string name="settings_usb_charging_reduced">Giảm (1.5 A)</string>
     <string name="settings_usb_charging_low">Thấp (0.5 A)</string>
-    <string name="settings_usb_charging_description">Dòng sạc mà DiPlay cung cấp cho iPhone qua USB. Nếu CarPlay có dây bị ngắt vài giây một lần và iPhone tự kết nối lại, cổng USB của xe có thể không cấp đủ điện: hãy thử Giảm, rồi Thấp. Khi đó iPhone sẽ sạc chậm hơn. Áp dụng ở lần kết nối USB tiếp theo.</string>
+    <string name="settings_usb_charging_description">Dòng sạc mà DiPlay cung cấp cho iPhone qua USB. Nếu CarPlay có dây bị ngắt vài giây một lần và iPhone tự kết nối lại, cổng USB của xe có thể không cấp đủ điện: hãy thử Giảm, rồi Trung bình, rồi Thấp. Khi đó iPhone sẽ sạc chậm hơn. Áp dụng ở lần kết nối USB tiếp theo.</string>
     <string name="wheel_joystick_auto_off">Cần điều khiển tự tắt</string>
     <string name="wheel_joystick_auto_off_description">Sau 15 giây không nhấn phím, và khi bắt đầu một lộ trình, các phím sẽ trở lại điều khiển nhạc và âm lượng.</string>
     <string name="wheel_joystick_on">Cần điều khiển bật</string>
@@ -1054,4 +1054,21 @@
     <string name="settings_fit_screen_shape">Tránh tai thỏ và góc bo tròn</string>
     <string name="settings_fit_screen_shape_description">Dành cho điện thoại hoặc máy tính bảng dùng làm hệ thống giải trí. Giữ các nút và thanh dock của CarPlay tránh khỏi tai thỏ camera và các góc bo tròn; bản đồ vẫn lấp đầy màn hình. Vùng an toàn đặt trong menu của phiên được ưu tiên. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="settings_safe_area_fitted_summary">Vùng an toàn: tránh tai thỏ và góc bo, %1$d x %2$d tại (%3$d, %4$d) trong %5$d x %6$d</string>
+    <string name="video_off_gear_unreadable">Không thể phát video trên màn hình xe: DiPlay không đọc được số.</string>
+    <string name="video_gear_no_reply">ADB của hệ thống giải trí không phản hồi khi đọc số.</string>
+    <string name="settings_usb_charging_medium">Trung bình (1 A)</string>
+    <string name="settings_car_brand_title">Huy hiệu thương hiệu xe</string>
+    <string name="settings_car_brand_summary">Chọn huy hiệu dòng xe BYD mà CarPlay hiển thị trong danh sách ứng dụng. Tên chỉ được cập nhật khi vẫn là tên mặc định hoặc tên huy hiệu. Chọn một huy hiệu sẽ thay thế ảnh tùy chỉnh.</string>
+    <string name="settings_car_brand_default">Mặc định (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Khôi phục huy hiệu thương hiệu</string>
+    <string name="settings_car_brand_reset">Khôi phục huy hiệu và tên mặc định</string>
+    <string name="last_carplay_connection_problem">Lần kết nối CarPlay gần nhất (%1$s): %2$s</string>
+    <string name="settings_call_attenuation">Âm lượng giọng trong cuộc gọi</string>
+    <string name="settings_call_attenuation_description">Giảm âm lượng giọng người gọi trong cuộc gọi CarPlay mà không thay đổi âm lượng cuộc gọi của xe. Áp dụng ngay, dù cuộc gọi phát qua đầu ra nào. Hãy để ở 0 dB trừ khi cuộc gọi nghe bị méo hoặc chói. Trên một chiếc BYD Han (DiLink 3), cuộc gọi nghe rõ ở khoảng -12 đến -16 dB trong một lần thử nghe.</string>
 </resources>

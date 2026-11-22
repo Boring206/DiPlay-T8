@@ -92,7 +92,12 @@ object NavigationOutputLines {
     fun hudTransactionsAnswer() = "HUD SOME/IP transactions answer again"
     fun hudFireEvent(result: Int) =
         "HUD fireEvent result=$result${if (BydHudProtocol.eventAccepted(result)) "" else " (not accepted)"}"
-    fun hudGuidanceAccepted() = "HUD gateway accepted guidance; rendering unconfirmed"
+    /**
+     * [arrival] is what the N9 HUD's field 26 carried (#301): null leaves it out (every other car sends the
+     * field empty), and an empty value shows as "none".
+     */
+    fun hudGuidanceAccepted(arrival: String? = null) = "HUD gateway accepted guidance; rendering unconfirmed" +
+        (arrival?.let { "; arrival field26=${it.ifEmpty { "none" }}" } ?: "")
     fun hudGuidanceCleared() = "HUD guidance cleared"
 
     fun clusterAdapter(packageName: String, simpleNavigationMode: Boolean) =

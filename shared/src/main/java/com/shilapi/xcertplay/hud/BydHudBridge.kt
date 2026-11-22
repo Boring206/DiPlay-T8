@@ -9,12 +9,14 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.SystemClock
+import android.text.format.DateFormat
 import android.util.Log
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
+import java.util.TimeZone
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/** Publishes CarPlay route arrows, distance and street to BYD's native windshield HUD. */
+/** Publishes CarPlay route arrows, distance and street (and the arrival time on the N9) to BYD's native windshield HUD. */
 internal object BydHudBridge {
     private const val TAG = "DiPlay-BYD-HUD"
     private const val SOMEIP_PACKAGE = "com.ts.car.someip.service"
@@ -39,13 +41,17 @@ internal object BydHudBridge {
     private var binding = false
     private var started = false
     private var senderStarted = false
-    private var guidanceSentLogged = false
+    private val guidanceNote = BydHudGuidanceNote()
     private var showing = false
     private var lastSendResult: Int? = null
     private var icons: Map<Int, ByteArray>? = null
     private var refusedBinds = 0
     private var transactionFailing = false
     private var nextBindAtMillis = 0L
+    // Field 26 stays empty except on the N9 (#301); see BydHudArrival.
+    private val arrivalEnabled by lazy { BydHudArrival.enabled() }
+    /** Passed where field 26 is not used, so other cars never read the default time zone on each tick. */
+    private val UNUSED_ZONE: TimeZone = TimeZone.getTimeZone("UTC")
 
     // The gateway pings registered callbacks and drops registrations that do not answer like an AIDL stub.
     private val callback = object : Binder() {
@@ -129,26 +135,30 @@ internal object BydHudBridge {
             clearHudLocked()
             return
         }
-        val payload = BydHudPayload.guidance(
-            distanceMeters = guidance.distanceMeters,
-            maneuver = guidance.maneuver,
+        // Only the N9 fills field 26; other cars skip the clock and settings reads on this 300 ms path.
+        val arrival = arrivalEnabled
+        val outgoing = BydHudArrival.payloadFor(
+            guidance,
             icon = iconFor(guidance.gaode),
-            road = guidance.road,
+            arrivalEnabled = arrival,
+            nowMillis = if (arrival) System.currentTimeMillis() else 0L,
+            zone = if (arrival) TimeZone.getDefault() else UNUSED_ZONE,
+            use24Hour = arrival && (context?.let { DateFormat.is24HourFormat(it) } ?: true),
         )
-        val accepted = sendLocked(payload)
-        if (accepted && !guidanceSentLogged) {
-            guidanceSentLogged = true
-            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): gateway accepted guidance; rendering unconfirmed")
-            NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceAccepted(), logcat = false)
+        val accepted = sendLocked(outgoing.payload)
+        if (!accepted) return
+        guidanceNote.accepted(outgoing.arrival)?.let { line ->
+            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): $line")
+            NavigationOutputLog.note(TAG, "hud.guidance", line, logcat = false)
         }
-        if (accepted) showing = true
+        showing = true
     }
 
     private fun clearHudLocked() {
         if (!showing) return
         if (!sendLocked(BydHudPayload.clear())) return
         showing = false
-        guidanceSentLogged = false
+        guidanceNote.reset()
         NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceCleared())
     }
 
@@ -307,6 +317,6 @@ internal object BydHudBridge {
         binding = false
         started = false
         showing = false
-        guidanceSentLogged = false
+        guidanceNote.reset()
     }
 }
