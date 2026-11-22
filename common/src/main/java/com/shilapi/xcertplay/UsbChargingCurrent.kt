@@ -11,6 +11,7 @@ import com.shilapi.xcertplay.orchestration.CarPlayRuntimeConfig
 enum class UsbChargingCurrent(val key: String, val milliAmps: Int) {
     NORMAL("normal", CarPlayRuntimeConfig.DEFAULT_AVAILABLE_CURRENT_MILLI_AMPS),
     REDUCED("reduced", 1500),
+    MEDIUM("medium", 1000),
     LOW("low", 500);
 
     companion object {

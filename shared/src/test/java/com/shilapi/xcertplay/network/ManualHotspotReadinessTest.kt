@@ -143,6 +143,23 @@ class ManualHotspotReadinessTest {
         }
     }
 
+    @Test fun aTetheredHotspotTheFirmwareReportsDownIsStillTheHotspot() {
+        // #1187: the platform tethers wlan0 and wlan0 holds the hotspot address, but isUp() reads false.
+        val tethered = snapshot(iface(index = 36, up = false), ap = setOf("wlan0")).copy(platformAp = setOf("wlan0"))
+        assertEquals("wlan0", select(tethered)?.name)
+        assertEquals("wlan0", await { tethered }.name)
+    }
+
+    @Test fun anInterfaceTheDriverNamedOrDiPlayInferredMustStillBeUp() {
+        assertNull(select(snapshot(iface(up = false), ap = setOf("wlan0"))))
+        assertNull(select(snapshot(iface(up = false), ap = setOf("wlan0")).copy(platformAp = emptySet())))
+    }
+
+    @Test fun aTetheredInterfaceReportedDownWithoutAHotspotAddressIsNotReady() {
+        val noAddress = snapshot(iface(up = false, addresses = emptyList()), ap = setOf("wlan0"))
+        assertNull(select(noAddress.copy(platformAp = setOf("wlan0"))))
+    }
+
     @Test fun switchedOffOrMissingAddressesAreNotReady() {
         assertNull(select(snapshot(iface()).copy(apEnabled = false)))
         assertNull(select(snapshot(iface(addresses = emptyList()))))

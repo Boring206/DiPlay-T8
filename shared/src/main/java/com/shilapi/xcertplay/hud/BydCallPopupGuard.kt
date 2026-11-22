@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.hud
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
 import java.io.Closeable
@@ -23,16 +24,23 @@ object BydCallPopupGuard {
     private var running = false
     private var leased = false
     private var adb: LocalAdb? = null
+    // The latest owner's report sink, kept after it lets go so a restore that ends while that host is still
+    // open reaches its report. A host closes its log in onDestroy, and no other log is open then, so a STOP
+    // that ends later (it can take up to 15 s) loses its line. The header's callPopupStatus still shows it.
+    @Volatile private var diagnostic: (String) -> Unit = {}
     @Volatile var status = "OFF"
         private set
 
+    /** [log] receives a report line at each hide request and status change (#1237). */
     fun update(context: Context, candidate: Any, foregroundConnected: Boolean,
-        connected: () -> Boolean) = synchronized(gate) {
+        log: (String) -> Unit = {}, connected: () -> Boolean) = synchronized(gate) {
         if (!foregroundConnected && owner !== candidate) return@synchronized
         if (foregroundConnected && owner === candidate) return@synchronized
         owner = if (foregroundConnected) candidate else null
         sessionReady = if (foregroundConnected) connected else ({ false })
         app = context.applicationContext
+        diagnostic = log
+        report(if (foregroundConnected) "hide requested" else "hide no longer requested")
         generation++
         gate.notifyAll()
         // START may already have written IGNORE before its reply. Keep that socket for STOP.
@@ -58,7 +66,7 @@ object BydCallPopupGuard {
             }
             val (value, context) = selected
             try {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) { status = "UNSUPPORTED"; continue }
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) { setStatus("UNSUPPORTED"); continue }
                 val client = LocalAdb(AdbKeys.load(context))
                 client.use {
                     synchronized(gate) {
@@ -71,9 +79,9 @@ object BydCallPopupGuard {
                         runPrepared(value, channel)
                     }
                 }
-            } catch (_: Exception) {
+            } catch (error: Exception) {
                 // A lost reply is not proof of restoration. The detached helper still owns recovery.
-                status = "UNAVAILABLE_OR_RESTORE_UNCONFIRMED"
+                setStatus("UNAVAILABLE_OR_RESTORE_UNCONFIRMED", reason(error))
             } finally {
                 synchronized(gate) { adb = null; leased = false }
             }
@@ -84,8 +92,30 @@ object BydCallPopupGuard {
         synchronized(gate) { leased = true }
         runSession(channel, { current(value) }, {
             synchronized(gate) { if (current(value)) gate.wait(2_000) }
-        }) { status = it }
+        }) { setStatus(it) }
     }
+
+    /** Only changes reach the report: the helper answers HIDDEN to every heartbeat. */
+    private fun setStatus(next: String, reason: String? = null) {
+        val previous = status
+        status = next
+        if (next != previous || reason != null) {
+            report("status=$next previous=$previous" + (reason?.let { " reason=$it" } ?: ""))
+        }
+    }
+
+    private fun report(event: String) {
+        val line = "BYD call popup: $event"
+        Log.i(TAG, line)
+        runCatching { diagnostic(line) }
+    }
+
+    /** The helper's own failure codes (HELPER_TIMEOUT, "ERROR BUSY"…), or the exception type; nothing else. */
+    internal fun reason(error: Throwable): String =
+        error.message?.takeIf { it.matches(Regex("[A-Z][A-Z0-9_ ]{2,47}")) }?.replace(' ', '_')
+            ?: error.javaClass.simpleName.filter { it.isLetterOrDigit() }.take(48).ifEmpty { "unknown" }
+
+    private const val TAG = "DiPlay-CallPopup"
 
     internal fun runSession(channel: BydCallPopupChannel, current: () -> Boolean,
         waitHeartbeat: () -> Unit, report: (String) -> Unit) {

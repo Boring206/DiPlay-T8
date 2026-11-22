@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_hide_byd_call_popup">Ẩn cửa sổ cuộc gọi của BYD (thử nghiệm)</string>
+    <string name="settings_hide_byd_call_popup_description">Chỉ dành cho hệ thống giải trí BYD chạy Android 10 trở lên. Cần ADB cục bộ đã được chấp thuận. Ẩn cửa sổ cuộc gọi gốc khi CarPlay đã kết nối đang ở nền trước; hiện lại khi ở nền. Không thay đổi âm thanh Bluetooth hay ẩn toàn bộ ứng dụng điện thoại.</string>
+</resources>

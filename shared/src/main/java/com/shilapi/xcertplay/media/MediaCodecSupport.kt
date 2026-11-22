@@ -11,6 +11,9 @@ import java.io.ByteArrayOutputStream
 object MediaCodecSupport {
     private val START_CODE = byteArrayOf(0x00, 0x00, 0x00, 0x01)
 
+    /** Largest AAC-LC access unit whose ADTS frame_length still fits in 13 bits. */
+    internal const val MAX_ADTS_ACCESS_UNIT_BYTES = 0x1fff - 7
+
     /** Splits an AVCDecoderConfigurationRecord into raw first SPS and first PPS. */
     fun avcParameterSets(codecData: ByteArray): Pair<ByteArray, ByteArray> {
         if (codecData.size < 7) return emptySet()
@@ -115,8 +118,9 @@ object MediaCodecSupport {
         return false
     }
 
-    /** Wraps one raw AAC-LC access unit in an MPEG-4 ADTS frame. */
+    /** Wraps one raw AAC-LC access unit in an ADTS frame, or returns empty if it cannot fit. */
     fun adtsFrame(accessUnit: ByteArray, sampleRate: Int, channels: Int): ByteArray {
+        if (accessUnit.size > MAX_ADTS_ACCESS_UNIT_BYTES) return ByteArray(0)
         val frequencyIndex = aacFrequencyIndex(sampleRate)
         val channelConfig = channels.coerceIn(1, 7)
         val frameLength = accessUnit.size + 7
@@ -124,7 +128,8 @@ object MediaCodecSupport {
         header[0] = 0xff.toByte()
         header[1] = 0xf1.toByte()
         header[2] = ((1 shl 6) or (frequencyIndex shl 2) or (channelConfig ushr 2)).toByte()
-        header[3] = (((channelConfig and 0x3) shl 6) or (frameLength ushr 11)).toByte()
+        // aac_frame_length is 13 bits: only its top two bits live in byte 3.
+        header[3] = (((channelConfig and 0x3) shl 6) or ((frameLength ushr 11) and 0x3)).toByte()
         header[4] = ((frameLength ushr 3) and 0xff).toByte()
         header[5] = (((frameLength and 0x7) shl 5) or 0x1f).toByte()
         header[6] = 0xfc.toByte()
