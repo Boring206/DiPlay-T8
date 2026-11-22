@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 
 /** The car's Bluetooth music link (A2DP sink), as far as the drop needs it. */
@@ -31,6 +32,9 @@ internal interface CarMusicLinkJournal {
 
 /** What to do and what the report says; no Android calls, so every branch is testable. */
 internal class CarMusicLinkGuard(private val journal: CarMusicLinkJournal) {
+    /** Whether the last [drop] disconnected this session's link; counts toward the re-drop cap. */
+    var dropped = false
+        private set
 
     /** Drops this session's link if it is up, and returns the report line. */
     fun drop(link: CarMusicLink, address: String): String {
@@ -38,18 +42,24 @@ internal class CarMusicLinkGuard(private val journal: CarMusicLinkJournal) {
         if (up.none { it.equals(address, ignoreCase = true) }) {
             return "car Bluetooth music not connected for this session's iPhone; nothing to drop yet"
         }
-        // One note at a time: a link still noted for another iPhone is handed back before it is overwritten.
+        // One note at a time: a link still noted for another iPhone is handed back first. If that doesn't go
+        // through (refused, or no connect()), this session's drop still goes ahead and replaces the note, so
+        // this iPhone isn't left paused behind a hand-back that can't succeed.
         val stale = runCatching { journal.dropped() }.getOrNull()
         val staleLine = if (stale != null && !stale.equals(address, ignoreCase = true)) restore(link) else null
-        if (runCatching { journal.dropped() }.getOrNull() != null && staleLine != null) {
-            return "$staleLine; car Bluetooth music drop skipped: another iPhone's link is still noted"
-        }
+        return listOfNotNull(staleLine, dropOwn(link, address)).joinToString("; ")
+    }
+
+    private fun dropOwn(link: CarMusicLink, address: String): String {
         // commit() first: an app kill after the call must leave the note that brings the link back.
         if (!runCatching { journal.write(address) }.getOrDefault(false)) {
             return "car Bluetooth music drop skipped: the restore note could not be saved"
         }
         return when (link.disconnect(address)) {
-            true -> "car Bluetooth music dropped for this session's iPhone until CarPlay ends"
+            true -> {
+                dropped = true
+                "car Bluetooth music dropped for this session's iPhone until CarPlay ends"
+            }
             false -> {
                 clear()
                 "car Bluetooth music drop refused by the head unit; CarPlay music may pause"
@@ -142,6 +152,9 @@ object CarMusicLinkDrop {
     private const val RESTORE_DELAY_MILLIS = 20_000L
     /** A profile proxy that never answers must not hold the queue. */
     private const val PROXY_TIMEOUT_MILLIS = 5_000L
+    /** At most this many drops in [DROP_WINDOW_MILLIS]; then the session leaves the link alone. */
+    private const val MAX_DROPS_PER_WINDOW = 5
+    private const val DROP_WINDOW_MILLIS = 60_000L
 
     private val main by lazy { Handler(Looper.getMainLooper()) }
 
@@ -157,6 +170,9 @@ object CarMusicLinkDrop {
     private var app: Context? = null
     private var restoreLog: (String) -> Unit = {}
     private var restorePending = false
+    private var dropMissedProxy = false
+    private var capped = false
+    private val dropTimes = ArrayDeque<Long>()
     private val drop = Runnable { withProxy { dropWith(it) } }
     private val restoreLater = Runnable { restore(restoreLog) }
     // The request stays outstanding: a late proxy is kept for the next call instead of asking twice.
@@ -192,11 +208,17 @@ object CarMusicLinkDrop {
             main.removeCallbacks(restoreLater)
             restorePending = false
             if (this.owner === owner && this.address.equals(address, ignoreCase = true)) {
+                // A new session of the same controller starts with a fresh re-drop budget.
+                if (capped) {
+                    resetCap()
+                    register(appContext)
+                }
                 scheduleDrop()
                 return@post
             }
             // A replacement controller takes over; the saved note stays, so its restore still runs at the end.
             unregister()
+            resetCap()
             this.owner = owner
             this.address = address
             this.log = log
@@ -226,18 +248,30 @@ object CarMusicLinkDrop {
         }
     }
 
+    private fun resetCap() {
+        capped = false
+        dropTimes.clear()
+    }
+
     private fun end(log: (String) -> Unit) {
         owner = null
         address = null
         this.log = {}
         unregister()
+        resetCap()
+        main.removeCallbacks(restoreLater)
         restorePending = false
         scheduleRestore(log)
     }
 
     private fun scheduleRestore(log: (String) -> Unit) {
         val appContext = app ?: return
-        if (restorePending || journal(appContext).dropped() == null) return
+        if (restorePending) return
+        if (journal(appContext).dropped() == null) {
+            closeProxyIfIdle() // nothing to hand back: release the session's proxy now
+            return
+        }
+        main.removeCallbacks(restoreLater)
         restorePending = true
         restoreLog = log
         main.postDelayed(restoreLater, RESTORE_DELAY_MILLIS)
@@ -261,12 +295,29 @@ object CarMusicLinkDrop {
     private fun dropWith(open: BluetoothProfile?) {
         val appContext = app ?: return
         val phone = address ?: return
-        if (owner == null || unavailable) return
-        // A null proxy reads as an unreadable profile, so the report says why nothing was dropped.
+        if (owner == null || unavailable || capped) return
+        // A null proxy reads as an unreadable profile, so the report says why nothing was dropped;
+        // a proxy that arrives later drops then.
+        dropMissedProxy = open == null
         val link = ProxyLink(open)
-        val line = CarMusicLinkGuard(journal(appContext)).drop(link, phone)
-        if (link.missing) unavailable = true
+        val guard = CarMusicLinkGuard(journal(appContext))
+        val line = guard.drop(link, phone)
+        if (link.missingDisconnect) unavailable = true
         log(line)
+        if (guard.dropped) countDrop()
+    }
+
+    /** A car that keeps raising the link would flap Bluetooth next to HFP for a whole drive. */
+    private fun countDrop() {
+        val now = SystemClock.elapsedRealtime()
+        dropTimes.addLast(now)
+        while (dropTimes.isNotEmpty() && now - dropTimes.first() > DROP_WINDOW_MILLIS) dropTimes.removeFirst()
+        if (dropTimes.size >= MAX_DROPS_PER_WINDOW) {
+            capped = true
+            unregister()
+            log("car Bluetooth music keeps coming back (${dropTimes.size} drops in a minute); " +
+                "DiPlay stops dropping it for this session")
+        }
     }
 
     private fun scheduleDrop() {
@@ -296,6 +347,7 @@ object CarMusicLinkDrop {
             }
         }.isSuccess
         if (registered) receiver = stateReceiver
+        else log("car Bluetooth music: can't watch the link; it is dropped once per session start only")
     }
 
     private fun unregister() {
@@ -328,6 +380,7 @@ object CarMusicLinkDrop {
                     }
                     proxy = connectedProxy
                     flush(connectedProxy)
+                    if (owner != null && dropMissedProxy) scheduleDrop()
                     closeProxyIfIdle()
                 }
             }
@@ -360,7 +413,9 @@ object CarMusicLinkDrop {
 
     private fun closeProxyIfIdle() {
         if (owner != null || waiting.isNotEmpty()) return
-        proxy?.let { open -> runCatching { BluetoothAdapter.getDefaultAdapter()?.closeProfileProxy(PROFILE_A2DP_SINK, open) } }
+        // A request still on its way stays outstanding: its proxy is closed here when it arrives.
+        val open = proxy ?: return
+        runCatching { BluetoothAdapter.getDefaultAdapter()?.closeProfileProxy(PROFILE_A2DP_SINK, open) }
         proxy = null
         proxyRequested = false
     }
@@ -375,8 +430,8 @@ object CarMusicLinkDrop {
 
     /** The hidden A2DP-sink calls, by reflection. */
     private class ProxyLink(private val proxy: BluetoothProfile?) : CarMusicLink {
-        /** The platform lacks the call; set by [call]. */
-        var missing = false
+        /** The platform lacks disconnect(); set by [call]. A missing connect() only stops the restore. */
+        var missingDisconnect = false
             private set
 
         private val adapter get() = BluetoothAdapter.getDefaultAdapter()
@@ -389,8 +444,9 @@ object CarMusicLinkDrop {
         override fun disconnect(address: String): Boolean? = call("disconnect", address)
         override fun connect(address: String): Boolean? = call("connect", address)
 
+        // With Bluetooth off the bonded list is empty, which would read as "no longer paired".
         override fun bonded(address: String): Boolean? = runCatching {
-            adapter?.bondedDevices?.any { it.address.equals(address, ignoreCase = true) }
+            adapter?.takeIf { it.isEnabled }?.bondedDevices?.any { it.address.equals(address, ignoreCase = true) }
         }.getOrNull()
 
         private fun call(name: String, address: String): Boolean? {
@@ -399,7 +455,7 @@ object CarMusicLinkDrop {
                 val device = adapter?.getRemoteDevice(address) ?: return false
                 open.javaClass.getMethod(name, BluetoothDevice::class.java).invoke(open, device) as? Boolean ?: false
             } catch (error: NoSuchMethodException) {
-                missing = true
+                if (name == "disconnect") missingDisconnect = true
                 Log.w(TAG, "car Bluetooth music: no $name() here", error)
                 null
             } catch (error: Exception) {

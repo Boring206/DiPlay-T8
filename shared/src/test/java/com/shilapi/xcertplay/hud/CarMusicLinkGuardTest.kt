@@ -64,10 +64,12 @@ class CarMusicLinkGuardTest {
     fun anUpLinkIsDroppedAfterTheRestoreNoteIsSaved() {
         val journal = FakeJournal()
         val link = FakeLink(up = listOf(phone.lowercase()))
-        val line = CarMusicLinkGuard(journal).drop(link, phone)
+        val guard = CarMusicLinkGuard(journal)
+        val line = guard.drop(link, phone)
         assertEquals(listOf(phone), link.disconnected)
         assertEquals(phone, journal.address)
         assertTrue(line.startsWith("car Bluetooth music dropped"))
+        assertTrue(guard.dropped)
     }
 
     @Test
@@ -82,7 +84,9 @@ class CarMusicLinkGuardTest {
     @Test
     fun aRefusedOrMissingCallIsReportedAndLeavesNothingToRestore() {
         val refused = FakeJournal()
-        val refusedLine = CarMusicLinkGuard(refused).drop(FakeLink(up = listOf(phone), disconnectResult = false), phone)
+        val refusedGuard = CarMusicLinkGuard(refused)
+        val refusedLine = refusedGuard.drop(FakeLink(up = listOf(phone), disconnectResult = false), phone)
+        assertFalse(refusedGuard.dropped)
         assertTrue(refusedLine.contains("refused"))
         assertNull(refused.address)
 
@@ -166,13 +170,21 @@ class CarMusicLinkGuardTest {
         assertEquals(listOf(other), link.connectedAgain)
         assertEquals(listOf(phone), link.disconnected)
         assertEquals(phone, journal.address)
-        assertTrue(line.startsWith("car Bluetooth music dropped"))
+        // Both outcomes reach the report.
+        assertTrue(line.startsWith("car Bluetooth music reconnect requested; car Bluetooth music dropped"))
+    }
 
-        // The old note can't be handed back yet: it stays, and this session leaves the link alone.
-        val stuck = FakeJournal(address = other)
-        val refusing = FakeLink(up = listOf(phone), connectResult = false)
-        assertTrue(CarMusicLinkGuard(stuck).drop(refusing, phone).contains("another iPhone's link is still noted"))
-        assertTrue(refusing.disconnected.isEmpty())
-        assertEquals(other, stuck.address)
+    @Test
+    fun aHandBackThatCantGoThroughStillLetsThisSessionDrop() {
+        // A refused or missing connect() for the other iPhone must not leave this iPhone paused.
+        for (result in listOf(false, null)) {
+            val other = "11:22:33:44:55:66"
+            val journal = FakeJournal(address = other)
+            val link = FakeLink(up = listOf(phone), connectResult = result)
+            val line = CarMusicLinkGuard(journal).drop(link, phone)
+            assertEquals(listOf(phone), link.disconnected)
+            assertEquals(phone, journal.address)
+            assertTrue(line.contains("car Bluetooth music dropped for this session's iPhone"))
+        }
     }
 }
