@@ -2917,6 +2917,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val panel = FrameLayout(this).apply {
             background = swipeMenuChrome()
+            // Keep the outer stroke above opaque scrolling navigation backgrounds.
+            foreground = swipeMenuChrome().apply {
+                colors = intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT)
+            }
             clipToOutline = true
             elevation = dp(SWIPE_PANEL_ELEVATION_DP).toFloat()
         }
@@ -3392,10 +3396,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) bottomMargin = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
@@ -3408,10 +3412,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    marginEnd = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) marginEnd = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
