@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.network
 
 import android.content.Context
+import android.net.wifi.SupplicantState
 import com.shilapi.xcertplay.adb.LocalAdb
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -95,5 +96,23 @@ class WifiScanPauseTest {
         assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.MANUAL_HOTSPOT, 28))
         assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.EXISTING_WIFI, 28, clientSearchingBesideHotspot = true))
         assertFalse(WifiScanPause.eligible(WirelessHotspotBackend.MANUAL_HOTSPOT, 24, clientSearchingBesideHotspot = true))
+    }
+
+    @Test
+    fun aClientSearchesOnlyWhenItIsOnAndJoinedToNoNetwork() {
+        for (state in listOf(SupplicantState.DISCONNECTED, SupplicantState.SCANNING, SupplicantState.INACTIVE)) {
+            assertTrue(state.name, WifiScanPause.clientSearching(true, state))
+            assertFalse(state.name, WifiScanPause.clientSearching(false, state))
+        }
+        // Joined, or joining: a phone's hotspot used for the car's internet is left alone.
+        for (state in listOf(SupplicantState.COMPLETED, SupplicantState.AUTHENTICATING, SupplicantState.ASSOCIATING,
+            SupplicantState.ASSOCIATED, SupplicantState.FOUR_WAY_HANDSHAKE, SupplicantState.GROUP_HANDSHAKE)) {
+            assertFalse(state.name, WifiScanPause.clientSearching(true, state))
+        }
+        // Unknown or off-band states keep today's behaviour: no pause.
+        for (state in listOf(SupplicantState.INTERFACE_DISABLED, SupplicantState.DORMANT,
+            SupplicantState.UNINITIALIZED, SupplicantState.INVALID, null)) {
+            assertFalse(state?.name ?: "null", WifiScanPause.clientSearching(true, state))
+        }
     }
 }

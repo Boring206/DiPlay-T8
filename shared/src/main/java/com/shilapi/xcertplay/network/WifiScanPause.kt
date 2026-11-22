@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.network
 
 import android.content.Context
+import android.net.wifi.SupplicantState
 import android.os.Build
 import android.util.Log
 import com.shilapi.xcertplay.adb.LocalAdb
@@ -69,6 +70,18 @@ internal class WifiScanPause(
             (backend == WirelessHotspotBackend.WIFI_P2P ||
                 (clientSearchingBesideHotspot && backend == WirelessHotspotBackend.MANUAL_HOTSPOT)) &&
                 sdk >= Build.VERSION_CODES.N_MR1
+
+        /**
+         * Whether the car's Wi-Fi client is on and joined to no network, so it keeps searching. The
+         * supplicant state is read because Android 10+ hides the network ID (as -1) from an app that
+         * cannot read scan results. Joined or joining (COMPLETED, associating, handshake) is left alone,
+         * and so is any state not listed here.
+         */
+        fun clientSearching(wifiEnabled: Boolean, state: SupplicantState?): Boolean =
+            wifiEnabled && state in SEARCHING_STATES
+
+        private val SEARCHING_STATES = setOf(SupplicantState.DISCONNECTED, SupplicantState.SCANNING,
+            SupplicantState.INACTIVE)
 
         fun restoreIfNeeded(context: Context) = ProcessWifiScanPause.recover(context.applicationContext)
 
