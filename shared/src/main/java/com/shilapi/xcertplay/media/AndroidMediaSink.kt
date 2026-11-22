@@ -1785,7 +1785,10 @@ private class AudioRenderer(
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
 ) : Closeable {
-    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long)
+    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long) {
+        /** Packets Wi-Fi lost right before this one, by sequence number. */
+        var lostBefore = 0
+    }
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
     private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
@@ -1799,6 +1802,11 @@ private class AudioRenderer(
     private val mediaLagGuard = if (format.audioType == "media") MediaPacketLagGuard(format.rtpClockRate) else null
     @Volatile private var newestRtpSample = 0
     private var lagRecoveryReports = 0
+    private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
+    private val sequenceGap = if (lostMusicFill != null) RtpSequenceGap() else null
+    private var underrunsAfterLastWrite = 0
+    private var silence = ByteArray(0)
+    private var lostFramesFilled = 0L
     @Volatile private var running = true
     @Volatile private var started = false
     private var codec: MediaCodec? = null
@@ -1888,7 +1896,7 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now))) {
+        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { lostBefore = sequenceGap?.lostBefore(rtp) ?: 0 })) {
             if (started) {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
@@ -2287,6 +2295,7 @@ private class AudioRenderer(
         }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
+        if (packet.lostBefore > 0 && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs, packet.lostBefore)
         when (format.codec) {
             AudioCodecKind.LPCM -> writePcm(byteSwapS16(rtp.copyOfRange(12, rtp.size)))
             AudioCodecKind.AAC_LC -> {
@@ -2422,12 +2431,32 @@ private class AudioRenderer(
                     } finally {
                         codec.releaseOutputBuffer(index, false)
                     }
-                    if (copied) writePcm(pcm, 0, size)
+                    if (copied) {
+                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes, fillLimitFrames()) ?: 0
+                        if (fill > 0) writeSilence(fill)
+                        writePcm(pcm, 0, size)
+                        if (lostMusicFill != null) underrunsAfterLastWrite = track?.underrunCount ?: 0
+                    }
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
             }
         }
+    }
+
+    /** The start level while the track still plays what it held before this buffer's hole, else 0. */
+    private fun fillLimitFrames(): Int {
+        val track = track ?: return 0
+        if (!playbackStarted || track.underrunCount != underrunsAfterLastWrite) return 0
+        return startThresholdBytes / frameBytes
+    }
+
+    private fun writeSilence(frames: Int) {
+        val bytes = frames * frameBytes
+        if (silence.size < bytes) silence = ByteArray(bytes) else silence.fill(0, 0, bytes)
+        if (lostFramesFilled == 0L) Log.i(TAG, "audio first lost music filled frames=$frames")
+        lostFramesFilled += frames
+        writePcm(silence, 0, bytes)
     }
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
@@ -2646,7 +2675,8 @@ private class AudioRenderer(
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
                 "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
-                "outputBuffersTotal=$outputBuffers ended=$force"
+                "outputBuffersTotal=$outputBuffers " +
+                (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
             runCatching { report(decoderLine) }
         }
