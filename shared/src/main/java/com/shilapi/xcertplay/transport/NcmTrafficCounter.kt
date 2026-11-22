@@ -6,8 +6,9 @@ package com.shilapi.xcertplay.transport
  * DiPlay's listener (#889, #890). Only headers are read, never payloads. Free of Android types for JVM tests.
  *
  * For each address and port the iPhone's connection attempts (TCP SYN) go to, it also counts what DiPlay sent back
- * from there: SYN-ACK (a listener took it), RST (nothing listens there), or nothing (#1338). A reply the USB link did
- * not take is counted apart, as is how many connections (source ports) the attempts were.
+ * from there: SYN-ACK (a listener took it), RST to a connection that got no SYN-ACK (refused: nothing listened
+ * there), or nothing (#1338). An RST that ends a connection DiPlay had accepted is not counted. A reply the USB link
+ * did not take is counted apart, as is how many connections (source ports) the attempts were.
  */
 internal class NcmTrafficCounter(private val nanoTime: () -> Long = System::nanoTime) {
     private var fromIphone = 0L
@@ -21,6 +22,8 @@ internal class NcmTrafficCounter(private val nanoTime: () -> Long = System::nano
     private class SynTarget(val address: ByteArray, val port: Int) {
         var syns = 0
         val sourcePorts = HashSet<Int>()
+        /** The iPhone's ports that DiPlay sent a SYN-ACK to; an RST to one of them ends an accepted connection. */
+        val acceptedPorts = HashSet<Int>()
         var synAcks = 0
         var resets = 0
         var unsent = 0
@@ -67,8 +70,14 @@ internal class NcmTrafficCounter(private val nanoTime: () -> Long = System::nano
         val synAck = !reset && flags and TCP_SYN != 0 && flags and TCP_ACK != 0
         if (!reset && !synAck) return
         val port = u16(frame, tcp + TCP_SOURCE_PORT_OFFSET) ?: return
+        val iphonePort = u16(frame, tcp + TCP_DESTINATION_PORT_OFFSET) ?: return
         val address = address(frame, destination = false) ?: return
         val target = targets.firstOrNull { it.matches(address, port) } ?: return
+        if (synAck) {
+            if (target.acceptedPorts.size < MAX_SOURCE_PORTS) target.acceptedPorts.add(iphonePort)
+        } else if (iphonePort in target.acceptedPorts) {
+            return
+        }
         when {
             !delivered -> target.unsent++
             reset -> target.resets++

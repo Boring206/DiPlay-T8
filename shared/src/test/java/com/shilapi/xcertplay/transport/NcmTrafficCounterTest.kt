@@ -128,6 +128,29 @@ class NcmTrafficCounterTest {
         assertTrue(counter.summary(7000).endsWith("toIphone=6"))
     }
 
+    @Test fun anRstThatEndsAnAcceptedConnectionIsNotCountedAsARefusal() {
+        // rst counts refused attempts only. DiPlay also resets connections it had accepted, for example when a
+        // session is torn down; those got a SYN-ACK first and say nothing about whether a listener was there.
+        val iphone = linkLocal(0x0a)
+        val advertised = linkLocal(0x02)
+        val counter = NcmTrafficCounter()
+        counter.received(ipv6Tcp(iphone, advertised, 50000, 7000, 0x02))
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50000, 0x12), delivered = true)
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50000, 0x14), delivered = true)
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50000, 0x04), delivered = false)
+        // A SYN-ACK the USB link did not take still means a listener took the attempt.
+        counter.received(ipv6Tcp(iphone, advertised, 50001, 7000, 0x02))
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50001, 0x12), delivered = false)
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50001, 0x14), delivered = true)
+        // An attempt that got no SYN-ACK and an RST is a refusal.
+        counter.received(ipv6Tcp(iphone, advertised, 50002, 7000, 0x02))
+        counter.sent(ipv6Tcp(advertised, iphone, 7000, 50002, 0x14), delivered = true)
+        assertEquals(
+            "to=advertised port=7000 syn=3 connections=3 synAck=1 rst=1 unsent=1",
+            counter.connectionAttemptSummary(advertised),
+        )
+    }
+
     @Test fun namesAddressKindsAndKeepsTheFirstFourTargets() {
         val iphone = linkLocal(0x0a)
         val counter = NcmTrafficCounter()
