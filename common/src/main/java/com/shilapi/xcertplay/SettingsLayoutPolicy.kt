@@ -19,5 +19,7 @@ internal object SettingsLayoutPolicy {
     fun overviewHasTwoColumns(widthDp: Int, fontScale: Float): Boolean =
         widthDp >= OVERVIEW_TWO_COLUMN_MIN_WIDTH_DP * fontScale.coerceAtLeast(1f)
 
-    fun railWidthDp(fontScale: Float): Int = (RAIL_WIDTH_DP * fontScale.coerceIn(1f, MAX_RAIL_SCALE)).toInt()
+    // coerceIn passes NaN through, and Float.toInt() turns NaN into a zero-width rail.
+    fun railWidthDp(fontScale: Float): Int =
+        (RAIL_WIDTH_DP * (if (fontScale.isNaN()) 1f else fontScale.coerceIn(1f, MAX_RAIL_SCALE))).toInt()
 }
