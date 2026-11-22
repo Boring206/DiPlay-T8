@@ -40,8 +40,14 @@ internal class MediaClockTrim(
     private val startTargetFrames = targetFrames
     /** The most the renderer held when its queue was full and dropped music, or 0 before that happens. */
     private var ceilingFrames = 0L
+    /**
+     * The target was lowered below what the renderer held when its queue overflowed. Until the level comes down to
+     * the target, the waiting packets are the overflow itself, not decoder backpressure, so the integral still learns.
+     */
+    private var overflowRecovery = false
 
     fun measureAgain() {
+        overflowRecovery = false
         if (measuresTarget) measuring = Measuring()
     }
 
@@ -56,6 +62,7 @@ internal class MediaClockTrim(
         if (targetFrames <= maxTarget) return
         level = level?.let { (targetFrames * (1.0 + it) - maxTarget) / maxTarget }
         targetFrames = maxTarget
+        overflowRecovery = true
     }
 
     private fun maxTargetFrames(): Long =
@@ -74,8 +81,10 @@ internal class MediaClockTrim(
         arrivedFrameNs: Double = 0.0) {
         if (targetFrames <= 0L) return
         // Decoder backpressure is not evidence that the head unit's clock runs at a different
-        // rate; do not teach the *next* music stream an artificial clock correction.
-        compressedBacklog = compressedFrames > targetFrames
+        // rate; do not teach the *next* music stream an artificial clock correction. After an overflow lowered the
+        // target, a full wired queue alone is above it when the track holds less than a third of the queue (about
+        // 220 ms on the T507 in #1177): freezing the integral there kept the slow trim and the full queue.
+        compressedBacklog = compressedFrames > targetFrames && !overflowRecovery
         val buffered = queuedFrames.coerceAtLeast(0L) +
             compressedFrames.coerceIn(0L, sampleRate.toLong() * 16L)
         val elapsedNs = nowNs - lastSampleNs
@@ -113,7 +122,9 @@ internal class MediaClockTrim(
             measuring = Measuring(nowNs, halfMean)
             return
         }
-        targetFrames = minOf(earlierHalfMean.roundToLong(), maxTargetFrames())
+        val measured = earlierHalfMean.roundToLong()
+        targetFrames = minOf(measured, maxTargetFrames())
+        if (measured > targetFrames) overflowRecovery = true
         level = error(earlierHalfMean)
         measuring = null
     }
@@ -143,6 +154,7 @@ internal class MediaClockTrim(
         // A pause between updates is not drift: integrate at most one normal step over it.
         val seconds = if (previousUpdate == null) 0.0 else ((nowNs - previousUpdate) / 1e9).coerceAtMost(MAX_STEP_SECONDS)
         lastUpdateNs = nowNs
+        if (error <= 0.0) overflowRecovery = false
         if (!compressedBacklog) {
             integral = (integral + KI * error * seconds).coerceIn(-MAX_TRIM, MAX_TRIM)
             learnedTrim = integral

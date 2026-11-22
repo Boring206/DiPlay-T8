@@ -96,8 +96,10 @@ class MediaClockTrimTest {
      * clock is accurate. Playback has just restarted after a camera stall: the refill burst left 185 packets queued
      * and the trim still plays at the slow rate it learned while the track ran dry. With [measureOnDrop] each drop
      * measures the target again, as 0.2.22's renderer did; otherwise the trim hears that the queue overflowed.
+     * The head unit plays [halChunkFrames] at a time: a HAL that takes large chunks blocks writes for that long.
      */
-    private class WiredDrive(trackMs: Int, startMs: Int, learned: Double, val measureOnDrop: Boolean = false) {
+    private class WiredDrive(trackMs: Int, startMs: Int, learned: Double, val measureOnDrop: Boolean = false,
+        private val halChunkFrames: Int = 256) {
         val trim: MediaClockTrim
         private val trackCapacity = 48.0 * trackMs
         private var trackQueued = trackCapacity
@@ -143,9 +145,9 @@ class MediaClockTrimTest {
                 }
                 if (ms >= 60_000 && ms % 1000 == 0) ratesAfterAMinute += rate
                 played += rate / 1000.0
-                while (played >= 256) {
-                    played -= 256
-                    trackQueued = (trackQueued - 256).coerceAtLeast(0.0)
+                while (played >= halChunkFrames) {
+                    played -= halChunkFrames
+                    trackQueued = (trackQueued - halChunkFrames).coerceAtLeast(0.0)
                 }
             }
         }
@@ -180,6 +182,24 @@ class MediaClockTrimTest {
             drive.run(300)
             assertTrue("$trackMs ms track dropped at ${drive.dropSeconds} s", drive.dropSeconds.all { it < 30 })
             assertTrue("$trackMs ms track dropped ${drive.dropSeconds.size}", drive.dropSeconds.size < 20)
+        }
+    }
+
+    @Test fun atTheTrackFillOfTheReportAFullQueueStillLetsTheSlowTrimRelearn() {
+        // In the #1177 report the T507's track held about 10 600 frames at the 300 ms setting and 14 700 at 500 ms,
+        // and writes blocked for up to 280 ms. The full queue alone is then above the lowered target; the trim must
+        // still learn from it, or it keeps the slow rate, parks the queue near full and teaches the next stream.
+        val cases = listOf(
+            Triple(220, 300, 256), Triple(220, 300, 8_000), Triple(310, 500, 256), Triple(310, 500, 13_440))
+        for ((trackMs, startMs, chunk) in cases) for (learned in listOf(-0.0084, -MediaClockTrim.MAX_TRIM)) {
+            val case = "$trackMs ms track, $chunk-frame chunks, learned $learned"
+            val drive = WiredDrive(trackMs, startMs, learned, halChunkFrames = chunk)
+            drive.run(300)
+            // From the slowest trim with 280 ms chunks the integral needs about 70 s to climb back.
+            val lastDropBy = if (learned < -0.01 && chunk > 10_000) 90 else 60
+            assertTrue("$case dropped at ${drive.dropSeconds} s", drive.dropSeconds.all { it < lastDropBy })
+            assertEquals(case, 0.0, MediaClockTrim.learnedTrim, 0.002)
+            assertEquals(case, 48_000.0, drive.trim.rate.toDouble(), 60.0)
         }
     }
 
