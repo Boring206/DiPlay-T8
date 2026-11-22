@@ -59,10 +59,89 @@ class CarPlayMediaButtonTest {
 
     @Test
     fun indicesMatchTheAdvertisedMediaHidReport() {
-        // Media report usages: 0 none, 1 play, 2 pause, 3 play/pause, 4 next, 5 previous.
+        // Media report usages: 0 none, 1 play, 2 pause, 3 play/pause, 4 next, 5 previous; with the seek keys
+        // declared, 7 fast forward and 8 rewind.
         assertEquals(3, CarPlayMediaButton.PLAY_PAUSE)
         assertEquals(4, CarPlayMediaButton.NEXT)
         assertEquals(5, CarPlayMediaButton.PREVIOUS)
+        assertEquals(7, CarPlayMediaButton.FAST_FORWARD)
+        assertEquals(8, CarPlayMediaButton.REWIND)
+    }
+
+    // #1190: DiLink 3 names its long-press keys; the numbers come from the head unit's framework.
+    private val dilink3 = mapOf("KEYCODE_AUTO_MEDIA_NEXT_LP" to 401, "KEYCODE_AUTO_MEDIA_PREVIOUS_LP" to 402)
+    private val dilink3Names = dilink3.entries.associate { (name, code) -> code to name }
+    private fun toName(code: Int) = dilink3Names[code] ?: code.toString()
+    private fun keys(fromName: (String) -> Int, toName: (Int) -> String = ::toName) = LongPressSeekKeys(fromName, toName)
+
+    @Test
+    fun dilink3LongPressNextAndPreviousSeek() {
+        val keys = keys({ dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN })
+        assertTrue(keys.available)
+        assertEquals(CarPlayMediaButton.FAST_FORWARD, keys.seekFor(401))
+        assertEquals(CarPlayMediaButton.REWIND, keys.seekFor(402))
+        // The tap keys keep their presses, and the long-press keys are no tap.
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_MEDIA_NEXT))
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_MEDIA_PREVIOUS))
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_UNKNOWN))
+        assertNull(CarPlayMediaButton.forKeyCode(401))
+        assertNull(CarPlayMediaButton.forKeyCode(402, experimentalDiLink3Keys = true))
+        assertNull(CarPlayMediaButton.forCarPlayWindow(401, sessionActive = true, inCall = false))
+        assertEquals("next=401 previous=402", keys.describe())
+    }
+
+    // Android 10 and later: keyCodeFromString gives KEYCODE_UNKNOWN above the SDK's last key code, while
+    // keyCodeToString still names BYD's codes.
+    @Test
+    fun keysAboveTheSdksLastKeyCodeAreFoundByTheirNames() {
+        val asked = mutableListOf<Int>()
+        val keys = keys({ KeyEvent.KEYCODE_UNKNOWN }, { asked += it; toName(it) })
+        assertEquals(CarPlayMediaButton.FAST_FORWARD, keys.seekFor(401))
+        assertEquals(CarPlayMediaButton.REWIND, keys.seekFor(402))
+        assertTrue(asked.size <= 2)
+        assertTrue(keys.available)
+        assertEquals("next=401 previous=402", keys.describe())
+        // One scan, stopped at the last name found.
+        assertEquals(2 + 402, asked.size)
+        keys.available
+        keys.describe()
+        assertEquals(2 + 402, asked.size)
+
+        // A name only the scan finds, beside one keyCodeFromString resolves.
+        val mixed = keys({ if (it == "KEYCODE_AUTO_MEDIA_NEXT_LP") 401 else KeyEvent.KEYCODE_UNKNOWN })
+        assertEquals("next=401 previous=402", mixed.describe())
+    }
+
+    @Test
+    fun firmwareThatDoesNotNameTheLongPressKeysSeeksWithNothing() {
+        val unnamed = keys({ KeyEvent.KEYCODE_UNKNOWN }, Int::toString)
+        assertFalse(unnamed.available)
+        for (code in listOf(KeyEvent.KEYCODE_UNKNOWN, KeyEvent.KEYCODE_MEDIA_NEXT, 401)) assertNull(unnamed.seekFor(code))
+        // The SDK's stub, or a firmware whose lookup fails, is the same as a name it does not know.
+        val failing = LongPressSeekKeys({ error("not available") }, { error("not available") })
+        assertFalse(failing.available)
+        assertNull(failing.seekFor(401))
+        val onlyNext = keys({ if (it == "KEYCODE_AUTO_MEDIA_NEXT_LP") 401 else KeyEvent.KEYCODE_UNKNOWN },
+            { if (it == 401) "KEYCODE_AUTO_MEDIA_NEXT_LP" else it.toString() })
+        assertTrue(onlyNext.available)
+        assertEquals(CarPlayMediaButton.FAST_FORWARD, onlyNext.seekFor(401))
+        assertNull(onlyNext.seekFor(402))
+        assertNull(onlyNext.seekFor(KeyEvent.KEYCODE_UNKNOWN))
+        assertEquals("not named by this firmware", unnamed.describe())
+        assertEquals("next=401 previous=none", onlyNext.describe())
+    }
+
+    @Test
+    fun eachNameIsLookedUpOnce() {
+        val asked = mutableListOf<String>()
+        val keys = keys({ asked += it; dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN })
+        assertTrue(asked.isEmpty())
+        repeat(5) {
+            keys.seekFor(401)
+            keys.seekFor(KeyEvent.KEYCODE_MEDIA_NEXT)
+            keys.available
+        }
+        assertEquals(listOf("KEYCODE_AUTO_MEDIA_NEXT_LP", "KEYCODE_AUTO_MEDIA_PREVIOUS_LP"), asked.sorted())
     }
 
     @Test

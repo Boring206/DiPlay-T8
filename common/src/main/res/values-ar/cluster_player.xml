@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">العرض</string>
+    <string name="settings_cluster_player_map">الخريطة</string>
+    <string name="settings_cluster_player">المشغل (تجريبي)</string>
+    <string name="settings_cluster_player_description">يبدّل فورًا بين الخريطة والمشغل مع احترام شكل العرض المحفوظ. يوقف المشغل الخريطة ونسخها الوسطية؛ لا تتوفر إرشادات الانعطاف في لوحة العدادات أثناء استخدامه. تبقى المؤشرات الأصلية تحت تحكم السيارة.</string>
+    <string name="settings_cluster_player_speed">عرض السرعة في المشغل</string>
+    <string name="settings_cluster_player_speed_description">سرعة السيارة بوحدة كم/س دون إطار. تتطلب قراءة بيانات السيارة عبر ADB؛ تظهر — عند غياب بيانات حديثة.</string>
+    <string name="settings_cluster_player_idle">لا يوجد تشغيل</string>
+    <string name="settings_cluster_player_vehicle">عرض معلومات السيارة في المشغل</string>
+    <string name="settings_cluster_player_vehicle_description">وضع ناقل الحركة ونسبة البطارية والمدى الكهربائي عبر ADB. تظهر — عند غياب البيانات الحديثة. تبقى مؤشرات التحذير والتنبيهات الأصلية ضرورية.</string>
+    <string name="cluster_player_vehicle_readout">ناقل الحركة %1$s   ·   البطارية %2$s   ·   المدى %3$s</string>
+    <string name="settings_cluster_player_fit_visible">ملاءمة المشغل بين الشريطين الأصليين</string>
+    <string name="settings_cluster_player_fit_visible_description">تخطيط مؤقت للشاشات ذات شريطي معلومات السيارة العلوي والسفلي. تبقى الصورة والأغنية والسرعة والتقدم ضمن المساحة المرئية مع خلفية تملأ العرض. يطبق فورًا ولا يخفي المؤشرات الأصلية.</string>
+</resources>

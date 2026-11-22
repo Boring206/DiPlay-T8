@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">Mostrar marco de la portada</string>
+    <string name="settings_cluster_music_border_description">Dibuja un marco delgado alrededor de la portada en el mapa del cuadro de instrumentos.</string>
+</resources>

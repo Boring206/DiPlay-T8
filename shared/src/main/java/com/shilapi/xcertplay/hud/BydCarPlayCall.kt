@@ -91,7 +91,9 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
         const val MAX_NAME_BYTES = 60
 
         fun nameBytes(name: String): ByteArray {
-            var end = name.length
+            // At most cap / 2 code units fit. Start two past that so the loop still checks for
+            // a split surrogate at the cut, without recopying the prefix for every character.
+            var end = minOf(name.length, MAX_NAME_BYTES / 2 + 2)
             while (name.substring(0, end).toByteArray(Charsets.UTF_16LE).size > MAX_NAME_BYTES) {
                 end--
                 if (end > 0 && Character.isLowSurrogate(name[end])) end--

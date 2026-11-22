@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">Показывать рамку обложки</string>
+    <string name="settings_cluster_music_border_description">Добавляет тонкую рамку вокруг обложки на карте приборной панели.</string>
+</resources>

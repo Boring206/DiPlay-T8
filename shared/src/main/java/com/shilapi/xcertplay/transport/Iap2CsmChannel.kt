@@ -215,7 +215,8 @@ class Iap2CsmChannel private constructor(
     }
 
     companion object {
-        private const val MAX_PENDING_FRAMES = 64
+        // Same burst as Iap2LinkChannel.MAX_PENDING_CONTROLS: one control payload may hold several frames.
+        private const val MAX_PENDING_FRAMES = 1_024
         private const val MAX_PENDING_FRAME_BYTES = 1_048_576
         private const val NANOS_PER_MILLISECOND = 1_000_000L
         private const val MAX_TIMEOUT_MILLIS = 5 * 60 * 1_000L

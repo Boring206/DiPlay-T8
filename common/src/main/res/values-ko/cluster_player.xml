@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">보기</string>
+    <string name="settings_cluster_player_map">지도</string>
+    <string name="settings_cluster_player">플레이어 (실험 기능)</string>
+    <string name="settings_cluster_player_description">저장된 표시 형식으로 지도와 플레이어를 즉시 전환합니다. 플레이어는 지도와 중앙 화면 복사본을 일시 중지하며 계기판 회전 안내는 표시하지 않습니다. 기본 표시등은 차량이 제어합니다.</string>
+    <string name="settings_cluster_player_speed">플레이어에 속도 표시</string>
+    <string name="settings_cluster_player_speed_description">테두리 없이 차량 속도를 km/h로 표시합니다. ADB 차량 읽기가 필요하며 최신 데이터가 없으면 —가 표시됩니다.</string>
+    <string name="settings_cluster_player_idle">재생 중인 항목 없음</string>
+    <string name="settings_cluster_player_vehicle">플레이어에 차량 정보 표시</string>
+    <string name="settings_cluster_player_vehicle_description">ADB로 기어, 배터리 잔량 및 전기 주행 가능 거리를 읽습니다. 없거나 오래된 정보는 —로 표시합니다. 순정 경고등과 알림은 계속 필요합니다.</string>
+    <string name="cluster_player_vehicle_readout">기어 %1$s   ·   배터리 %2$s   ·   주행 거리 %3$s</string>
+    <string name="settings_cluster_player_fit_visible">순정 표시줄 사이에 플레이어 맞추기</string>
+    <string name="settings_cluster_player_fit_visible_description">위아래에 차량 정보 표시줄이 있는 계기판을 위한 임시 배치입니다. 표지, 곡, 속도 및 진행 상황을 보이는 영역에 배치하고 배경은 전체 투영을 채웁니다. 즉시 적용되며 순정 표시등을 숨기지 않습니다.</string>
+</resources>

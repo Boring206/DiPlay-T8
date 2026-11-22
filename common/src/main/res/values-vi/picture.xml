@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">Điều chỉnh hình ảnh</string>
+    <string name="picture_live_hint">Áp dụng trực tiếp trên video CarPlay chính. Thay đổi được lưu ngay. Ảnh gốc chỉ để so sánh tạm thời.</string>
+    <string name="picture_show_original">Hiện ảnh gốc</string>
+    <string name="picture_done">Xong</string>
+    <string name="picture_brightness">Độ sáng</string>
+    <string name="picture_contrast">Độ tương phản</string>
+    <string name="picture_saturation">Độ bão hòa</string>
+    <string name="picture_warmth">Độ ấm</string>
+    <string name="picture_reset">Đặt lại hình ảnh</string>
+</resources>

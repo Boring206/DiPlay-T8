@@ -16,6 +16,11 @@ import java.util.IdentityHashMap
  */
 internal object CrashRecord {
     private const val FILE = "logs/last-crash.txt"
+    // format() emits at most 85 lines (1 header + 4 causes x 21 lines each), so 200 keeps every
+    // genuine record intact while bounding a blown-up file (old build / adb / backup restore).
+    internal const val MAX_REPORT_LINES = 200
+    // A line cap alone cannot bound memory: readLine() loads a file with no newlines in full (256 KiB cap).
+    private const val MAX_REPORT_BYTES = 262144L
     private const val MAX_CAUSES = 4
     private const val MAX_FRAMES = 12
     private const val MAX_OWN_FRAMES = 6
@@ -65,8 +70,15 @@ internal object CrashRecord {
     fun report(context: Context): String {
         val file = File(context.filesDir, FILE)
         if (!file.isFile) return "No crash recorded by this version."
-        return runCatching { file.readLines().mapNotNull(DiagnosticRedactor::redact).joinToString("\n") }
-            .getOrElse { "Crash record unreadable: ${it.javaClass.simpleName}" }
+        // take(MAX_REPORT_LINES) caps lines, not bytes: readLine() would still load a file
+        // with no newlines in full. Refuse oversized files before opening a reader.
+        val bytes = file.length()
+        if (bytes > MAX_REPORT_BYTES) return "too large ($bytes bytes)"
+        return runCatching {
+            file.useLines { lines ->
+                lines.take(MAX_REPORT_LINES).mapNotNull(DiagnosticRedactor::redact).joinToString("\n")
+            }
+        }.getOrElse { "Crash record unreadable: ${it.javaClass.simpleName}" }
     }
 }
 

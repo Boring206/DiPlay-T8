@@ -58,12 +58,50 @@ class PhoneAudioRouteControllerTest {
     private val scheduler = FakeScheduler()
     private val enabled = mutableSetOf(PhoneAudioReason.CARPLAY_CALL, PhoneAudioReason.VOIP_APP)
 
+    private val reported = mutableListOf<String>()
+
     private fun controller() = PhoneAudioRouteController(
         backend = backend,
         scheduler = scheduler,
         enabled = { it in enabled },
         now = { scheduler.time },
+        report = reported::add,
     )
+
+    @Test fun eachStateChangeReachesTheDiagnosticReport() {
+        val route = controller()
+        route.setWanted(PhoneAudioReason.CARPLAY_CALL, true)
+        route.setWanted(PhoneAudioReason.CARPLAY_CALL, false)
+        scheduler.advance(PhoneAudioRouteController.RELEASE_DELAY_MILLIS)
+        backend.accept = false
+        route.setWanted(PhoneAudioReason.CARPLAY_CALL, true)
+
+        assertEquals(
+            listOf(
+                "car phone audio state on",
+                "car phone audio state off",
+                "Telecom refused the call that selects the car's phone audio state",
+            ),
+            reported,
+        )
+    }
+
+    @Test fun phoneAudioLinesReachTheSessionSinkWithAPrefix() {
+        val lines = mutableListOf<String>()
+        PhoneAudioRoute.diagnostics = { lines += it }
+        try {
+            PhoneAudioRoute.report("Telecom call active")
+            PhoneAudioRoute.reportWarning("Telecom call not allowed", SecurityException("test"))
+        } finally {
+            PhoneAudioRoute.diagnostics = null
+        }
+        PhoneAudioRoute.report("dropped without a sink")
+
+        assertEquals(
+            listOf("Phone audio: Telecom call active", "Phone audio: Telecom call not allowed error=SecurityException"),
+            lines,
+        )
+    }
 
     @Test fun aCarPlayCallHoldsTheTelecomCallUntilItHasEnded() {
         val route = controller()

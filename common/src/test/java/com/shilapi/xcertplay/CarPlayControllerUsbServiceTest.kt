@@ -26,6 +26,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.util.ReflectionHelpers
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
@@ -68,17 +70,57 @@ class CarPlayControllerUsbServiceTest {
         assertEquals(0, context.receivers.size)
     }
 
-    @Test fun availableWiredUsbStillRegistersAndClosesBothIphoneReceivers() {
+    @Test fun availableWiredUsbStillRegistersAndClosesEveryIphoneReceiver() {
         val context = UsbContext(true)
         val controller = controller(context, CarPlayTransport.WIRED, MfiTarget.LOCAL)
         controller.start()
-        assertEquals(2, context.receivers.size)
+        assertEquals(3, context.receivers.size)
         assertTrue(context.receivers.values.any { it.hasAction("${context.packageName}.IPHONE_USB_PERMISSION") })
-        assertTrue(context.receivers.values.any { it.hasAction("android.hardware.usb.action.USB_DEVICE_ATTACHED") })
+        assertTrue(context.receivers.values.any { it.hasAction(UsbManager.ACTION_USB_DEVICE_ATTACHED) })
+        assertTrue(context.receivers.values.any { it.hasAction(UsbManager.ACTION_USB_DEVICE_DETACHED) })
         controller.close()
         assertTrue(controller.awaitClosed(2_000))
         assertEquals(0, context.receivers.size)
-        assertEquals(2, context.unregistered)
+        assertEquals(3, context.unregistered)
+    }
+
+    // #1216: the report showed USB permission prompts again and again but not whether the cable dropped.
+    @Test fun iphoneAttachesAndDetachesLeaveCountedLinesWithTheDeviceIdOnly() {
+        val context = UsbContext(true)
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>() // start() logs from its own threads too
+        val controller = controller(context, CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
+        controller.start()
+        shadowOf(Looper.getMainLooper()).idle()
+        fun deliver(action: String, deviceId: Int, vendor: Int = 0x05ac) {
+            val device = mock(UsbDevice::class.java)
+            `when`(device.vendorId).thenReturn(vendor)
+            `when`(device.productId).thenReturn(0x12a8)
+            `when`(device.deviceId).thenReturn(deviceId)
+            `when`(device.deviceName).thenReturn("/dev/bus/usb/001/0$deviceId")
+            `when`(device.productName).thenReturn("Jane's iPhone")
+            val intent = Intent(action).putExtra(UsbManager.EXTRA_DEVICE, device)
+            context.receivers.filterValues { it.hasAction(action) }.keys.toList().forEach { it.onReceive(context, intent) }
+        }
+        deliver(UsbManager.ACTION_USB_DEVICE_ATTACHED, 11)
+        deliver(UsbManager.ACTION_USB_DEVICE_DETACHED, 11)
+        deliver(UsbManager.ACTION_USB_DEVICE_ATTACHED, 12)
+        deliver(UsbManager.ACTION_USB_DEVICE_DETACHED, 12)
+        deliver(UsbManager.ACTION_USB_DEVICE_ATTACHED, 13, vendor = 0x0781) // a USB stick is not counted
+
+        val usbLines = logs.filter { it.contains("USB iPhone ") }
+        assertEquals(listOf(
+            ConnectionDiagnosticLines.usbIphone(true, 11, attaches = 1, detaches = 0, permissionRequested = false),
+            ConnectionDiagnosticLines.usbIphone(false, 11, attaches = 1, detaches = 1),
+            ConnectionDiagnosticLines.usbIphone(true, 12, attaches = 2, detaches = 1, permissionRequested = false),
+            ConnectionDiagnosticLines.usbIphone(false, 12, attaches = 2, detaches = 2),
+        ), usbLines.map { it.substringAfter(" phase=").substringAfter(' ') })
+        assertEquals("USB iPhone detached deviceId=12 attaches=2 detaches=2",
+            usbLines.last().substringAfter(" phase=").substringAfter(' '))
+        for (line in usbLines) {
+            assertTrue(line, line.startsWith(CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX + " "))
+            assertEquals(line, DiagnosticRedactor.redact(line))
+            assertFalse(line, line.contains("/dev/bus/usb") || line.contains("Jane"))
+        }
     }
 
     @Test fun availableWirelessCh341StillWaitsForMfiAndClosesItsPermissionReceiver() {
@@ -214,7 +256,7 @@ class CarPlayControllerUsbServiceTest {
         assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
     }
 
-    @Test fun anAttachOrAnIphoneThatLeftTheBusEndsTheWaitWithoutALook() {
+    @Test fun anAttachEndsTheWaitWithoutALook() {
         val context = UsbContext(true)
         val usb = context.getSystemService(UsbManager::class.java)
         val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
@@ -230,12 +272,54 @@ class CarPlayControllerUsbServiceTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
         assertTrue(logs.none { it.contains("USB transition unanswered") })
 
-        // The iPhone is off the bus while it re-enumerates: its attach will end the wait.
+        // The iPhone is off the bus while it re-enumerates, then its attach answers the request.
         shadowOf(usb).removeUsbDevice(iphone)
         ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
             ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
-        assertTrue(logs.none { it.contains("USB transition unanswered") })
+        ReflectionHelpers.getField<java.util.concurrent.atomic.AtomicInteger>(controller, "availabilityPollGeneration")
+            .incrementAndGet()
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/005"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        assertTrue(logs.none { it.contains("USB transition unanswered") || it.contains("permission already granted") })
+    }
+
+    // #1220: a Necvox unit (Android 10) never broadcast the attach of the iPhone back in CarPlay mode, so
+    // wired CarPlay stayed on "Getting CarPlay ready" for 20 minutes.
+    @Test fun anIphoneBackUnderANewNameWithoutAnAttachIsTakenUp() {
+        val context = UsbContext(true)
+        val usb = context.getSystemService(UsbManager::class.java)
+        val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
+        shadowOf(usb).addOrUpdateUsbDevice(iphone, true)
+        val logs = mutableListOf<String>()
+        val controller = waitingForReenumeration(context, logs)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
+            ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
+        shadowOf(usb).removeUsbDevice(iphone)
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/005"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(CarPlayController.REENUMERATION_WAIT_MILLIS + 100))
+
+        assertTrue(logs.any { it.contains("the iPhone is back as /dev/bus/usb/001/005 without an attach") })
+        assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
+    }
+
+    @Test fun anIphoneStillOffTheBusIsLookedForUntilItReturns() {
+        val context = UsbContext(true)
+        val usb = context.getSystemService(UsbManager::class.java)
+        val iphone = usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/004")
+        val logs = mutableListOf<String>()
+        val controller = waitingForReenumeration(context, logs)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(controller, "watchReenumeration",
+            ReflectionHelpers.ClassParameter.from(UsbDevice::class.java, iphone))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(25))
+        assertTrue(logs.none { it.contains("permission already granted") })
+        assertEquals(1, logs.count { it.contains("no iPhone listed after 10000ms count=1; still looking") })
+
+        shadowOf(usb).addOrUpdateUsbDevice(usbDevice(0x05ac, 0x12a8, "/dev/bus/usb/001/006"), true)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+        assertTrue(logs.any { it == "wired iPhone USB permission already granted" })
     }
 
     private fun waitingForReenumeration(context: Context, logs: MutableList<String>): CarPlayController {
