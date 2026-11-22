@@ -20,6 +20,7 @@ internal class VoiceFilter(sampleRate: Int, private val channels: Int, cutoffHz:
     /** Filters 16-bit little-endian interleaved PCM in place. */
     fun process(pcm: ByteArray, offset: Int, length: Int) {
         val frameBytes = 2 * channels
+        if (frameBytes <= 0) return
         for (frame in 0 until length / frameBytes) {
             for (channel in 0 until channels) {
                 val at = offset + frame * frameBytes + channel * 2
