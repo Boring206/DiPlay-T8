@@ -140,15 +140,91 @@ class WirelessStartupControllerTest {
     }
 
     // #1256: firmware without Wi-Fi Direct used to fail with no reason, so it was retried forever unnamed.
-    @Test fun aHeadUnitWithoutWifiDirectIsNamedAndNotRetried() {
+    @Test fun aHeadUnitWithoutAWifiP2pManagerIsNamedAndNotRetried() {
         val packageManager = shadowOf(RuntimeEnvironment.getApplication().packageManager)
-        for ((feature, service) in listOf(false to true, true to false, false to false)) {
+        for (feature in listOf(true, false)) {
             packageManager.setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, feature)
-            val failure = hotspotStartFailure(WirelessHotspotMode.WIFI_P2P, p2pService = service)
+            val failure = hotspotStartFailure(WirelessHotspotMode.WIFI_P2P, p2pService = false)
             assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
             assertFalse(failure.reason.retryable)
             assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, failure.knownCause)
         }
+    }
+
+    // Nothing shows that every unit where Wi-Fi Direct works declares the feature, so a missing flag alone never blocks.
+    @Test fun aManagerWithoutTheDeclaredFeatureStillStartsWifiDirect() {
+        shadowOf(RuntimeEnvironment.getApplication().packageManager).setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, false)
+        // Location is not granted, so WifiP2pGroupManager's own preflight is what stops it.
+        val error = wirelessHotspotError()
+        assertTrue(error.message!!, error.message!!.contains("Allow precise Location"))
+        assertNull(namedCause(error))
+    }
+
+    // Android 7 keeps a WifiP2pManager without Wi-Fi Direct; the framework answers createGroup with P2P_UNSUPPORTED.
+    @Test @Config(shadows = [UnsupportedP2p::class, WifiP2pGroupManagerTest.P2pChannel::class])
+    fun aFrameworkThatRefusesWifiDirectIsNamedAndNotRetried() {
+        UnsupportedP2p.creates = 0
+        val app = RuntimeEnvironment.getApplication()
+        shadowOf(app).grantPermissions(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        app.getSystemService(android.net.wifi.WifiManager::class.java).isWifiEnabled = true
+        val error = wirelessHotspotError()
+        val failure = requireNotNull(namedCause(error)) { error.toString() }
+        assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
+        assertFalse(failure.reason.retryable)
+        assertEquals(1, UnsupportedP2p.creates)
+        val controller = controller()
+        try {
+            fail(controller, 0, error)
+            shadowOf(Looper.getMainLooper()).idle()
+            val status = statuses.single() as CarPlayStatus.Failed
+            assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, status.startupFailure)
+            assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, status.knownCause)
+        } finally { controller.close(); controller.awaitClosed(2_000) }
+    }
+
+    /** startWirelessHotspot in WIFI_P2P mode past the cancelled-run check, so the manager really starts. */
+    private fun wirelessHotspotError(): Throwable {
+        val controller = controller()
+        val phase = controller.javaClass.getDeclaredField("phase").apply { isAccessible = true }
+        phase.set(controller, phase.type.enumConstants!!.first { it.toString() == "WIRELESS" })
+        val start = controller.javaClass.getDeclaredMethod("startWirelessHotspot", Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }
+        // WifiP2pGroupManager.start refuses the main thread, as on the car.
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        try {
+            return assertThrows(java.util.concurrent.ExecutionException::class.java) {
+                executor.submit<Any?> { start.invoke(controller, 0) }.get(10, java.util.concurrent.TimeUnit.SECONDS)
+            }.cause!!.let { if (it is InvocationTargetException) it.cause!! else it }
+        } finally {
+            executor.shutdownNow()
+            controller.close(); controller.awaitClosed(2_000)
+        }
+    }
+
+    private fun namedCause(error: Throwable): WirelessStartupException? =
+        generateSequence(error) { it.cause }.filterIsInstance<WirelessStartupException>()
+            .firstOrNull { it.knownCause == ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED }
+
+    @Implements(android.net.wifi.p2p.WifiP2pManager::class)
+    class UnsupportedP2p : org.robolectric.shadows.ShadowWifiP2pManager() {
+        @Implementation protected fun requestP2pState(channel: android.net.wifi.p2p.WifiP2pManager.Channel,
+                                                      listener: android.net.wifi.p2p.WifiP2pManager.P2pStateListener) {
+            listener.onP2pStateAvailable(android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_DISABLED)
+        }
+
+        @Implementation override fun requestGroupInfo(channel: android.net.wifi.p2p.WifiP2pManager.Channel,
+                                                      listener: android.net.wifi.p2p.WifiP2pManager.GroupInfoListener) {
+            listener.onGroupInfoAvailable(null)
+        }
+
+        @Implementation override fun createGroup(channel: android.net.wifi.p2p.WifiP2pManager.Channel,
+                                                 config: android.net.wifi.p2p.WifiP2pConfig?,
+                                                 listener: android.net.wifi.p2p.WifiP2pManager.ActionListener) {
+            creates++
+            listener.onFailure(android.net.wifi.p2p.WifiP2pManager.P2P_UNSUPPORTED)
+        }
+
+        companion object { var creates = 0 }
     }
 
     @Test fun theFailureOfAHeadUnitWithoutWifiDirectReachesTheScreenWithItsCause() {

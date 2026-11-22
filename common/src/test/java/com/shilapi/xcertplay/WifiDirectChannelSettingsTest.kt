@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Looper
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -21,7 +22,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowAlertDialog
+import org.robolectric.shadows.ShadowContextImpl
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [32], qualifiers = "en", manifest = Config.NONE)
@@ -35,16 +38,18 @@ class WifiDirectChannelSettingsTest {
         activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.WIFI_P2P)
-        // Robolectric declares no system features; a real head unit with Wi-Fi Direct declares this one.
-        shadowOf(activity.packageManager).setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, true)
     }
 
     // #1256: without Wi-Fi Direct the choice could only fail, so it is marked and cannot be chosen.
     @Test fun aHeadUnitWithoutWifiDirectMarksTheChoiceAndSaysWhatToChoose() {
-        shadowOf(activity.packageManager).setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, false)
+        // The #1256 unit: no wifip2p service, so Android gives no WifiP2pManager.
+        Shadow.extract<ShadowContextImpl>(activity.baseContext).removeSystemService(Context.WIFI_P2P_SERVICE)
         val chosen = controls()
         val choice = findButton(chosen, "✓  Wi-Fi Direct · Not available")!!
         assertFalse(choice.isEnabled)
+        // It opens nothing, so it stays a centred tile without the setting-row chevron.
+        assertEquals(Gravity.CENTER, choice.gravity)
+        assertTrue(choice.compoundDrawablesRelative.all { it == null })
         assertTrue(findText(chosen, activity.getString(R.string.this_head_unit_does_not_support_wi_fi_direct)))
         assertTrue(findText(chosen, activity.getString(R.string.settings_wifi_direct_unsupported_help)))
         assertNull(channelControl(chosen))
@@ -59,6 +64,8 @@ class WifiDirectChannelSettingsTest {
     }
 
     @Test fun aHeadUnitWithWifiDirectKeepsTheChoice() {
+        // A manager alone keeps Wi-Fi Direct, also where the firmware does not declare the feature.
+        shadowOf(activity.packageManager).setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, false)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
         val view = controls()
         val choice = findButton(view, activity.getString(R.string.wifi_direct))!!

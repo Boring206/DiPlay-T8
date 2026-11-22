@@ -3537,7 +3537,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 if (index > 0) marginStart = dp(16)
             } else LinearLayout.LayoutParams(-1, -2))
             val usable = candidate != WirelessHotspotMode.WIFI_P2P || wifiDirect
-            option.addView(button("${if (mode == candidate) "✓  " else ""}${titles[index]}", mode == candidate && usable) {
+            val choiceText = "${if (mode == candidate) "✓  " else ""}${titles[index]}"
+            if (!usable) {
+                // A saved Wi-Fi Direct choice keeps its ✓ but is not styled selected: it cannot connect here.
+                // actionButton: "Wi-Fi Direct · Not available" opens nothing, so it must not draw as a setting row.
+                option.addView(actionButton(choiceText, false) {}.apply { isEnabled = false; setTextColor(MUTED) },
+                    matchButton(12, 60))
+                option.addView(label(descriptions[index], 15, WARNING).apply { setPadding(0, dp(6), 0, dp(12)) })
+                return@forEachIndexed
+            }
+            option.addView(button(choiceText, mode == candidate) {
                 if (candidate == WirelessHotspotMode.MANUAL) {
                     pendingCarHotspotSetup = true
                     render()
@@ -3552,8 +3561,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     pendingCarHotspotSetup = false
                     applyWirelessLink(candidate)
                 }
-            }.apply { if (!usable) { isEnabled = false; setTextColor(MUTED) } }, matchButton(12, 60))
-            option.addView(label(descriptions[index], 15, if (usable) MUTED else WARNING).apply { setPadding(0, dp(6), 0, dp(12)) })
+            }, matchButton(12, 60))
+            option.addView(label(descriptions[index], 15, MUTED).apply { setPadding(0, dp(6), 0, dp(12)) })
         }
         if (mode == WirelessHotspotMode.MANUAL) {
             parent.addView(label(getString(R.string.hotspot_setup), 22, TEXT, true))

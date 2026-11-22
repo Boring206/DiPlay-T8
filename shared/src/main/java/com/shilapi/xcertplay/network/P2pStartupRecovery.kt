@@ -140,7 +140,11 @@ internal object P2pStartupRecovery {
                     // prerequisite interlock, then try the API 29 null-config overload once.
                     beforeRetry()
                     val systemDefault = P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)
-                    request(systemDefault)
+                    try {
+                        request(systemDefault)
+                    } catch (rejected: P2pCreateRejected) {
+                        throw unsupportedOr(rejected)
+                    }
                     // Its generated credentials must be read from the real returned group.
                     // A failed default request exits directly instead of reentering this plan.
                     return systemDefault
@@ -151,8 +155,8 @@ internal object P2pStartupRecovery {
                     when {
                         // A rejection that is not tied to one channel cannot be fixed by asking
                         // for a different channel, and retrying would only stall the bring-up.
-                        failure.reason == WifiP2pManager.NO_PERMISSION ||
-                            failure.reason == WifiP2pManager.P2P_UNSUPPORTED -> throw failure
+                        failure.reason == WifiP2pManager.NO_PERMISSION -> throw failure
+                        failure.reason == WifiP2pManager.P2P_UNSUPPORTED -> throw unsupportedOr(failure)
                         failure.reason == WifiP2pManager.BUSY && !retriedBusy -> {
                             retriedBusy = true
                             beforeRetry()
@@ -174,4 +178,11 @@ internal object P2pStartupRecovery {
         }
         throw lastRejection ?: error("No Wi-Fi Direct creation mode attempted")
     }
+
+    /**
+     * The framework itself has no Wi-Fi Direct: on Android 7 the manager exists even then, and
+     * every createGroup is answered P2P_UNSUPPORTED (#1256). Named and not retried, like a missing manager.
+     */
+    private fun unsupportedOr(rejection: P2pCreateRejected): IOException =
+        if (rejection.reason == WifiP2pManager.P2P_UNSUPPORTED) WifiDirectSupport.unsupported(rejection) else rejection
 }
