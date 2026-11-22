@@ -1446,6 +1446,8 @@ class CarPlayController(
             onStatus(CarPlayStatus.AttachingNetwork)
             val service = awaitVpnService()
                 ?: throw IOException("Could not bind the CarPlay AirPlay service")
+            var publishedHost: InetAddress = hostAddress
+            var servedAddresses: List<InetAddress> = listOf(hostAddress)
             synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
                 startedHotspot?.validateReady()
@@ -1470,11 +1472,27 @@ class CarPlayController(
                         throw IOException(result.message)
                     }
                 }
+                // An address the kernel refused has no listener; publishing it would send the
+                // iPhone to a closed port, so discovery and iAP2 follow the served family (#1356).
+                servedAddresses = service.servedAddresses().ifEmpty { listOf(hostAddress) }
+                publishedHost = HotspotAddressPolicy.publishedAfterBind(hostAddress, servedAddresses)
+                    ?: throw IOException("Wireless AirPlay listener has no address an iPhone can reach")
+                if (publishedHost != hostAddress) {
+                    wirelessPublishedAddress = publishedHost
+                    wirelessAlternateAddress = HotspotAddressPolicy.alternateFamilyCandidate(servedAddresses, publishedHost)
+                    debugLog(
+                        "wireless AirPlay published family switched " +
+                            "from=${if (hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
+                            "to=${if (publishedHost is Inet6Address) "IPv6" else "IPv4"} reason=listener_address_unusable",
+                    )
+                }
             }
+            val publishedHostText = hostAddressText(publishedHost)
             val listenerPort = service.boundPort() ?: wirelessAirPlayConfig.port
             val advertisedAirPlayConfig = wirelessAirPlayConfig.copy(port = listenerPort)
             debugLog(
-                "wireless AirPlay listener attached bind=$hostAddressText " +
+                "wireless AirPlay listener attached bind=$publishedHostText " +
+                    "families=${servedAddresses.joinToString("+") { if (it is Inet6Address) "IPv6" else "IPv4" }} " +
                     "port=$listenerPort" +
                     (if (listenerPort != airPlayConfig.port) " (preferred ${airPlayConfig.port} in use)" else ""),
             )
@@ -1486,13 +1504,13 @@ class CarPlayController(
                 context = appContext,
                 config = advertisedAirPlayConfig,
                 identity = identity,
-                advertisedHost = hostAddress.hostAddress,
+                advertisedHost = publishedHost.hostAddress,
                 // Bind discovery and its connect probe to the same AP/address family as AirPlay.
                 // The car hotspot previously used system NSD, which could resolve another interface
                 // or IPv6 while the listener/probe was bound to the AP's IPv4 address.
                 useInterfaceMdns = true,
                 onEvent = { event -> debugLog("wireless bonjour: ${event.diagnosticSummary()}") },
-                additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
+                additionalAddresses = servedAddresses.filter { it != publishedHost },
             )
             synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
@@ -1585,7 +1603,7 @@ class CarPlayController(
                 passphrase = hotspotInfo.passphrase,
                 channel = hotspotInfo.channel,
                 security = hotspotInfo.security,
-                ipAddresses = listOf(hostAddressText),
+                ipAddresses = listOf(publishedHostText),
                 airPlayPort = listenerPort,
                 deviceIdentifier = deviceIdentifier,
                 publicKey = identity.publicKeyHex,
@@ -1596,7 +1614,7 @@ class CarPlayController(
             wirelessAirPlayEndpoint = endpoint
             debugLog(
                 "wireless endpoint addressCount=${endpoint.ipAddresses.size} " +
-                    "family=${if (hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
+                    "family=${if (publishedHost is Inet6Address) "IPv6" else "IPv4"} " +
                     "port=${endpoint.airPlayPort} channel=${endpoint.channel} security=${endpoint.security}",
             )
             media.setIapTunnelHandler(::startWirelessTunnelControl)
