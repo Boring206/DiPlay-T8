@@ -5134,6 +5134,8 @@ open class CarPlayHostActivity : ComponentActivity() {
         appendLog(effectiveSummary)
         val carBluetoothAudio = AirPlayPersistence.loadCarBluetoothAudio(this)
         if (carBluetoothAudio) logCarBluetoothAudio()
+        appendLog(MusicOutputDiagnostics.read(AirPlayPersistence.loadMediaAudioChannel(this))
+            .summary(audioOffered = !carBluetoothAudio))
         return AirPlayConfig(
             deviceName = "DiPlay",
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
