@@ -1827,6 +1827,8 @@ private class AudioRenderer(
     private var inputQueued = 0
     private var inputDropped = 0
     private var shortOpusPackets = 0
+    private var oversizeAacPackets = 0
+    private var firstOversizeAacLogged = false
     private var decoderUnavailablePackets = 0
     private var outputBuffers = 0
     private var firstPcmLogged = false
@@ -2301,6 +2303,19 @@ private class AudioRenderer(
             AudioCodecKind.AAC_LC -> {
                 val accessUnit = rtp.copyOfRange(12, rtp.size)
                 if (accessUnit.isNotEmpty()) {
+                    val frame =
+                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels)
+                    if (frame.isEmpty()) {
+                        oversizeAacPackets++
+                        if (!firstOversizeAacLogged) {
+                            firstOversizeAacLogged = true
+                            Log.i(
+                                TAG,
+                                "audio AAC skipping oversize access unit bytes=${accessUnit.size}",
+                            )
+                        }
+                        return
+                    }
                     if (!firstAacPayloadLogged) {
                         firstAacPayloadLogged = true
                         Log.i(
@@ -2308,10 +2323,7 @@ private class AudioRenderer(
                             "audio AAC access unit bytes=${accessUnit.size}",
                         )
                     }
-                    feedCodec(
-                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels),
-                        timestampUs,
-                    )
+                    feedCodec(frame, timestampUs)
                 }
             }
             AudioCodecKind.OPUS -> {
@@ -2674,7 +2686,8 @@ private class AudioRenderer(
             // Keep this separate: the exported diagnostic recorder caps each line at 700 characters.
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
-                "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
+                "shortOpusPacketsTotal=$shortOpusPackets oversizeAacPacketsTotal=$oversizeAacPackets " +
+                "decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
                 "outputBuffersTotal=$outputBuffers " +
                 (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
