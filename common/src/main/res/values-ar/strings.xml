@@ -1026,4 +1026,6 @@
     <string name="settings_fit_screen_shape">تجنّب النتوء والزوايا المستديرة</string>
     <string name="settings_fit_screen_shape_description">للهاتف أو الجهاز اللوحي المستخدم كوحدة في السيارة. يُبعد أزرار CarPlay وشريط التطبيقات عن نتوء الكاميرا والزوايا المستديرة، وتبقى الخرائط تملأ الشاشة. المنطقة الآمنة المضبوطة من قائمة الجلسة لها الأولوية. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_safe_area_fitted_summary">المنطقة الآمنة: مضبوطة حول النتوء والزوايا، %1$d x %2$d عند (%3$d، %4$d) ضمن %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">غير متاح</string>
+    <string name="settings_wifi_direct_unsupported_help">اختر «نقطة اتصال السيارة المدمجة» أو «شبكة Wi-Fi موجودة / نفس الشبكة المحلية» في «إعداد الاتصال»، ثم أعد المحاولة.</string>
 </resources>

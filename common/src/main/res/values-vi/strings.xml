@@ -1080,4 +1080,6 @@
     <string name="last_carplay_connection_problem">Lần kết nối CarPlay gần nhất (%1$s): %2$s</string>
     <string name="settings_call_attenuation">Âm lượng giọng trong cuộc gọi</string>
     <string name="settings_call_attenuation_description">Giảm âm lượng giọng người gọi trong cuộc gọi CarPlay mà không thay đổi âm lượng cuộc gọi của xe. Áp dụng ngay, dù cuộc gọi phát qua đầu ra nào. Hãy để ở 0 dB trừ khi cuộc gọi nghe bị méo hoặc chói. Trên một chiếc BYD Han (DiLink 3), cuộc gọi nghe rõ ở khoảng -12 đến -16 dB trong một lần thử nghe.</string>
+    <string name="settings_wifi_direct_unavailable">Không khả dụng</string>
+    <string name="settings_wifi_direct_unsupported_help">Trong «Thiết lập kết nối», chọn «Điểm phát sóng tích hợp của xe» hoặc «Wi-Fi có sẵn / Cùng mạng LAN», rồi thử lại.</string>
 </resources>

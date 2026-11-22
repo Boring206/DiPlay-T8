@@ -1080,4 +1080,6 @@
     <string name="settings_fit_screen_shape">Fit around notch and rounded corners</string>
     <string name="settings_fit_screen_shape_description">For a phone or tablet used as a head unit. Keeps CarPlay\'s buttons and dock clear of the camera notch and the rounded corners; maps still fill the screen. A safe area set in the in-session menu takes priority. Applies at the next connection.</string>
     <string name="settings_safe_area_fitted_summary">Safe area: fitted to the notch and corners, %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">Not available</string>
+    <string name="settings_wifi_direct_unsupported_help">Choose Built-in car hotspot or Existing Wi-Fi / Same LAN in Connection setup, then retry.</string>
 </resources>

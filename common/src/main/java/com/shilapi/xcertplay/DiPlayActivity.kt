@@ -82,6 +82,7 @@ import com.shilapi.xcertplay.network.CarHotspotSavedCredentials
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.HotspotCredentials
+import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.ManualHotspotProvisioning
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
@@ -3598,10 +3599,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun wirelessLinkControls(parent: LinearLayout) {
         val mode = if (pendingCarHotspotSetup) WirelessHotspotMode.MANUAL else AirPlayPersistence.loadWirelessHotspotMode(this)
         val modes = listOf(WirelessHotspotMode.MANUAL, WirelessHotspotMode.WIFI_P2P, WirelessHotspotMode.EXISTING_WIFI)
-        val titles = listOf(getString(R.string.settings_built_in_car_hotspot_recommended), getString(R.string.wifi_direct), getString(R.string.existing_wifi_title))
+        // #1256: some firmware has no Wi-Fi Direct at all, so that choice could never connect.
+        val wifiDirect = WifiDirectSupport.available(this)
+        val titles = listOf(getString(R.string.settings_built_in_car_hotspot_recommended),
+            if (wifiDirect) getString(R.string.wifi_direct)
+            else "${getString(R.string.wifi_direct)}$VALUE_SEPARATOR${getString(R.string.settings_wifi_direct_unavailable)}",
+            getString(R.string.existing_wifi_title))
         val descriptions = listOf(
             getString(R.string.hotspot_mode_manual_desc),
-            getString(R.string.hotspot_mode_p2p_desc),
+            getString(if (wifiDirect) R.string.hotspot_mode_p2p_desc else R.string.this_head_unit_does_not_support_wi_fi_direct),
             getString(R.string.existing_wifi_description)
         )
         val wide = resources.configuration.screenWidthDp >= 850
@@ -3612,7 +3618,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             choices.addView(option, if (wide) LinearLayout.LayoutParams(0, -2, 1f).apply {
                 if (index > 0) marginStart = dp(16)
             } else LinearLayout.LayoutParams(-1, -2))
-            option.addView(button("${if (mode == candidate) "✓  " else ""}${titles[index]}", mode == candidate) {
+            val usable = candidate != WirelessHotspotMode.WIFI_P2P || wifiDirect
+            val choiceText = "${if (mode == candidate) "✓  " else ""}${titles[index]}"
+            if (!usable) {
+                // A saved Wi-Fi Direct choice keeps its ✓ but is not styled selected: it cannot connect here.
+                // actionButton: "Wi-Fi Direct · Not available" opens nothing, so it must not draw as a setting row.
+                option.addView(actionButton(choiceText, false) {}.apply { isEnabled = false; setTextColor(MUTED) },
+                    matchButton(12, 60))
+                option.addView(label(descriptions[index], 15, WARNING).apply { setPadding(0, dp(6), 0, dp(12)) })
+                return@forEachIndexed
+            }
+            option.addView(button(choiceText, mode == candidate) {
                 if (candidate == WirelessHotspotMode.MANUAL) {
                     pendingCarHotspotSetup = true
                     render()
@@ -3686,6 +3702,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     toast(getString(R.string.saved_for_your_next_connection))
                 }
             }, matchButton(12, 60))
+        } else if (!wifiDirect) {
+            parent.addView(label(getString(R.string.settings_wifi_direct_unsupported_help), 16, WARNING))
         } else {
             parent.addView(label(getString(R.string.turn_the_car_s_wi_fi_switch_on_allow_location_nearby_devic), 16, MUTED))
             wifiDirectChannelControl(parent)

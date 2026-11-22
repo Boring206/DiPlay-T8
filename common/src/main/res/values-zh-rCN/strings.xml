@@ -1037,4 +1037,6 @@
     <string name="settings_fit_screen_shape">避开刘海和圆角</string>
     <string name="settings_fit_screen_shape_description">适用于用作车机的手机或平板。让 CarPlay 的按钮和程序栏避开摄像头刘海和屏幕圆角，地图仍铺满全屏。在会话菜单中设置的安全区域优先。下次连接时生效。</string>
     <string name="settings_safe_area_fitted_summary">安全区域：已避开刘海和圆角，%1$d x %2$d，位于 (%3$d, %4$d)，画面 %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">不可用</string>
+    <string name="settings_wifi_direct_unsupported_help">请在“连接设置”中选择“车载热点”或“现有 Wi-Fi / 同一局域网”，然后重试。</string>
 </resources>

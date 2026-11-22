@@ -977,4 +977,6 @@
     <string name="settings_fit_screen_shape">Ajustar a la muesca y las esquinas redondeadas</string>
     <string name="settings_fit_screen_shape_description">Para un teléfono o una tableta usados como unidad principal. Aparta los botones y el dock de CarPlay de la muesca de la cámara y de las esquinas redondeadas; los mapas siguen llenando la pantalla. Una zona segura ajustada en el menú de la sesión tiene prioridad. Se aplica en la próxima conexión.</string>
     <string name="settings_safe_area_fitted_summary">Zona segura: ajustada a la muesca y las esquinas, %1$d x %2$d en (%3$d, %4$d) dentro de %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">No disponible</string>
+    <string name="settings_wifi_direct_unsupported_help">En «Configuración de conexión», elige «Punto de acceso integrado del coche» o «Wi-Fi existente / Misma LAN» y reintenta.</string>
 </resources>

@@ -28,6 +28,7 @@ internal object ConnectionFailureGuidance {
             ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT,
             ConnectionFailureCause.CAR_HOTSPOT_START_FAILED -> return R.string.connection_help_hotspot
             ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD -> return R.string.connection_help_existing_wifi_needs_password
+            ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED -> return R.string.settings_wifi_direct_unsupported_help
             null -> Unit
         }
         when (failure.startupFailure) {
@@ -74,6 +75,7 @@ internal object ConnectionFailureGuidance {
         ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT -> R.string.hotspot_control_timeout
         ConnectionFailureCause.CAR_HOTSPOT_START_FAILED -> R.string.hotspot_control_failed
         ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD -> R.string.existing_wifi_needs_password
+        ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED -> R.string.this_head_unit_does_not_support_wi_fi_direct
     }
 
     /** The network the iPhone joins: the car hotspot, a Wi-Fi Direct group, or a shared Wi-Fi. */

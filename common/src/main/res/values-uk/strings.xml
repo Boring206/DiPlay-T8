@@ -989,4 +989,6 @@
     <string name="settings_fit_screen_shape">Обходити виріз і заокруглені кути</string>
     <string name="settings_fit_screen_shape_description">Для телефона чи планшета в ролі головного пристрою. Відсуває кнопки й панель програм CarPlay від вирізу камери та заокруглених кутів; карти й далі займають увесь екран. Безпечна область, задана в меню під час сесії, має перевагу. Застосовується з наступного підключення.</string>
     <string name="settings_safe_area_fitted_summary">Безпечна область: за вирізом і кутами, %1$d x %2$d у точці (%3$d, %4$d) на екрані %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">Недоступно</string>
+    <string name="settings_wifi_direct_unsupported_help">У розділі «Налаштування підключення» виберіть «Вбудована точка доступу автомобіля» або «Наявна Wi-Fi / Одна LAN» і повторіть спробу.</string>
 </resources>

@@ -2756,6 +2756,9 @@ class CarPlayController(
         type.equals("disableBluetooth", ignoreCase = true) ||
             type.equals("disable-bluetooth", ignoreCase = true)
 
+    // The Wi-Fi Direct feature and manager line goes into the connection diagnostics once per controller.
+    @Volatile private var wifiDirectSupportLogged = false
+
     private fun startWirelessHotspot(generation: Int): WirelessHotspotInfo {
         val readyDeadline = System.nanoTime() + WirelessStartupPolicy.HOTSPOT_READY_MILLIS * 1_000_000
         val hotspotMode = config.wirelessHotspotMode
@@ -2799,8 +2802,18 @@ class CarPlayController(
             pastOffReport = state == false
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
-            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
-                preferredChannel = config.wifiP2pPreferredChannel)
+            WirelessHotspotMode.WIFI_P2P -> {
+                if (!wifiDirectSupportLogged) {
+                    wifiDirectSupportLogged = true
+                    connectionDiagnostic(com.shilapi.xcertplay.network.WifiDirectSupport.diagnostic(appContext))
+                }
+                // #1256: only a missing manager blocks here; the framework's P2P_UNSUPPORTED is named later.
+                if (com.shilapi.xcertplay.network.WifiDirectSupport.available(appContext)) {
+                    WifiP2pGroupManager(appContext, ::debugLog, preferredChannel = config.wifiP2pPreferredChannel)
+                } else {
+                    throw com.shilapi.xcertplay.network.WifiDirectSupport.unsupported()
+                }
+            }
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 LocalOnlyHotspotManager(appContext, ::debugLog)
             } else {

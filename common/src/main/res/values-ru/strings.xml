@@ -977,4 +977,6 @@
     <string name="settings_fit_screen_shape">Обходить вырез и скруглённые углы</string>
     <string name="settings_fit_screen_shape_description">Для телефона или планшета в роли головного устройства. Отодвигает кнопки и панель приложений CarPlay от выреза камеры и скруглённых углов; карты по-прежнему занимают весь экран. Безопасная область, заданная в меню во время сеанса, важнее. Применяется со следующего подключения.</string>
     <string name="settings_safe_area_fitted_summary">Безопасная область: по вырезу и углам, %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">Недоступно</string>
+    <string name="settings_wifi_direct_unsupported_help">В разделе «Настройка подключения» выберите «Встроенная точка доступа автомобиля» или «Существующая Wi-Fi / Одна LAN» и повторите попытку.</string>
 </resources>

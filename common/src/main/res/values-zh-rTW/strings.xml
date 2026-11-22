@@ -1037,4 +1037,6 @@
     <string name="settings_fit_screen_shape">避開瀏海和圓角</string>
     <string name="settings_fit_screen_shape_description">適用於當作車機使用的手機或平板。讓 CarPlay 的按鈕和程式列避開相機瀏海和螢幕圓角，地圖仍會填滿整個螢幕。在連線期間的選單中設定的安全區域優先。下次連線時生效。</string>
     <string name="settings_safe_area_fitted_summary">安全區域：已避開瀏海和圓角，%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">無法使用</string>
+    <string name="settings_wifi_direct_unsupported_help">請在「連線設定」選擇「車載熱點」或「現有 Wi-Fi / 同一區域網路」，再重試。</string>
 </resources>

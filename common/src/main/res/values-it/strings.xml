@@ -1067,4 +1067,6 @@
     <string name="settings_fit_screen_shape">Evita notch e angoli arrotondati</string>
     <string name="settings_fit_screen_shape_description">Per un telefono o un tablet usato come head unit. Tiene i pulsanti e il dock di CarPlay lontani dal notch della fotocamera e dagli angoli arrotondati; le mappe riempiono comunque lo schermo. Un’area sicura impostata nel menu della sessione ha la precedenza. Si applica alla prossima connessione.</string>
     <string name="settings_safe_area_fitted_summary">Area sicura: adattata a notch e angoli, %1$d x %2$d a (%3$d, %4$d) in %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">Non disponibile</string>
+    <string name="settings_wifi_direct_unsupported_help">In Configurazione connessione scegli Hotspot integrato dell’auto o Wi-Fi esistente / Stessa LAN, poi riprova.</string>
 </resources>

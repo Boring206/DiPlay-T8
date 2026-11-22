@@ -43,6 +43,10 @@ class ConnectionFailureGuidanceTest {
             "No unambiguous bonded iPhone found; pair one iPhone and retry", known = ConnectionFailureCause.IPHONE_NOT_CHOSEN))
         assertEquals(R.string.connection_help_wifi_direct_channel, guide(channelRejected,
             known = ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE, mode = WirelessHotspotMode.WIFI_P2P))
+        assertEquals(R.string.settings_wifi_direct_unsupported_help, guide("This head unit does not support Wi-Fi Direct.",
+            startup = WirelessStartupFailure.HOTSPOT_CONFIGURATION, known = ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED,
+            mode = WirelessHotspotMode.WIFI_P2P))
+        assertEquals(R.string.this_head_unit_does_not_support_wi_fi_direct, ConnectionFailureGuidance.stage(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED))
     }
 
     @Test fun aHotspotCauseNamesItsOwnHelp() {

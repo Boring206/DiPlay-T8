@@ -1079,4 +1079,6 @@
     <string name="settings_fit_screen_shape">ノッチと角丸を避ける</string>
     <string name="settings_fit_screen_shape_description">車載端末として使うスマートフォンやタブレット向けです。CarPlayのボタンとDockをカメラのノッチと画面の角丸から離します。地図は画面全体に表示されたままです。接続中のメニューで設定したセーフエリアが優先されます。次回の接続から反映されます。</string>
     <string name="settings_safe_area_fitted_summary">セーフエリア：ノッチと角に合わせて調整、%5$d×%6$d内の(%3$d, %4$d)に%1$d×%2$d</string>
+    <string name="settings_wifi_direct_unavailable">利用不可</string>
+    <string name="settings_wifi_direct_unsupported_help">「接続設定」で「車載ホットスポット」または「既存のWi-Fi／同一LAN」を選んでから再試行してください。</string>
 </resources>
