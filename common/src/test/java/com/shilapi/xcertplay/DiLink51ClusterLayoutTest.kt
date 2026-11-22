@@ -76,7 +76,7 @@ class DiLink51ClusterLayoutTest {
 
     @Test fun theDenzaN9FirmwareUsesTheSharedLayers() {
         // #301: like the Leopard 5, the N9 cluster never shows the plain layer. OTA V1.9 changed the build,
-        // and with only V1.8 listed DiPlay gave the updated car the plain layer and a 1920x720 stream.
+        // and with only V1.8 listed DiPlay gave the updated car the plain layer and a stream sized for it.
         assertEquals(
             setOf(
                 "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys", // V1.8

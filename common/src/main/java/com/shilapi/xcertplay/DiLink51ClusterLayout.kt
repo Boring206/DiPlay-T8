@@ -19,9 +19,10 @@ internal object DiLink51ClusterLayout {
 
     /**
      * Exact builds only. Each OTA changes the build, and the car then gets the unknown-firmware path: the
-     * plain layer, a 1920x720 stream and no Instrument theme. The N9 did on V1.9 (#301), and the Leopard 5
-     * entry has the same limit. Matching the 2560x720 shared layers instead would need them to exist before
-     * the cluster stream is negotiated (#981), which no N9 report shows yet.
+     * plain layer, a stream sized for it and no Instrument theme. The N9 did on V1.9 (#301; its report
+     * requested 2136x600 on the 2560x720 plain layer), and the Leopard 5 entry has the same limit. Matching
+     * the 2560x720 shared layers instead would need them to exist before the cluster stream is negotiated
+     * (#981), which no N9 report shows yet.
      */
     private val FINGERPRINTS = setOf(FINGERPRINT, LEOPARD5_FINGERPRINT) + DENZA_N9_FINGERPRINTS
     const val BASE = "fission_bg_XDJAScreenProjection"
