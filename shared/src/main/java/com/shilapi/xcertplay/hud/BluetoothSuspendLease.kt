@@ -18,6 +18,14 @@ internal class BluetoothSuspendLease(
     private var owner: Any? = null
     private var generation = 0L
 
+    /**
+     * For the report (#1021): the radio as a disable that did not take effect in time left it, read before
+     * [restoreOwned] could turn it back on ("ON", "OFF" or "unknown"). Null when the last pause never
+     * waited for a disable.
+     */
+    @Volatile var radioWhenDisableWaitEnded: String? = null
+        private set
+
     fun begin(requester: Any): Long? = synchronized(stateLock) {
         if (owner === requester) return null
         owner = requester
@@ -51,6 +59,7 @@ internal class BluetoothSuspendLease(
     fun isCurrent(ticket: Long): Boolean = current(ticket)
 
     fun suspend(ticket: Long): Boolean = synchronized(commandLock) {
+        radioWhenDisableWaitEnded = null
         if (!current(ticket)) return false
         // Reconcile an interrupted older lease before observing this session's original state.
         if (!restoreOwned()) return false
@@ -63,6 +72,13 @@ internal class BluetoothSuspendLease(
         }
         runCatching { requestEnabled(false) }
         val disabled = runCatching { awaitEnabled(false) }.getOrDefault(false)
+        if (!disabled) {
+            radioWhenDisableWaitEnded = when (enabled()) {
+                true -> "ON"
+                false -> "OFF"
+                null -> "unknown"
+            }
+        }
         if (!disabled || !current(ticket)) {
             // A cancelled command may already have executed. Compensate while still serialized.
             restoreOwned()
@@ -112,4 +128,55 @@ internal object BluetoothPauseOutcome {
         adbAccess != null && adbAccess != "READY" -> "car Bluetooth pause failed: ADB access $adbAccess"
         else -> "car Bluetooth pause failed: Android Bluetooth stayed on"
     }
+
+    /** True exactly when [describe] reports "pause failed". */
+    fun failed(paused: Boolean, radioBefore: Boolean?, stillCurrent: Boolean): Boolean =
+        !paused && stillCurrent && radioBefore == true
+}
+
+/**
+ * What a failed pause adds to the report (#1021): what `svc bluetooth disable` printed, and the
+ * `enabled:` and `state:` fields of `dumpsys bluetooth_manager`. The dump's name and address lines
+ * never leave [managerLine], and the command's reply keeps plain characters only.
+ */
+object BluetoothPauseEvidence {
+    private const val PREFIX = "car Bluetooth pause evidence:"
+    private const val MAX_REPLY_CHARS = 160
+    private val unsafeCharacters = Regex("[^A-Za-z0-9 _.,:;()/+-]")
+    private val spaces = Regex("\\s+")
+
+    /**
+     * [radioWhenWaitEnded] is the radio as the wait for the disable ended, before DiPlay's restore could
+     * turn it back on; null when no wait ran. [managerDump] is read after that restore step.
+     */
+    fun lines(disableSent: Boolean, disableReply: String?, radioWhenWaitEnded: String?, managerDump: String?): List<String> =
+        listOfNotNull(commandLine(disableSent, disableReply), radioWhenWaitEnded?.let(::waitLine), managerLine(managerDump))
+
+    /** OFF here with ON in [managerLine]: the disable worked, too late, and DiPlay turned the radio back on. */
+    fun waitLine(radio: String): String = "$PREFIX Android Bluetooth was $radio when the wait for the disable ended"
+
+    /** [sent] false: the command never ran; [reply] null: ADB returned nothing at all. */
+    fun commandLine(sent: Boolean, reply: String?): String = when {
+        !sent -> "$PREFIX svc bluetooth disable not sent"
+        reply == null -> "$PREFIX svc bluetooth disable got no ADB reply"
+        reply.isBlank() -> "$PREFIX svc bluetooth disable printed nothing"
+        else -> "$PREFIX svc bluetooth disable printed '${clean(reply)}'"
+    }
+
+    fun managerLine(dump: String?): String {
+        if (dump == null) return "$PREFIX bluetooth_manager unavailable"
+        return "$PREFIX bluetooth_manager after DiPlay's restore step enabled=${field(dump, "enabled") ?: "unknown"} " +
+            "state=${field(dump, "state") ?: "unknown"}"
+    }
+
+    private fun field(dump: String, key: String): String? = dump.lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("$key:", ignoreCase = true) }
+        ?.substringAfter(':')?.trim()
+        ?.takeWhile { it.isLetterOrDigit() || it == '_' }
+        ?.take(24)
+        ?.ifEmpty { null }
+
+    private fun clean(reply: String): String =
+        reply.replace(unsafeCharacters, " ").replace(spaces, " ").trim().take(MAX_REPLY_CHARS)
 }

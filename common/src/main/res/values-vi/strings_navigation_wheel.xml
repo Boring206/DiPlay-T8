@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_wheel_volume">Âm lượng vô lăng khi đang chỉ dẫn đường (thử nghiệm)</string>
+    <string name="settings_navigation_wheel_volume_description">Trong lúc CarPlay đọc chỉ dẫn đường, phím âm lượng điều chỉnh luồng âm thanh dẫn đường đã chọn. Ngoài lúc đó, phím hoạt động theo hệ thống giải trí. Cần quyền hỗ trợ tiếp cận cho phím vô lăng. Cuộc gọi, thu phóng bản đồ và cần điều khiển được ưu tiên. Đã thử nghiệm cục bộ trên hệ thống giải trí Tang platform-21; việc thử nghiệm trên xe ở dự án chính vẫn đang chờ. Định tuyến tự động hoặc đa phương tiện không bị chặn.</string>
+    <string name="settings_navigation_wheel_service_required">Hãy cho phép dịch vụ hỗ trợ tiếp cận phím vô lăng trong cài đặt Android, hoặc dùng nút cấp quyền ADB hiện có.</string>
+</resources>

@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
 import com.shilapi.xcertplay.compat.Base64Compat
@@ -122,6 +123,13 @@ internal object BydClusterSong {
 
     @Volatile
     private var sGateOpened = false
+    // For the report (#1110): how the gate went, and how the latest dashboard write ended.
+    @Volatile private var gateResult = "not tried"
+    @Volatile private var lastWrite = "none"
+    @Volatile private var lastWriteAtMillis = 0L
+    @Volatile private var writesAccepted = 0
+    @Volatile private var writesRejected = 0
+    @Volatile private var writesUnanswered = 0
     private const val GATE_PKG = "com.byd.mediacenter"
     private const val GATE_ACT = "com.byd.mediacenter.main.MediaActivity"
     private const val RETURN_DELAY_MS = 1000L
@@ -285,6 +293,7 @@ internal object BydClusterSong {
         // if called on the main thread, skip to avoid an ANR.
         if (Looper.myLooper() == Looper.getMainLooper()) {
             sGateOpened = true
+            gateResult = "skipped on the main thread"
             return
         }
 
@@ -306,6 +315,7 @@ internal object BydClusterSong {
             Thread.sleep(RETURN_DELAY_MS)
 
             // 3) Return to the CarPlay task if it is running, otherwise fall back to the DiPlay launcher.
+            gateResult = if (carplayTask != null) "opened, back to CarPlay" else "opened, back to DiPlay"
             if (carplayTask != null) {
                 carplayTask.moveToFront()
             } else {
@@ -320,6 +330,7 @@ internal object BydClusterSong {
             }
         } catch (t: Throwable) {
             Log.w(TAG, "gate open failed: $t")
+            gateResult = "failed ${t.javaClass.simpleName}"
         }
 
         // Mark as done regardless of success or failure, so this is only attempted once per app run;
@@ -342,11 +353,57 @@ internal object BydClusterSong {
     private fun run(app: Context, args: String, clearing: Boolean = false): Boolean {
         val apk = app.applicationInfo.sourceDir
         val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydClusterSongTool::class.java.name} $args")
-            ?: return false
+        lastWriteAtMillis = SystemClock.elapsedRealtime()
+        if (output == null) {
+            writesUnanswered++
+            lastWrite = "no ADB reply"
+            return false
+        }
         val succeeded = ClusterSongWriteResult.accepted(output, clearing)
+        if (succeeded) writesAccepted++ else writesRejected++
+        lastWrite = if (succeeded) "accepted" else "rejected (${ClusterSongWriteResult.summary(output)})"
         if (!succeeded) Log.w(TAG, "dashboard write failed: incomplete or rejected vendor response")
         return succeeded
     }
+
+    /** The report's "Dashboard song:" line; never the song itself. */
+    fun report(app: Context): String = ClusterSongReport.line(
+        clusterSong = BydOutputSettings.clusterSong(app),
+        clusterSongGate = BydOutputSettings.clusterSongGate(app),
+        clusterSongOnChange = BydOutputSettings.clusterSongOnChange(app),
+        gate = gateResult,
+        adbAccess = shell.lastAccess?.name,
+        lastWrite = lastWrite,
+        lastWriteAgeSeconds = lastWriteAtMillis.takeIf { it > 0 }
+            ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0) / 1000 },
+        accepted = writesAccepted,
+        rejected = writesRejected,
+        unanswered = writesUnanswered,
+    )
+}
+
+/**
+ * Formats [BydClusterSong.report]; each setting under its [BydOutputSettings] name. The gate, ADB access
+ * and writes live in memory only, so the line puts them after "since app start:".
+ */
+internal object ClusterSongReport {
+    fun line(
+        clusterSong: Boolean,
+        clusterSongGate: Boolean,
+        clusterSongOnChange: Boolean,
+        gate: String,
+        adbAccess: String?,
+        lastWrite: String,
+        lastWriteAgeSeconds: Long?,
+        accepted: Int,
+        rejected: Int,
+        unanswered: Int,
+    ): String =
+        "Dashboard song: clusterSong=$clusterSong clusterSongGate=$clusterSongGate " +
+            "clusterSongOnChange=$clusterSongOnChange; since app start: gate=${if (clusterSongGate) gate else "off"} " +
+            "adbAccess=${adbAccess ?: "not tried"} lastWrite=$lastWrite" +
+            (lastWriteAgeSeconds?.let { " ${it}s ago" } ?: "") +
+            " writes accepted=$accepted rejected=$rejected unanswered=$unanswered"
 }
 
 /** Validate the complete app_process write response, rather than treating an empty response as success. */
@@ -354,6 +411,28 @@ internal object ClusterSongWriteResult {
     // The PR reporter observed this result on a DiLink 4 Seal while the music card updated.
     // Accept it only for the instrument writes below; it is not a general shell success code.
     private const val OBSERVED_VENDOR_RESULT = -2147482648
+
+    /**
+     * The write names and results of a rejected response, such as "source=0 state=0 text=ERR", for the
+     * report. Only names this tool prints and numbers pass: the song text never does.
+     */
+    fun summary(output: String): String {
+        val parts = output.lineSequence().map { it.trim() }.filter { '=' in it }.take(4).map { line ->
+            val name = line.substringBefore('=').trim().takeIf { it in WRITE_NAMES } ?: "other"
+            val value = line.substringAfter('=').trim()
+            "$name=" + (value.toIntOrNull()?.toString() ?: errorClass(value))
+        }.toList()
+        return if (parts.isEmpty()) "no result lines" else parts.joinToString(" ")
+    }
+
+    private val WRITE_NAMES = setOf("source", "state", "text", "write")
+
+    // "ERR java.lang.ClassNotFoundException: …" → "ERR ClassNotFoundException"; no message text.
+    private fun errorClass(value: String): String {
+        val type = value.removePrefix("ERR").trim().substringBefore(':').substringBefore(' ')
+            .substringAfterLast('.').filter { it.isLetterOrDigit() || it == '_' || it == '$' }.take(60)
+        return if (type.endsWith("Exception") || type.endsWith("Error")) "ERR $type" else "ERR"
+    }
 
     fun accepted(output: String, clearing: Boolean = false): Boolean {
         val expected = if (clearing) setOf("state") else setOf("source", "state", "text")

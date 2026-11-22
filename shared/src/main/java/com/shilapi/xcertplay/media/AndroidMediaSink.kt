@@ -191,6 +191,7 @@ class AndroidMediaSink(
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
     navigationAttenuationDb: Int = 0,
+    callAttenuationDb: Int = 0,
     context: Context? = null,
     private val navigationStreamType: Int = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
     onScreenStreamActiveChanged: ((Int, Boolean) -> Unit)? = null,
@@ -277,6 +278,14 @@ class AndroidMediaSink(
     fun setNavigationAttenuationDb(db: Int) {
         navigationAttenuationDb = NavigationAudioGain.clamp(db)
         audioRenderers.values.forEach { it.setNavigationAttenuationDb(navigationAttenuationDb) }
+    }
+
+    @Volatile private var callAttenuationDb = NavigationAudioGain.clamp(callAttenuationDb)
+
+    /** Apply a saved Audio setting to calls already playing, without reconnecting CarPlay. */
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+        audioRenderers.values.forEach { it.setCallAttenuationDb(callAttenuationDb) }
     }
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
     private val audioModeLock = Any()
@@ -752,10 +761,12 @@ class AndroidMediaSink(
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also {
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.onRoutedToEarpiece = { moveCallToLoudspeaker(id) }
             audioRenderers[id] = it
             // Cover a Settings change made while this renderer was being prepared.
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
         }
     }
 
@@ -1670,6 +1681,8 @@ private class VideoDecoder(
         synchronized(outputLock) {
             codec = decoder
             decoder = null
+            // A failure reported for this codec must not retire its replacement.
+            outputFailure = null
             // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
             awaitNotDequeuing(codec)
         }
@@ -1792,6 +1805,8 @@ private class AudioRenderer(
     private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
+    @Volatile private var callAttenuationDb = 0
+    private var appliedCallAttenuationDb: Int? = null
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -1914,6 +1929,7 @@ private class AudioRenderer(
             while (running) {
                 // Report Settings changes from this worker, never from the UI thread, also between prompts.
                 applyNavigationAttenuation()
+                applyCallAttenuation()
                 diagnosticStage = "packet"
                 queue.poll(AUDIO_POLL_MILLIS, TimeUnit.MILLISECONDS)?.let(::handle)
                 // Output becomes ready asynchronously, including after the last packet of a burst.
@@ -2127,6 +2143,26 @@ private class AudioRenderer(
     private fun attenuateNavigation(data: ByteArray, offset: Int, length: Int) {
         if (mappedChannel != AudioChannel.NAVIGATION) return
         NavigationAudioGain.scalePcm16(data, offset, length, navigationAttenuationDb)
+    }
+
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+    }
+
+    /** Worker-thread only. Reports each call level change once, when it reaches this call. */
+    private fun applyCallAttenuation() {
+        if (format.audioType != "telephony") return
+        val requestedDb = callAttenuationDb
+        if (requestedDb == 0 && appliedCallAttenuationDb == null) return
+        if (appliedCallAttenuationDb == requestedDb) return
+        appliedCallAttenuationDb = requestedDb
+        runCatching { report("Audio: call attenuation=" + requestedDb + "dB channel=" + mappedChannel + " applied=true") }
+    }
+
+    /** Lowers a call in the PCM itself, whichever output it plays on; other streams and 0 dB pass through untouched. */
+    private fun attenuateCall(data: ByteArray, offset: Int, length: Int) {
+        if (format.audioType != "telephony") return
+        NavigationAudioGain.scalePcm16(data, offset, length, callAttenuationDb)
     }
 
     private fun audioAttributesFor(
@@ -2407,6 +2443,8 @@ private class AudioRenderer(
         voiceFilter?.process(data, offset, length)
         applyNavigationAttenuation()
         attenuateNavigation(data, offset, length)
+        applyCallAttenuation()
+        attenuateCall(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
