@@ -53,6 +53,25 @@ class WiredConfigurationActionTest {
         assertFalse(WiredConfigurationAction.fallbackAfterRejection(found = true, carPlayMode = true))
     }
 
+    @Test fun aModeRequestLeftUnansweredOnThisEnumerationIsNotSentAgain() {
+        // #1338: the iPhone stayed on the same device node after every request, so each retry waited 10 s and then
+        // used the mode it already offered. After one unanswered request that mode is used at once.
+        assertEquals(WiredConfigurationAction.USE,
+            WiredConfigurationAction.choose(true, true, 0, maximumTransitions = 2, sessionAlreadyStarted = true,
+                transitionUnansweredOnThisEnumeration = true))
+        // Without a session of DiPlay's own on this enumeration the decision is unchanged.
+        assertEquals(WiredConfigurationAction.USE,
+            WiredConfigurationAction.choose(true, true, 0, maximumTransitions = 2,
+                transitionUnansweredOnThisEnumeration = true))
+        // A configuration without Apple Ethernet still asks for CarPlay mode (#634), and so does a missing one.
+        assertEquals(WiredConfigurationAction.REQUEST_TRANSITION,
+            WiredConfigurationAction.choose(true, false, 0, maximumTransitions = 2, sessionAlreadyStarted = true,
+                transitionUnansweredOnThisEnumeration = true))
+        assertEquals(WiredConfigurationAction.REQUEST_TRANSITION,
+            WiredConfigurationAction.choose(false, false, 0, maximumTransitions = 2, sessionAlreadyStarted = true,
+                transitionUnansweredOnThisEnumeration = true))
+    }
+
     @Test fun theMemoryMatchesOnlyTheSameEnumeration() {
         WiredSessionMemory.clear()
         assertFalse(WiredSessionMemory.startedOn("/dev/bus/usb/001/005"))
@@ -60,5 +79,20 @@ class WiredConfigurationActionTest {
         assertTrue(WiredSessionMemory.startedOn("/dev/bus/usb/001/005"))
         assertFalse(WiredSessionMemory.startedOn("/dev/bus/usb/001/006"))
         WiredSessionMemory.clear()
+    }
+
+    @Test fun anUnansweredRequestIsRememberedOnlyForItsEnumeration() {
+        WiredSessionMemory.clear()
+        assertFalse(WiredSessionMemory.transitionUnansweredOn("/dev/bus/usb/001/005"))
+        WiredSessionMemory.started("/dev/bus/usb/001/005")
+        WiredSessionMemory.transitionUnanswered("/dev/bus/usb/001/005")
+        assertTrue(WiredSessionMemory.transitionUnansweredOn("/dev/bus/usb/001/005"))
+        // A session on the same node keeps the note; the iPhone is still on that enumeration.
+        WiredSessionMemory.started("/dev/bus/usb/001/005")
+        assertTrue(WiredSessionMemory.transitionUnansweredOn("/dev/bus/usb/001/005"))
+        // A re-enumerated iPhone has a new node and is asked again.
+        assertFalse(WiredSessionMemory.transitionUnansweredOn("/dev/bus/usb/001/006"))
+        WiredSessionMemory.clear()
+        assertFalse(WiredSessionMemory.transitionUnansweredOn("/dev/bus/usb/001/005"))
     }
 }

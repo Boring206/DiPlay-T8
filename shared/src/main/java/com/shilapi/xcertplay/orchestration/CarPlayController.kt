@@ -2054,18 +2054,22 @@ class CarPlayController(
                         val configuration = IphoneCarPlayConfiguration.find(result.device)
                         val carPlayMode = configuration?.let(IphoneCarPlayConfiguration::isCarPlayMode) == true
                         val sessionAlreadyStarted = WiredSessionMemory.startedOn(result.device.deviceName)
+                        val transitionUnanswered = sessionAlreadyStarted &&
+                            WiredSessionMemory.transitionUnansweredOn(result.device.deviceName)
                         val action = WiredConfigurationAction.choose(
                             found = configuration != null,
                             carPlayMode = carPlayMode,
                             transitionsTried = reenumerationAttempts,
                             maximumTransitions = MAXIMUM_REENUMERATION_ATTEMPTS,
                             sessionAlreadyStarted = sessionAlreadyStarted,
+                            transitionUnansweredOnThisEnumeration = transitionUnanswered,
                         )
                         connectionDiagnostic(
                             "USB configuration ready=${configuration != null} " +
                                 "configurationId=${configuration?.id ?: "none"} " +
                                 "reenumerationAttempts=$reenumerationAttempts " +
                                 (if (sessionAlreadyStarted && carPlayMode) "previousSessionOnThisEnumeration=true " else "") +
+                                (if (transitionUnanswered && carPlayMode) "transitionUnansweredOnThisEnumeration=true " else "") +
                                 "action=${action.diagnostic}",
                         )
                         when (action) {
@@ -2158,7 +2162,8 @@ class CarPlayController(
      * Only a USB attach ended the wait for the iPhone to come back in CarPlay mode, and an iPhone that ignores
      * the request never attaches again: after Save and reconnect an iPhone still in the mode of the ended
      * session left wired CarPlay waiting for minutes (#335). Without an attach the iPhone is looked at again,
-     * which uses the mode it already offers, as before the request.
+     * which uses the mode it already offers, as before the request. The node is remembered, so a later retry on
+     * the same enumeration uses that mode without waiting again (#1338; WiredSessionMemory).
      */
     private fun watchReenumeration(device: UsbDevice) {
         val attempt = reenumerationAttempts
@@ -2171,6 +2176,7 @@ class CarPlayController(
             connectionDiagnostic(
                 "USB transition unanswered after ${REENUMERATION_WAIT_MILLIS}ms count=$attempt; checking the iPhone again",
             )
+            WiredSessionMemory.transitionUnanswered(listed.deviceName)
             requestIphonePermission(listed)
         }, REENUMERATION_WAIT_MILLIS)
     }
@@ -2394,6 +2400,13 @@ class CarPlayController(
                         opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
                 )
             }
+            // #1338: SYNs reached DiPlay but no session followed. Name where they went and what DiPlay answered.
+            val advertisedAddress = runCatching { InetAddress.getByName(config.linkLocal).address }.getOrNull()
+            fun logConnectionAttempts() {
+                ncm.connectionAttemptSummary(advertisedAddress)?.let {
+                    debugLog("wired start: NCM connection attempts $it")
+                }
+            }
             lateinit var startWatchdog: WiredStartWatchdog
             startWatchdog = WiredStartWatchdog(
                 schedule = { delay, action ->
@@ -2412,6 +2425,7 @@ class CarPlayController(
                             "wired start: no AirPlay session $waitedSeconds s " +
                                 "after carplay-start-session; NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                         )
+                        logConnectionAttempts()
                         fail(IphoneUsbException.TimedOut("The iPhone did not open CarPlay over USB in time"))
                     }
                 },
@@ -2423,6 +2437,7 @@ class CarPlayController(
                             "${WiredStartWatchdog.HELD_TIMEOUT_MILLIS / 1000} s for the second request; " +
                             "NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                     )
+                    logConnectionAttempts()
                 },
             )
             wiredStartWatchdog = startWatchdog
