@@ -11,6 +11,7 @@ import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.media.AndroidMediaSink
 import com.shilapi.xcertplay.media.CarPlayNowPlaying
 import com.shilapi.xcertplay.orchestration.CarPlayController
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import org.junit.After
 import org.junit.Assert.*
@@ -35,13 +36,19 @@ class CarPlayHostClusterStartupTest {
     private lateinit var sink: AndroidMediaSink
     private lateinit var session: AirPlaySession
     private val displays = mutableListOf<Int>()
+    // Sessions whose main frame has rendered. onSessionActive sends the dark-mode command to the
+    // session from airPlayCommandExecutor, a real thread. Mockito attaches `when(mock.x).thenReturn(...)`
+    // to the mock's latest call from any thread, so a stub written after that point could land on
+    // setNightMode instead of hasRenderedMainFrame. Each session is therefore stubbed once, before
+    // production code sees it, and a test marks a frame by adding the session here.
+    private val renderedMainFrames: MutableSet<AirPlaySession> = ConcurrentHashMap.newKeySet()
 
     @Before fun setUp() {
         activity = Robolectric.buildActivity(CarPlayHostActivity::class.java).get()
         AirPlayPersistence.saveClusterMapEnabled(activity, true)
         controller = mock(CarPlayController::class.java)
         sink = mock(AndroidMediaSink::class.java)
-        session = mock(AirPlaySession::class.java)
+        session = airPlaySession()
         `when`(controller.activeAirPlaySession()).thenReturn(session)
         `when`(controller.nowPlayingSnapshot()).thenReturn(CarPlayNowPlaying())
         set("controller", controller)
@@ -151,11 +158,10 @@ class CarPlayHostClusterStartupTest {
 
     @Test fun staleSessionsAndControllerGenerationsCannotLaunchTheCluster() {
         display()
-        val stale = mock(AirPlaySession::class.java)
-        `when`(stale.hasRenderedMainFrame).thenReturn(true)
+        val stale = airPlaySession().also(::rendered)
         mockConstruction(ClusterMapPresentation::class.java).use { windows ->
             listener().onVideoFrameRendered(stale)
-            `when`(session.hasRenderedMainFrame).thenReturn(true)
+            rendered(session)
             listener(-1).onVideoFrameRendered(session)
             shadowOf(Looper.getMainLooper()).idle()
             assertTrue(windows.constructed().isEmpty())
@@ -183,12 +189,12 @@ class CarPlayHostClusterStartupTest {
         set("clusterSurface", surface)
         firstFrame()
         verify(sink).setSurface(111, surface)
-        val replacement = mock(AirPlaySession::class.java)
+        val replacement = airPlaySession()
         listener().onSessionActive(replacement)
         shadowOf(Looper.getMainLooper()).idle()
         verify(sink).clearSurface(111, surface)
         verify(sink, times(1)).setSurface(111, surface)
-        `when`(replacement.hasRenderedMainFrame).thenReturn(true)
+        rendered(replacement)
         listener().onVideoFrameRendered(replacement)
         shadowOf(Looper.getMainLooper()).idle()
         verify(sink, times(2)).setSurface(111, surface)
@@ -197,7 +203,7 @@ class CarPlayHostClusterStartupTest {
     @Test fun aFrameReportedBeforeSessionActiveIsRememberedWhenTheHostCatchesUp() {
         display()
         set("activeAirPlaySession", null)
-        `when`(session.hasRenderedMainFrame).thenReturn(true)
+        rendered(session)
         mockConstruction(ClusterMapPresentation::class.java).use { windows ->
             listener().onVideoFrameRendered(session)
             shadowOf(Looper.getMainLooper()).idle()
@@ -214,7 +220,7 @@ class CarPlayHostClusterStartupTest {
         AirPlayPersistence.saveAdbClusterEnabled(activity, true)
         confirmAdbRoute()
         assertFalse(get("adbClusterConfigured") as Boolean)
-        `when`(session.hasRenderedMainFrame).thenReturn(true)
+        rendered(session)
         val surface = mock(Surface::class.java)
         invokeSurface("onClusterSurface", surface)
         verify(sink, never()).setSurface(111, surface)
@@ -243,7 +249,7 @@ class CarPlayHostClusterStartupTest {
 
     @Test fun adoptingAnAlreadyRenderedBackgroundSessionDoesNotWaitForAnotherFrame() {
         display()
-        `when`(session.hasRenderedMainFrame).thenReturn(true)
+        rendered(session)
         set("smoothVideo", false)
         set("activeAirPlaySession", null)
         set("controller", null)
@@ -292,9 +298,17 @@ class CarPlayHostClusterStartupTest {
     }
 
     private fun firstFrame() {
-        `when`(session.hasRenderedMainFrame).thenReturn(true)
+        rendered(session)
         listener().onVideoFrameRendered(session)
         shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun airPlaySession(): AirPlaySession = mock(AirPlaySession::class.java).also { s ->
+        `when`(s.hasRenderedMainFrame).thenAnswer { s in renderedMainFrames }
+    }
+
+    private fun rendered(s: AirPlaySession) {
+        renderedMainFrames += s
     }
 
     private fun confirmAdbRoute(): AdbClusterActivity {
