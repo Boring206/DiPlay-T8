@@ -15,6 +15,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import kotlin.math.roundToInt
 
 /** The music renderer trims its track's playback rate from the queued level (#610). */
 @RunWith(RobolectricTestRunner::class)
@@ -87,6 +88,60 @@ class AudioClockTrimTest {
         assertTrue(RateTrack.rates.isEmpty())
     }
 
+    private fun submit(sample: Int) = type.getDeclaredMethod("submit", ByteArray::class.java, Int::class.javaPrimitiveType)
+        .apply { isAccessible = true }.invoke(renderer, ByteArray(12 + PACKET_FRAMES * 4), sample)
+
+    /**
+     * Wired music after a camera stall (#1177): the trim plays 0.84 % slow, as it learned while the track ran dry,
+     * and took the level the refill burst left, about 90 000 frames, as its target. It measured over the 3.5 s
+     * that ended 1.5 s ago, so the next write may set a new rate.
+     */
+    private fun slowTrimMeasuredAtTheRefillBurst(): MediaClockTrim {
+        set("started", true)
+        MediaClockTrim.learnedTrim = -0.0084
+        val trim = MediaClockTrim(48_000, 14_400, measuresTarget = true)
+        val startNs = System.nanoTime() - 5_000_000_000L
+        for (step in 0..35) {
+            val nowNs = startNs + step * 100_000_000L
+            trim.sample(92_160, nowNs)
+            trim.rateDue(nowNs)
+        }
+        assertEquals(47_597, trim.rate)
+        set("clockTrim", trim)
+        return trim
+    }
+
+    @Test fun aFullQueueSpeedsUpASlowTrimInsteadOfMeasuringAgain() {
+        slowTrimMeasuredAtTheRefillBurst()
+        // 192 wired packets of 355 frames fill the queue, and the next one is dropped.
+        for (packet in 0..192) submit(packet * PACKET_FRAMES)
+        assertTrue(reports.toString(), reports.contains("Audio: queue full audioType=media count=1"))
+        // A full 500 ms track. Measuring again kept the slow rate, so the queue stayed full and dropped a packet
+        // a second. The trim now holds less than the renderer can, so a full queue reads as overfull.
+        write(96_000)
+        assertEquals(1, RateTrack.rates.size)
+        assertTrue("rate ${RateTrack.rates}", RateTrack.rates.single() > 48_000)
+    }
+
+    @Test fun aLagGuardDiscardMeasuresTheLevelAgain() {
+        val trim = slowTrimMeasuredAtTheRefillBurst()
+        // Twice the target, more than a second after the last write: the trim plays fast.
+        val nowNs = System.nanoTime() - 400_000_000L
+        trim.sample(184_320, nowNs)
+        val fast = trim.rateDue(nowNs)!!
+        assertTrue("rate $fast", fast > 48_000)
+        for (packet in 0..9) submit(packet * PACKET_FRAMES)
+        // The backlog has been more than 1.5 s behind for 2 s: the next packet, 2 s on, discards it.
+        val guard = get("mediaLagGuard")!!
+        guard.javaClass.getDeclaredField("congestionSinceNs").apply { isAccessible = true }
+            .setLong(guard, System.nanoTime() - 2_000_000_000L)
+        submit(96_000)
+        assertTrue(reports.toString(), reports.any { it.startsWith("Audio: stale media packet backlog recovered") })
+        // The level the trim held is gone: it measures again, at the rate it learned.
+        write(PACKET_FRAMES * 4)
+        assertEquals(listOf((48_000 * (1 + MediaClockTrim.learnedTrim)).roundToInt()), RateTrack.rates)
+    }
+
     @Implements(AudioTrack::class)
     class RateTrack {
         @Implementation fun getPlaybackHeadPosition() = 0
@@ -103,5 +158,10 @@ class AudioClockTrimTest {
             val rates = mutableListOf<Int>()
             var result = AudioTrack.SUCCESS
         }
+    }
+
+    private companion object {
+        /** A wired LPCM packet: 7.4 ms at 48 kHz. */
+        const val PACKET_FRAMES = 355
     }
 }

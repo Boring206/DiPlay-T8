@@ -37,10 +37,30 @@ internal class MediaClockTrim(
     private var lastUpdateNs: Long? = null
     private var compressedBacklog = false
     private var measuring: Measuring? = if (measuresTarget) Measuring() else null
+    private val startTargetFrames = targetFrames
+    /** The most the renderer held when its queue was full and dropped music, or 0 before that happens. */
+    private var ceilingFrames = 0L
 
     fun measureAgain() {
         if (measuresTarget) measuring = Measuring()
     }
+
+    /**
+     * The renderer's queue was full and dropped music while [bufferedFrames] were queued, in the track and waiting.
+     * The level cannot rise above that, so a target there never reads as overfull: a slow trim then kept the queue
+     * full and dropped a packet a second for 13 minutes (#1177). The target stays below what the renderer holds.
+     */
+    fun overflowed(bufferedFrames: Long) {
+        ceilingFrames = maxOf(ceilingFrames, bufferedFrames)
+        val maxTarget = maxTargetFrames()
+        if (targetFrames <= maxTarget) return
+        level = level?.let { (targetFrames * (1.0 + it) - maxTarget) / maxTarget }
+        targetFrames = maxTarget
+    }
+
+    private fun maxTargetFrames(): Long =
+        if (ceilingFrames <= 0L) Long.MAX_VALUE
+        else maxOf((ceilingFrames * MAX_TARGET_OF_CEILING).roundToLong(), startTargetFrames)
 
     /** The playback rate last asked of the track, in Hz. */
     var rate = sampleRate
@@ -93,8 +113,8 @@ internal class MediaClockTrim(
             measuring = Measuring(nowNs, halfMean)
             return
         }
-        targetFrames = earlierHalfMean.roundToLong()
-        level = 0.0
+        targetFrames = minOf(earlierHalfMean.roundToLong(), maxTargetFrames())
+        level = error(earlierHalfMean)
         measuring = null
     }
 
@@ -146,6 +166,8 @@ internal class MediaClockTrim(
         const val MAX_STEP_SECONDS = 2.0
         const val MEASURE_HALF_NS = 1_500_000_000L
         const val HALVES_AGREE_SECONDS = 0.2
+        /** At the level that overflowed, a third above the target: the trim plays 1 % faster than it learned. */
+        const val MAX_TARGET_OF_CEILING = 0.75
 
         /** The drift the last music stream settled on. Each process plays to one head unit. */
         @Volatile var learnedTrim = 0.0
