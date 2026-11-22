@@ -2482,38 +2482,12 @@ class CarPlayController(
             )
             onStatus(CarPlayStatus.ConnectingControl)
             val carKitClient = LockdownCarKitClient(mux)
-            // Temporary lab capture, limited to accessory/authentication messages and two minutes.
-            try {
-                val relay = carKitClient.openService(pairRecord, config.label, "com.apple.syslog_relay")
-                Thread({
-                    try {
-                        relay.use {
-                            val deadline = System.nanoTime() + 120_000_000_000L
-                            val pending = StringBuilder()
-                            val relevant = Regex(" (accessoryd|ACCCarPlayService|iap2d|CarPlay)([\\[(])", RegexOption.IGNORE_CASE)
-                            while (!closed && System.nanoTime() < deadline) {
-                                val bytes = relay.recv(8192, 1000) ?: continue
-                                if (bytes.isEmpty()) break
-                                pending.append(bytes.toString(Charsets.UTF_8).replace('\u0000', '\n'))
-                                while (true) {
-                                    val end = pending.indexOf("\n")
-                                    if (end < 0) break
-                                    val line = pending.substring(0, end)
-                                    pending.delete(0, end + 1)
-                                    if (relevant.containsMatchIn(line)) debugLog("PHONE ${line.take(2000)}")
-                                }
-                                if (pending.length > 65536) pending.clear()
-                            }
-                        }
-                        debugLog("phone authentication diagnostic capture ended")
-                    } catch (error: Exception) {
-                        debugLog("phone authentication diagnostic capture ended: ${error.javaClass.simpleName}")
-                    }
-                }, "carplay-lab-phone-diagnostics").apply { isDaemon = true; start() }
-                debugLog("phone authentication diagnostic capture started")
-            } catch (error: Exception) {
-                debugLog("phone authentication diagnostics unavailable: ${error.message}")
-            }
+            PhoneSyslogCapture.start(
+                wanted = Log.isLoggable(TRACE_LOG_TAG, Log.VERBOSE),
+                open = { carKitClient.openService(pairRecord, config.label, "com.apple.syslog_relay") },
+                isClosed = { closed },
+                log = ::debugLog,
+            )
             val carkit = try {
                 carKitClient.open(pairRecord, config.label)
             } catch (error: Throwable) {
