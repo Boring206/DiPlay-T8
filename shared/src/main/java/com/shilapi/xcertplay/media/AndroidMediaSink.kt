@@ -1813,7 +1813,7 @@ private class AudioRenderer(
     @Volatile private var running = true
     @Volatile private var started = false
     private var codec: MediaCodec? = null
-    private var track: AudioTrack? = null
+    @Volatile private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
     @Volatile private var callAttenuationDb = 0
@@ -1925,8 +1925,33 @@ private class AudioRenderer(
     override fun close() {
         AmbientMusicController.closeRenderer(ambientRendererToken)
         running = false
+        // Drop packets queued for this track. They belong to the song playing
+        // before a skip or pause. Nothing replays them: the worker stops
+        // reading once `running` is false, and the next renderer starts from
+        // its own queue — clearing here only frees them early.
+        queue.clear()
+        // Silence the track now, on the calling thread. The worker thread only
+        // flushes it in its finally block, after a blocking write returns —
+        // on head units whose audio writes wait for room that can be long
+        // after the next track has started on a fresh renderer, so the old
+        // song is heard over the new one (#1031). pause() + flush() are
+        // quick calls; they never wait for the worker thread or for the
+        // vendor codec stop that release() may block in.
+        stopTrackNow()
         NavigationPlayback.close(navigationPlaybackToken)
         thread.interrupt()
+    }
+
+    /**
+     * Pause and discard the track's unplayed audio without taking the renderer
+     * monitor or waiting for the worker thread. The worker's finally block
+     * still runs release(), which repeats the pause/flush and releases the
+     * track; both paths are idempotent.
+     */
+    private fun stopTrackNow() {
+        val current = track ?: return
+        runCatching { current.pause() }
+        runCatching { current.flush() }
     }
 
     private fun run() {
