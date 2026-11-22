@@ -190,7 +190,6 @@
     <string name="could_not_save_image">Impossibile salvare l’immagine</string>
     <string name="could_not_save_the_report">Impossibile salvare il report</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Impossibile avviare CarPlay. Torna a DiPlay e controlla i permessi dell’app.</string>
-    <string name="custom_1_1_icon">Icona 1:1 personalizzata</string>
     <string name="debug_logs">Log di debug</string>
     <string name="default_icon">Icona predefinita</string>
     <string name="default_placeholder_icon">Icona segnaposto predefinita</string>
@@ -789,6 +788,17 @@
     <string name="car_button_name">Nome</string>
     <string name="car_button_description">CarPlay mostra questa icona e questo nome nel suo elenco di app. Toccala per tornare alla schermata dell’auto. Le modifiche si applicano alla prossima connessione di CarPlay.</string>
     <string name="car_button_saved_next_connection">Salvato. CarPlay mostrerà la nuova icona e il nuovo nome alla prossima connessione.</string>
+    <string name="settings_car_brand_title">Logo del marchio</string>
+    <string name="settings_car_brand_summary">Scegli il logo della serie BYD che CarPlay mostra nell’elenco app. Il nome viene aggiornato solo se resta quello predefinito o il nome di un logo. La scelta di un logo sostituisce l’immagine personalizzata.</string>
+    <string name="settings_car_brand_default">Predefinito (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Reimposta al logo del marchio</string>
+<string name="settings_car_brand_reset">Ripristina logo e nome predefiniti</string>
     <string name="this_head_unit_has_no_image_picker">Questa head unit non ha un selettore di immagini.</string>
 
     <!-- Optional BYD ambient lighting. -->

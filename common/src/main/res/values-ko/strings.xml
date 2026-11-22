@@ -192,7 +192,6 @@
     <string name="could_not_save_image">이미지를 저장할 수 없습니다.</string>
     <string name="could_not_save_the_report">보고서를 저장할 수 없습니다.</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay를 시작할 수 없습니다. DiPlay로 돌아가 앱 권한을 확인하세요.</string>
-    <string name="custom_1_1_icon">사용자 지정 1:1 아이콘</string>
     <string name="debug_logs">디버그 로그</string>
     <string name="default_icon">기본 아이콘</string>
     <string name="default_placeholder_icon">기본 자리표시자 아이콘</string>
@@ -806,6 +805,17 @@
     <string name="car_button_name">이름</string>
     <string name="car_button_description">CarPlay 앱 목록에 이 아이콘과 이름이 표시됩니다. 탭하면 차량 자체 화면으로 돌아갑니다. 변경 사항은 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="car_button_saved_next_connection">저장했습니다. 다음 연결 때 CarPlay에 새 아이콘과 이름이 표시됩니다.</string>
+    <string name="settings_car_brand_title">차량 브랜드 뱃지</string>
+    <string name="settings_car_brand_summary">CarPlay 앱 목록에 표시되는 BYD 계열 뱃지를 선택합니다. 이름이 기본값 또는 뱃지 이름일 때만 함께 업데이트됩니다. 뱃지를 선택하면 사용자 지정 이미지가 교체됩니다.</string>
+    <string name="settings_car_brand_default">기본 (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">브랜드 뱃지로 재설정</string>
+<string name="settings_car_brand_reset">기본 뱃지와 이름으로 복원</string>
     <string name="this_head_unit_has_no_image_picker">이 헤드 유닛에는 이미지 선택기가 없습니다.</string>
     <string name="settings_ambient_title">무드 조명 (실험 기능)</string>
     <string name="settings_ambient_configuration">무드 조명 설정</string>

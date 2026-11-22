@@ -18,6 +18,7 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -5621,10 +5622,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun carButtonControls(parent: LinearLayout) {
+        val badge = CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this))
         val custom = AirPlayPersistence.loadCustomAirPlayIconFile(this)?.let { BitmapFactory.decodeFile(it.absolutePath) }
         val preview = row().apply { gravity = Gravity.CENTER_VERTICAL }
         preview.addView(ImageView(this).apply {
-            setImageBitmap(custom ?: BitmapFactory.decodeResource(resources, R.raw.ic_car_home))
+            setImageBitmap(custom ?: BitmapFactory.decodeResource(resources, badge.iconRawRes))
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = rounded(SURFACE, BORDER)
             clipToOutline = true
@@ -5632,9 +5634,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }, LinearLayout.LayoutParams(dp(72), dp(72)).apply { marginEnd = dp(16) })
         val text = column()
         text.addView(label(getString(R.string.car_button_icon), 18, TEXT, true))
-        text.addView(label(getString(if (custom != null) R.string.car_button_icon_custom else R.string.default_icon), 14, MUTED).apply { setPadding(0, dp(6), 0, 0) })
+        text.addView(label(
+            if (custom != null) getString(R.string.car_button_icon_custom) else getString(badge.labelRes),
+            14, MUTED,
+        ).apply { setPadding(0, dp(6), 0, 0) })
         preview.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
         parent.addView(preview)
+        // Brand badge row sits above "Choose image" so the preset picks the badge before a custom image.
+        val brandTitle = getString(R.string.settings_car_brand_title)
+        parent.addView(button("$brandTitle · ${getString(badge.labelRes)}", false) {
+            showCarBrandPicker(badge)
+        }, settingsButtonLayout())
+        parent.addView(choiceNote(getString(R.string.settings_car_brand_summary)))
         parent.addView(button(getString(R.string.choose_image), false) {
             launchCarButtonImagePicker(
                 openDocument = { iconDocumentPicker.launch(arrayOf("image/*")) },
@@ -5642,7 +5653,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 documentPickerIsSystem = documentPickerIsSystem(),
             ).onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, settingsButtonLayout())
-        if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
+        if (custom != null) parent.addView(button(getString(R.string.settings_car_brand_reset_image), false) {
             AirPlayPersistence.clearCustomAirPlayIcon(this)
             refreshCarButton()
             carButtonSaved()
@@ -5655,7 +5666,72 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 carButtonSaved()
             }
         }, settingsButtonLayout())
-        parent.addView(label(getString(R.string.car_button_description), 14, MUTED).apply { setPadding(0, dp(12), 0, 0) })
+        if (custom != null || badge != CarBrandBadge.DEFAULT ||
+            name != AirPlayPersistence.DEFAULT_OEM_LABEL
+        ) parent.addView(
+            button(getString(R.string.settings_car_brand_reset), false) {
+                AirPlayPersistence.clearCustomAirPlayIcon(this)
+                AirPlayPersistence.saveCarBrand(this, CarBrandBadge.DEFAULT.key)
+                AirPlayPersistence.saveOemLabel(this, AirPlayPersistence.DEFAULT_OEM_LABEL)
+                refreshCarButton()
+                carButtonSaved()
+            }, settingsButtonLayout())
+        parent.addView(label(getString(R.string.car_button_description), 14, MUTED))
+    }
+
+    private fun showCarBrandPicker(current: CarBrandBadge) {
+        var pending = current
+        val checkedIndex = CarBrandBadge.entries.indexOf(current)
+        val dialog = appDialogBuilder().setTitle(getString(R.string.settings_car_brand_title))
+            .setSingleChoiceItems(carBrandAdapter(), checkedIndex) { _, index ->
+                pending = CarBrandBadge.entries[index]
+            }
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
+                // Match choice(): saving without changing the selection does nothing.
+                if (pending == current) return@setPositiveButton
+                AirPlayPersistence.saveCarBrand(this, pending.key)
+                // The name is only replaced while it is still the default or a name a previous badge
+                // wrote. A name the user typed stays untouched.
+                val currentName = AirPlayPersistence.loadOemLabel(this)
+                if (currentName == AirPlayPersistence.DEFAULT_OEM_LABEL ||
+                    CarBrandBadge.entries.filter { it != pending }.any { badgeName(it) == currentName }
+                ) {
+                    AirPlayPersistence.saveOemLabel(this, badgeName(pending))
+                }
+                // Drop the gallery image so the new badge shows through.
+                AirPlayPersistence.clearCustomAirPlayIcon(this)
+                refreshCarButton()
+                carButtonSaved()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .create()
+        dialog.prepareSingleChoiceRows()
+        dialog.show()
+    }
+
+    // The default badge keeps the literal "BYD" label rather than its settings description.
+    private fun badgeName(badge: CarBrandBadge): String =
+        if (badge == CarBrandBadge.DEFAULT) AirPlayPersistence.DEFAULT_OEM_LABEL
+        else getString(badge.labelRes)
+
+    private fun carBrandAdapter(): ListAdapter = object : ArrayAdapter<CarBrandBadge>(
+        appDialogContext(),
+        android.R.layout.simple_list_item_single_choice,
+        android.R.id.text1,
+        CarBrandBadge.entries,
+    ) {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = super.getView(position, convertView, parent) as CheckedTextView
+            val badge = getItem(position)!!
+            view.text = getString(badge.labelRes)
+            val icon = BitmapDrawable(
+                resources,
+                BitmapFactory.decodeResource(resources, badge.iconRawRes),
+            ).apply { setBounds(0, 0, dp(28), dp(28)) }
+            view.setCompoundDrawablesRelative(icon, null, null, null)
+            view.compoundDrawablePadding = dp(16)
+            return view
+        }
     }
 
     private fun carButtonSaved() {

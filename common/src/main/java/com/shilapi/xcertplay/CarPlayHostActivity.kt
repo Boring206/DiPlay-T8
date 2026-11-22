@@ -4076,7 +4076,10 @@ open class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(10) },
         )
-        val status = menuText("", 14f, MENU_SECONDARY)
+        // Pin to the view's start edge (right in RTL) so Latin badge names line up under the icon too.
+        val status = menuText("", 14f, MENU_SECONDARY).apply {
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        }
         section.addView(
             status,
             LinearLayout.LayoutParams(
@@ -5169,7 +5172,9 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun defaultAirPlayIconBytes(): ByteArray =
         // Shown in CarPlay's app list as the "back to the car" button.
-        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
+        resources.openRawResource(
+            CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this)).iconRawRes,
+        ).use { it.readBytes() }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
@@ -5181,10 +5186,13 @@ open class CarPlayHostActivity : ComponentActivity() {
                 AirPlayPersistence.clearCustomAirPlayIcon(this)
             }
         }
-        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, R.raw.placeholder_icon)
+        val badge = CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this))
+        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, badge.iconRawRes)
         preview.setImageBitmap(bitmap)
+        // Share the exact settings-vehicle wording: "Custom icon", else the badge's own label.
         iconStatusView?.text =
-            if (customBitmap != null) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
+            if (customBitmap != null) getString(R.string.car_button_icon_custom)
+            else getString(badge.labelRes)
     }
 
     private fun currentActivitySize(): DisplaySize? {

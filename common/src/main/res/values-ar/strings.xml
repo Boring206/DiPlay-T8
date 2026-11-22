@@ -186,7 +186,6 @@
     <string name="could_not_save_image">تعذّر حفظ الصورة</string>
     <string name="could_not_save_the_report">تعذّر حفظ التقرير</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">تعذّر بدء CarPlay. عد إلى DiPlay وتحقق من أذونات التطبيق.</string>
-    <string name="custom_1_1_icon">أيقونة مخصصة 1:1</string>
     <string name="debug_logs">سجلات تصحيح</string>
     <string name="default_icon">الأيقونة الافتراضية</string>
     <string name="default_placeholder_icon">أيقونة بديلة افتراضية</string>
@@ -712,6 +711,17 @@
     <string name="car_button_name">الاسم</string>
     <string name="car_button_description">يعرض CarPlay هذه الأيقونة وهذا الاسم في قائمة التطبيقات. اضغط عليها للعودة إلى شاشة السيارة. تُطبَّق التغييرات عند اتصال CarPlay في المرة القادمة.</string>
     <string name="car_button_saved_next_connection">تم الحفظ. سيعرض CarPlay الأيقونة والاسم الجديدين عند اتصاله في المرة القادمة.</string>
+    <string name="settings_car_brand_title">شعار العلامة التجارية</string>
+    <string name="settings_car_brand_summary">اختر شعار سلسلة BYD الذي يعرضه CarPlay في قائمة التطبيقات. يُحدَّث الاسم فقط عندما يظل الافتراضي أو اسم شعار. اختيار شعار يستبدل أي صورة مخصصة.</string>
+    <string name="settings_car_brand_default">افتراضي (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">إعادة التعيين إلى شعار العلامة</string>
+<string name="settings_car_brand_reset">استعادة الشعار والاسم الافتراضيين</string>
     <string name="this_head_unit_has_no_image_picker">لا يحتوي نظام السيارة هذا على أداة لاختيار الصور.</string>
     <string name="settings_interface_size">حجم الواجهة</string>
     <string name="settings_interface_size_auto">تلقائي</string>

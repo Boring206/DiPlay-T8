@@ -186,7 +186,6 @@
     <string name="could_not_save_image">Görsel kaydedilemedi</string>
     <string name="could_not_save_the_report">Rapor kaydedilemedi</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay başlatılamadı. DiPlay\'e dönün ve uygulama izinlerini kontrol edin.</string>
-    <string name="custom_1_1_icon">Özel 1:1 simge</string>
     <string name="debug_logs">Hata ayıklama günlükleri</string>
     <string name="default_icon">Varsayılan simge</string>
     <string name="default_placeholder_icon">Varsayılan yer tutucu simge</string>
@@ -775,6 +774,17 @@
     <string name="car_button_name">Ad</string>
     <string name="car_button_description">CarPlay bu simgeyi ve adı uygulama listesinde gösterir. Aracın kendi ekranına dönmek için dokunun. Değişiklikler CarPlay\'in bir sonraki bağlanışında geçerli olur.</string>
     <string name="car_button_saved_next_connection">Kaydedildi. CarPlay bir sonraki bağlanışında yeni simgeyi ve adı gösterecektir.</string>
+    <string name="settings_car_brand_title">Marka amblemi</string>
+    <string name="settings_car_brand_summary">CarPlay uygulama listesinde gösterilecek BYD serisi amblemini seçin. Ad yalnızca varsayılan veya bir amblem adı olduğunda güncellenir. Amblem seçmek özel görüntünün yerini alır.</string>
+    <string name="settings_car_brand_default">Varsayılan (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Marka amblemine sıfırla</string>
+<string name="settings_car_brand_reset">Varsayılan amblemi ve adı geri yükle</string>
     <string name="this_head_unit_has_no_image_picker">Bu ana ünitede resim seçici yok.</string>
     <string name="settings_ambient_title">Ambiyans aydınlatması (deneysel)</string>
     <string name="settings_ambient_configuration">Ambiyans ışığı ayarları</string>

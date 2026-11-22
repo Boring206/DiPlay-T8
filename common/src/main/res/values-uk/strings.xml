@@ -190,7 +190,6 @@
     <string name="could_not_save_image">Не вдалося зберегти зображення</string>
     <string name="could_not_save_the_report">Не вдалося зберегти звіт</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не вдалося запустити CarPlay. Поверніться до DiPlay та перевірте дозволи застосунку.</string>
-    <string name="custom_1_1_icon">Власний значок 1:1</string>
     <string name="debug_logs">Журнали налагодження</string>
     <string name="default_icon">Типовий значок</string>
     <string name="default_placeholder_icon">Типовий значок-заповнювач</string>
@@ -724,6 +723,17 @@
     <string name="car_button_name">Назва</string>
     <string name="car_button_description">CarPlay показує цей значок і назву у списку застосунків. Натисніть його, щоб повернутися на екран автомобіля. Зміни застосуються під час наступного підключення CarPlay.</string>
     <string name="car_button_saved_next_connection">Збережено. CarPlay покаже новий значок і назву під час наступного підключення.</string>
+    <string name="settings_car_brand_title">Значок бренду</string>
+    <string name="settings_car_brand_summary">Виберіть значок лінійки BYD, який CarPlay показує в списку застосунків. Назва оновлюється, лише якщо вона типова або збігається з назвою значка. Вибір значка замінює користувацьке зображення.</string>
+    <string name="settings_car_brand_default">Типово (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Скинути на фірмовий значок</string>
+<string name="settings_car_brand_reset">Відновити типові значок і назву</string>
     <string name="this_head_unit_has_no_image_picker">На цьому головному пристрої немає вибору зображень.</string>
     <string name="settings_interface_size">Розмір інтерфейсу</string>
     <string name="settings_interface_size_auto">Автоматично</string>

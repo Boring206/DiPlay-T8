@@ -68,6 +68,7 @@ object AirPlayPersistence {
     private const val KEY_MANUFACTURER = "manufacturer"
     private const val KEY_MODEL = "model"
     private const val KEY_OEM_LABEL = "oem_label"
+    private const val KEY_CAR_BRAND = "car_brand_badge"
     private const val KEY_APP_APPEARANCE = "app_appearance"
     private const val KEY_CARPLAY_NIGHT_MODE = "carplay_night_mode"
     private const val KEY_CARPLAY_NIGHT_START = "carplay_night_start_minute"
@@ -147,6 +148,7 @@ object AirPlayPersistence {
     const val DEFAULT_MANUFACTURER = "DiPlay"
     const val DEFAULT_MODEL = "DiPlay"
     const val DEFAULT_OEM_LABEL = "BYD"
+    const val DEFAULT_CAR_BRAND = "default"
     const val DEFAULT_MFI_I2C_PATH = "/dev/i2c-1"
 
     fun loadAmbientDelaySeconds(context: Context): Int =
@@ -660,6 +662,22 @@ object AirPlayPersistence {
     fun saveOemLabel(context: Context, oemLabel: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_OEM_LABEL, oemLabel)
+            .apply()
+    }
+
+    /**
+     * BYD-series badge preset shown in CarPlay: "default" uses the packaged BYD icon, any other value
+     * maps to a matching res/raw icon. A custom gallery image (see [loadCustomAirPlayIconFile]) still
+     * takes priority over this preset.
+     */
+    fun loadCarBrand(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_CAR_BRAND, DEFAULT_CAR_BRAND)
+            .orEmpty().ifBlank { DEFAULT_CAR_BRAND }
+
+    fun saveCarBrand(context: Context, brand: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_CAR_BRAND, brand)
             .apply()
     }
 

@@ -186,7 +186,6 @@
     <string name="could_not_save_image">Не удалось сохранить изображение</string>
     <string name="could_not_save_the_report">Не удалось сохранить отчёт</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не удалось запустить CarPlay. Вернитесь в DiPlay и проверьте разрешения приложения.</string>
-    <string name="custom_1_1_icon">Пользовательский значок 1:1</string>
     <string name="debug_logs">Отладочные журналы</string>
     <string name="default_icon">Значок по умолчанию</string>
     <string name="default_placeholder_icon">Значок-заглушка по умолчанию</string>
@@ -712,6 +711,17 @@
     <string name="car_button_name">Название</string>
     <string name="car_button_description">CarPlay показывает этот значок и название в списке приложений. Нажмите его, чтобы вернуться на экран автомобиля. Изменения применятся при следующем подключении CarPlay.</string>
     <string name="car_button_saved_next_connection">Сохранено. CarPlay покажет новый значок и название при следующем подключении.</string>
+    <string name="settings_car_brand_title">Значок бренда</string>
+    <string name="settings_car_brand_summary">Выберите значок серии BYD, который CarPlay показывает в списке приложений. Название обновляется, только если оно по умолчанию или совпадает с названием значка. Выбор значка заменяет пользовательское изображение.</string>
+    <string name="settings_car_brand_default">По умолчанию (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Сбросить на фирменный значок</string>
+<string name="settings_car_brand_reset">Восстановить значок и название по умолчанию</string>
     <string name="this_head_unit_has_no_image_picker">На этом головном устройстве нет выбора изображений.</string>
     <string name="settings_interface_size">Размер интерфейса</string>
     <string name="settings_interface_size_auto">Автоматически</string>

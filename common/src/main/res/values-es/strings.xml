@@ -186,7 +186,6 @@
     <string name="could_not_save_image">No se pudo guardar la imagen</string>
     <string name="could_not_save_the_report">No se pudo guardar el informe</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">No se pudo iniciar CarPlay. Vuelve a DiPlay y comprueba los permisos de la aplicación.</string>
-    <string name="custom_1_1_icon">Icono personalizado 1:1</string>
     <string name="debug_logs">Registros de depuración</string>
     <string name="default_icon">Icono predeterminado</string>
     <string name="default_placeholder_icon">Icono de marcador de posición predeterminado</string>
@@ -712,6 +711,17 @@
     <string name="car_button_name">Nombre</string>
     <string name="car_button_description">CarPlay muestra este icono y este nombre en su lista de apps. Tócalo para volver a la pantalla del coche. Los cambios se aplican la próxima vez que CarPlay se conecte.</string>
     <string name="car_button_saved_next_connection">Guardado. CarPlay mostrará el nuevo icono y nombre la próxima vez que se conecte.</string>
+    <string name="settings_car_brand_title">Insignia de marca</string>
+    <string name="settings_car_brand_summary">Elige la insignia de la serie BYD que CarPlay muestra en su lista de apps. El nombre solo se actualiza si sigue siendo el predeterminado o el nombre de una insignia. Elegir una insignia sustituye la imagen personalizada.</string>
+    <string name="settings_car_brand_default">Predeterminado (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Restablecer al icono de la marca</string>
+<string name="settings_car_brand_reset">Restablecer la insignia y el nombre predeterminados</string>
     <string name="this_head_unit_has_no_image_picker">Esta unidad principal no tiene selector de imágenes.</string>
     <string name="settings_interface_size">Tamaño de la interfaz</string>
     <string name="settings_interface_size_auto">Automático</string>

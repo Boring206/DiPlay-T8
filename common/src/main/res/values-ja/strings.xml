@@ -190,7 +190,6 @@
     <string name="could_not_save_image">画像を保存できませんでした</string>
     <string name="could_not_save_the_report">レポートを保存できませんでした</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlayを起動できませんでした。DiPlayに戻り、アプリの権限を確認してください。</string>
-    <string name="custom_1_1_icon">カスタムの正方形アイコン</string>
     <string name="debug_logs">デバッグログ</string>
     <string name="default_icon">標準アイコン</string>
     <string name="default_placeholder_icon">標準の仮アイコン</string>
@@ -816,6 +815,17 @@
     <string name="car_button_name">名前</string>
     <string name="car_button_description">このアイコンと名前がCarPlayのアプリ一覧に表示されます。タップすると車の画面に戻ります。変更は次回CarPlay接続時から有効です。</string>
     <string name="car_button_saved_next_connection">保存しました。新しいアイコンと名前は次回のCarPlay接続時に表示されます。</string>
+    <string name="settings_car_brand_title">カーブランドバッジ</string>
+    <string name="settings_car_brand_summary">CarPlay がアプリ一覧に表示する BYD シリーズのバッジを選択します。名前が既定値またはバッジ名の場合にのみ更新されます。バッジを選ぶとカスタム画像は置き換えられます。</string>
+    <string name="settings_car_brand_default">既定 (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">ブランドバッジにリセット</string>
+<string name="settings_car_brand_reset">既定のバッジと名前に戻す</string>
     <string name="this_head_unit_has_no_image_picker">この車載端末には画像選択機能がありません。</string>
     <string name="settings_ambient_title">アンビエントライト（実験的機能）</string>
     <string name="settings_ambient_configuration">アンビエントライトの設定</string>

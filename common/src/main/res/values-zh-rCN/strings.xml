@@ -186,7 +186,6 @@
     <string name="could_not_save_image">无法保存图片</string>
     <string name="could_not_save_the_report">无法保存报告</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">无法启动 CarPlay。请返回 DiPlay 检查应用权限。</string>
-    <string name="custom_1_1_icon">自定义 1:1 图标</string>
     <string name="debug_logs">调试日志</string>
     <string name="default_icon">默认图标</string>
     <string name="default_placeholder_icon">默认占位图标</string>
@@ -772,6 +771,17 @@
     <string name="car_button_name">名称</string>
     <string name="car_button_description">CarPlay 会在应用列表中显示此图标和名称。点按即可返回车辆自带的界面。更改将在 CarPlay 下次连接时生效。</string>
     <string name="car_button_saved_next_connection">已保存。CarPlay 将在下次连接时显示新的图标和名称。</string>
+    <string name="settings_car_brand_title">车标品牌</string>
+    <string name="settings_car_brand_summary">选择 CarPlay 在应用列表中显示的比亚迪车标。仅当名称仍为默认或车标名称时才一并更新；选择车标会替换自定义图片。</string>
+    <string name="settings_car_brand_default">默认（BYD）</string>
+    <string name="settings_car_brand_wangchao">王朝</string>
+    <string name="settings_car_brand_haiyang">海洋</string>
+    <string name="settings_car_brand_fangchengbao">方程豹</string>
+    <string name="settings_car_brand_denza">腾势</string>
+    <string name="settings_car_brand_yangwang">仰望</string>
+    <string name="settings_car_brand_linghui">领汇</string>
+    <string name="settings_car_brand_reset_image">重置为品牌车标</string>
+<string name="settings_car_brand_reset">恢复默认车标与名称</string>
     <string name="this_head_unit_has_no_image_picker">此车机没有图片选择器。</string>
 
     <!-- Optional BYD ambient lighting. -->

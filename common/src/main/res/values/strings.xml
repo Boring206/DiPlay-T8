@@ -192,7 +192,6 @@
     <string name="could_not_save_image">Could not save image</string>
     <string name="could_not_save_the_report">Could not save the report</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Could not start CarPlay. Return to DiPlay and check app permissions.</string>
-    <string name="custom_1_1_icon">Custom 1:1 icon</string>
     <string name="debug_logs">Debug logs</string>
     <string name="default_icon">Default icon</string>
     <string name="default_placeholder_icon">Default placeholder icon</string>
@@ -816,6 +815,17 @@
     <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
     <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
     <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
+    <string name="settings_car_brand_title">Car brand badge</string>
+    <string name="settings_car_brand_summary">Picks the BYD-series badge CarPlay shows in its app list. The name is only updated when it is still the default or a badge name. Choosing a badge replaces a custom image.</string>
+    <string name="settings_car_brand_default">Default (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Reset to brand badge</string>
+<string name="settings_car_brand_reset">Restore default badge and name</string>
 
     <!-- Optional BYD ambient lighting. -->
     <string name="settings_ambient_title">Ambient lighting (experimental)</string>

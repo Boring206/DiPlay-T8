@@ -185,7 +185,6 @@
     <string name="could_not_save_image">無法儲存圖片</string>
     <string name="could_not_save_the_report">無法儲存報告</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">無法啟動 CarPlay。請返回 DiPlay 檢查 App 權限。</string>
-    <string name="custom_1_1_icon">自訂 1:1 圖示</string>
     <string name="debug_logs">除錯記錄</string>
     <string name="default_icon">預設圖示</string>
     <string name="default_placeholder_icon">預設預留位置圖示</string>
@@ -723,6 +722,17 @@
     <string name="car_button_in_carplay">CarPlay 中的車輛按鈕</string>
     <string name="car_button_name">名稱</string>
     <string name="car_button_saved_next_connection">已儲存。下次連線時，CarPlay 會顯示新的圖示和名稱。</string>
+    <string name="settings_car_brand_title">車標品牌</string>
+    <string name="settings_car_brand_summary">選擇 CarPlay 在應用程式清單中顯示的比亞迪車標。僅當名稱仍為預設或車標名稱時才一併更新；選擇車標會取代自訂圖片。</string>
+    <string name="settings_car_brand_default">預設（BYD）</string>
+    <string name="settings_car_brand_wangchao">王朝</string>
+    <string name="settings_car_brand_haiyang">海洋</string>
+    <string name="settings_car_brand_fangchengbao">方程豹</string>
+    <string name="settings_car_brand_denza">騰勢</string>
+    <string name="settings_car_brand_yangwang">仰望</string>
+    <string name="settings_car_brand_linghui">領匯</string>
+    <string name="settings_car_brand_reset_image">重置為品牌車標</string>
+<string name="settings_car_brand_reset">恢復預設車標與名稱</string>
     <string name="carplay_call_controls_experimental">CarPlay 通話、Siri 與媒體按鍵（實驗性）</string>
     <string name="carplay_call_controls_experimental_description">電話鍵接聽 CarPlay 來電，掛斷鍵／模式鍵拒接或掛斷。來電響鈴時，也可用下一首接聽、上一首拒接；通話接通後，上下首不會掛斷通話。同時啟用 DiLink 3 專用 Siri 與播放／暫停按鍵。預設關閉，車型與韌體支援情況需實車確認；儀表通話顯示另行設定。</string>
     <string name="carplay_calls_on_dashboard">在儀表板顯示 CarPlay 通話</string>
