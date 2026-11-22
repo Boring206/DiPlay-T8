@@ -452,26 +452,8 @@ internal object CarPlayMediaKeys {
      * A wheel long press with the long-press seek setting on (#1190): Fast Forward or Rewind, held on the
      * iPhone by [seekHold]. Main thread.
      */
-    private fun seek(index: Int, source: String, event: KeyEvent) {
-        val skip = if (index == CarPlayMediaButton.FAST_FORWARD) CarPlayMediaButton.NEXT else CarPlayMediaButton.PREVIOUS
-        when {
-            event.action == KeyEvent.ACTION_UP -> seekHold.up(index, source, event.eventTime)
-            event.action != KeyEvent.ACTION_DOWN -> Unit
-            event.repeatCount > 0 -> seekHold.repeated(index)
-            // The car's video player skips for a long press as for next and previous; the iPhone is not asked.
-            CarPlayVideo.onMediaKey(skip) -> noteMediaKey("media key $source -> car video player $skip")
-            else -> {
-                val active = synchronized(this) { controller }
-                when {
-                    active == null -> noteMediaKey("media key $source not sent: no CarPlay session")
-                    // The iPhone was told of the seek keys when this connection started.
-                    !active.mediaSeekKeysDeclared() ->
-                        noteMediaKey("media key $source not sent: long-press seek starts at the next connection")
-                    else -> seekHold.down(index, source, event.eventTime, active::holdMediaButton, active::releaseMediaButton)
-                }
-            }
-        }
-    }
+    private fun seek(index: Int, source: String, event: KeyEvent) =
+        seekHold.onKey(index, source, event, CarPlayVideo::onMediaKey) { synchronized(this) { controller } }
 
     private fun noteMediaKey(message: String) {
         Log.i(TAG, message)
@@ -605,8 +587,8 @@ internal object CarPlayMediaKeys {
  * goes to [notUsedReleased] with when it came, so the report shows whether a car sends a long press at its
  * threshold or at the release (#1190).
  *
- * With [longPressSeek] on, DiLink 3's long-press next and previous keys ([seekKeys]) go to [seek] as
- * Fast Forward and Rewind, press and release alike.
+ * With [longPressSeek] on, DiLink 3's long-press next and previous keys ([seekKeys], matched by the name
+ * KeyEvent.keyCodeToString gives their code) go to [seek] as Fast Forward and Rewind, press and release alike.
  */
 internal class CarPlayMediaCallback(
     private val experimentalDiLink3Keys: () -> Boolean = { false },
@@ -615,9 +597,10 @@ internal class CarPlayMediaCallback(
     private val seek: (index: Int, source: String, event: KeyEvent) -> Unit = { _, _, _ -> },
     private val notUsed: (source: String) -> Unit = {},
     private val notUsedReleased: (source: String, timing: String) -> Unit = { _, _ -> },
+    private val uptime: () -> Long = SystemClock::uptimeMillis,
     private val send: (index: Int, source: String) -> Unit,
 ) : MediaSession.Callback() {
-    private val unusedTiming = KeyHoldTiming<Int>()
+    private val unusedTiming = KeyHoldTiming<Int>(uptime)
 
     override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
         @Suppress("DEPRECATION")

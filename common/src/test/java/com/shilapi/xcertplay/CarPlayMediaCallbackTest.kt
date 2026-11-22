@@ -79,34 +79,53 @@ class CarPlayMediaCallbackTest {
     // #1190: whether a car sends a long press at its threshold or at the release.
     @Test fun anUnusedKeysReleaseSaysWhenItCameAfterItsDownTime() {
         val released = mutableListOf<Pair<String, String>>()
-        val callback = CarPlayMediaCallback(notUsedReleased = { name, timing -> released += name to timing }) { index, _ -> sent += index }
+        var uptime = 0L
+        val callback = CarPlayMediaCallback(
+            notUsedReleased = { name, timing -> released += name to timing },
+            uptime = { uptime },
+        ) { index, _ -> sent += index }
         val skip = KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD
         val name = KeyEvent.keyCodeToString(skip)
+        /** [event] arrives at uptime [at]. */
+        fun arrive(at: Long, event: KeyEvent) {
+            uptime = at
+            callback.onMediaButtonEvent(button(event))
+        }
         // An instant down/up pair.
-        callback.onMediaButtonEvent(button(KeyEvent(1_000, 1_000, KeyEvent.ACTION_DOWN, skip, 0)))
-        callback.onMediaButtonEvent(button(KeyEvent(1_000, 1_004, KeyEvent.ACTION_UP, skip, 0)))
+        arrive(1_000, KeyEvent(1_000, 1_000, KeyEvent.ACTION_DOWN, skip, 0))
+        arrive(1_004, KeyEvent(1_000, 1_004, KeyEvent.ACTION_UP, skip, 0))
         // Held for four seconds, repeating.
-        callback.onMediaButtonEvent(button(KeyEvent(2_000, 2_000, KeyEvent.ACTION_DOWN, skip, 0)))
-        callback.onMediaButtonEvent(button(KeyEvent(2_000, 2_500, KeyEvent.ACTION_DOWN, skip, 1)))
-        callback.onMediaButtonEvent(button(KeyEvent(2_000, 2_600, KeyEvent.ACTION_DOWN, skip, 2)))
-        callback.onMediaButtonEvent(button(KeyEvent(2_000, 6_200, KeyEvent.ACTION_UP, skip, 0)))
+        arrive(2_000, KeyEvent(2_000, 2_000, KeyEvent.ACTION_DOWN, skip, 0))
+        arrive(2_500, KeyEvent(2_000, 2_500, KeyEvent.ACTION_DOWN, skip, 1))
+        arrive(2_600, KeyEvent(2_000, 2_600, KeyEvent.ACTION_DOWN, skip, 2))
+        arrive(6_200, KeyEvent(2_000, 6_200, KeyEvent.ACTION_UP, skip, 0))
         // Sent at the threshold as a pair dated from the press.
-        callback.onMediaButtonEvent(button(KeyEvent(7_000, 7_800, KeyEvent.ACTION_DOWN, skip, 0)))
-        callback.onMediaButtonEvent(button(KeyEvent(7_000, 7_801, KeyEvent.ACTION_UP, skip, 0)))
+        arrive(7_800, KeyEvent(7_000, 7_800, KeyEvent.ACTION_DOWN, skip, 0))
+        arrive(7_801, KeyEvent(7_000, 7_801, KeyEvent.ACTION_UP, skip, 0))
+        // Built by the firmware with no stamps at all, released three seconds later.
+        arrive(8_000, KeyEvent(KeyEvent.ACTION_DOWN, skip))
+        arrive(11_000, KeyEvent(KeyEvent.ACTION_UP, skip))
+        // A downTime of 0 with a real eventTime: no span from the stamps.
+        arrive(12_000, KeyEvent(0, 12_000, KeyEvent.ACTION_DOWN, skip, 0))
+        arrive(12_010, KeyEvent(0, 12_010, KeyEvent.ACTION_UP, skip, 0))
         // A release with no press seen, and a used key's release, add nothing.
-        callback.onMediaButtonEvent(button(KeyEvent(9_000, 9_000, KeyEvent.ACTION_UP, skip, 0)))
-        callback.onMediaButtonEvent(button(KeyEvent(9_000, 9_000, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT, 0)))
-        callback.onMediaButtonEvent(button(KeyEvent(9_000, 9_900, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT, 0)))
+        arrive(13_000, KeyEvent(13_000, 13_000, KeyEvent.ACTION_UP, skip, 0))
+        arrive(13_000, KeyEvent(13_000, 13_000, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT, 0))
+        arrive(13_900, KeyEvent(13_000, 13_900, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT, 0))
 
         assertEquals(listOf(
-            name to "; released at +0 s",
-            name to "; released at +4.2 s, 2 repeats",
-            name to "; released at +0.8 s, down event at +0.8 s",
+            name to "; released at +0 s, arrived +0 s after the press",
+            name to "; released at +4.2 s, arrived +4.2 s after the press, 2 repeats",
+            name to "; released at +0.8 s, arrived +0 s after the press, down event at +0.8 s",
+            name to "; released, no downTime, arrived +3.0 s after the press",
+            name to "; released, no downTime, arrived +0 s after the press",
         ), released)
         assertEquals(listOf(CarPlayMediaButton.NEXT), sent)
     }
 
     private val dilink3 = mapOf("KEYCODE_AUTO_MEDIA_NEXT_LP" to 401, "KEYCODE_AUTO_MEDIA_PREVIOUS_LP" to 402)
+    private val dilink3Names = dilink3.entries.associate { (name, code) -> code to name }
+    private fun dilink3Name(code: Int) = dilink3Names[code] ?: KeyEvent.keyCodeToString(code)
 
     @Test fun longPressKeysSeekOnlyWithTheSettingOn() {
         var enabled = false
@@ -114,7 +133,7 @@ class CarPlayMediaCallbackTest {
         val notUsed = mutableListOf<String>()
         val callback = CarPlayMediaCallback(
             longPressSeek = { enabled },
-            seekKeys = LongPressSeekKeys { dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN },
+            seekKeys = LongPressSeekKeys({ dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN }, ::dilink3Name),
             seek = { index, _, event -> seeks += Triple(index, event.action, event.repeatCount) },
             notUsed = { notUsed += it },
         ) { index, _ -> sent += index }
@@ -147,11 +166,29 @@ class CarPlayMediaCallbackTest {
         assertEquals(5, seeks.size)
     }
 
+    // Android 10: keyCodeFromString gives KEYCODE_UNKNOWN above the SDK's last key code; the name still matches.
+    @Test fun longPressKeysThatKeyCodeFromStringCannotResolveStillSeek() {
+        val seeks = mutableListOf<Int>()
+        val keys = LongPressSeekKeys({ KeyEvent.KEYCODE_UNKNOWN }, ::dilink3Name)
+        val callback = CarPlayMediaCallback(
+            longPressSeek = { true },
+            seekKeys = keys,
+            seek = { index, _, event -> if (event.action == KeyEvent.ACTION_DOWN) seeks += index },
+        ) { index, _ -> sent += index }
+        callback.onMediaButtonEvent(button(KeyEvent(KeyEvent.ACTION_DOWN, 401)))
+        callback.onMediaButtonEvent(button(KeyEvent(KeyEvent.ACTION_DOWN, 402)))
+        assertEquals(listOf(CarPlayMediaButton.FAST_FORWARD, CarPlayMediaButton.REWIND), seeks)
+        // So the toggle shows, and the report names the numbers.
+        assertEquals(true, keys.available)
+        assertEquals("next=401 previous=402", keys.describe())
+        assertEquals(emptyList<Int>(), sent)
+    }
+
     @Test fun onAHeadUnitThatDoesNotNameTheLongPressKeysTheSettingChangesNothing() {
         val seeks = mutableListOf<Int>()
         val callback = CarPlayMediaCallback(
             longPressSeek = { true },
-            seekKeys = LongPressSeekKeys { KeyEvent.KEYCODE_UNKNOWN },
+            seekKeys = LongPressSeekKeys({ KeyEvent.KEYCODE_UNKNOWN }, KeyEvent::keyCodeToString),
             seek = { index, _, _ -> seeks += index },
         ) { index, _ -> sent += index }
         for (code in listOf(KeyEvent.KEYCODE_UNKNOWN, 401, KeyEvent.KEYCODE_MEDIA_NEXT)) {
