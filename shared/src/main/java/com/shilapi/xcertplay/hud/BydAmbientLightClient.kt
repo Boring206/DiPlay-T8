@@ -88,6 +88,28 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
         return result
     }
 
+    /**
+     * The lamp as the worker reads it now becomes the value the next apply is compared with, which ends a hold
+     * (#1332). Runs on the executor like [apply], never in the middle of another exchange.
+     */
+    fun rebase(): CompletableFuture<Unit> {
+        val result = CompletableFuture<Unit>()
+        val ticket = generation.get()
+        executor.execute {
+            if (closed || status.phase != Phase.ACTIVE || ticket != generation.get()) {
+                result.completeExceptionally(IllegalStateException("ambient-session-not-active")); return@execute
+            }
+            try {
+                check(exchange("rebase") == "rebased") { "worker-rebase-failed" }
+                result.complete(Unit)
+            } catch (t: Throwable) {
+                result.completeExceptionally(t)
+                fail(ticket, safe(t))
+            }
+        }
+        return result
+    }
+
     /** Restoration is never coalesced or dropped; queued cosmetic applies are discarded first. */
     fun stop(): CompletableFuture<State?> = submit {
         val ticket = generation.get()

@@ -50,6 +50,7 @@ object AmbientMusicController {
                         BydAmbientLightPolicy.Snapshot(s.frontColor, s.backColor, s.frontBrightness, s.backBrightness, s.area)
                     })
                 }
+                override fun rebase() = real.rebase()
                 override fun stop() = real.stop().thenApply { Unit }
                 // stop's future completes only after closeTransport, including its failure path.
                 override fun close() = real.close()
@@ -71,6 +72,9 @@ object AmbientMusicController {
             runCatching { diagnosticSink?.invoke(line) }
         },
     )
+
+    /** Ends any lamp hold (#1332), on the executor; tests record the calls. */
+    @Volatile internal var rebaseLamp: (String) -> Unit = { reason -> lampSession.rebase(reason) }
 
     // The 20 Hz lamp update, scheduled only while the feature (or the car's own rhythm) is on; turning it off
     // restores the lamps by itself.
@@ -105,7 +109,8 @@ object AmbientMusicController {
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled; envelope = null; playback = null
             idleSinceMillis = longIdle()
-            if (!settings.enabled) restoreOriginal()
+            // A hold never carries into the next CarPlay session, and this session's report says so if it ends one.
+            if (!settings.enabled) restoreOriginal() else rebaseLamp("new CarPlay session")
             updateTicking()
         }
         return token
@@ -204,7 +209,8 @@ object AmbientMusicController {
             resetColors()
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled
-            if (!settings.enabled) restoreOriginal()
+            // The driver's own DiPlay choice always takes effect again, even during a hold.
+            if (!settings.enabled) restoreOriginal() else rebaseLamp("DiPlay settings changed")
             updateTicking()
         }
     }

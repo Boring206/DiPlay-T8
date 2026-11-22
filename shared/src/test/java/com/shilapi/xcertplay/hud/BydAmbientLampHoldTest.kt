@@ -77,14 +77,63 @@ class BydAmbientLampHoldTest {
         assertTrue(BydAmbientLampHold.beforeApply(state, music, 2_400 + HOLD_MILLIS).write)
     }
 
-    @Test fun lampLeftAtAnotherValueStaysHeldUntilTheSessionEnds() {
-        // A colour picked in the car's menu never returns to DiPlay's value; DiPlay does not take it back.
+    @Test fun lampLeftAtAnotherValueStaysHeldUntilRebased() {
+        // A colour picked in the car's menu never returns to DiPlay's value; DiPlay does not take it back by itself.
         var state = BydAmbientLampHold.beforeApply(baseline(music), nextMusic, 0).state
         for (now in listOf(HOLD_MILLIS, 30_000L, 600_000L)) {
             val decision = BydAmbientLampHold.beforeApply(state, nextMusic, now)
             assertFalse(decision.write)
             state = decision.state
         }
+    }
+
+    @Test fun aRebaseTakesTheLampAsReadSoTheNextApplyWrites() {
+        // The worker's rebase op: a DiPlay Settings change or a new CarPlay session.
+        var state = BydAmbientLampHold.beforeApply(baseline(music), nextMusic, 0).state
+        assertTrue(state.holding)
+        state = BydAmbientLampHold.State(nextMusic)
+        var writes = 0
+        val (_, reply) = BydAmbientLightWorkerProtocol.applyOrHold(state, 100, { nextMusic }) { writes++; music }
+        assertEquals(1, writes)
+        assertEquals("applied=15,15,6,6,3", reply)
+    }
+
+    @Test fun carPuttingItsOwnMenuColourBackEndsTheHoldAfterTheQuietPeriod() {
+        val menu = BydAmbientLightPolicy.Snapshot(7, 23, 2, 5, 2) // The lamp before this session.
+        var state = BydAmbientLampHold.beforeApply(baseline(music), warning, 0, menu).state
+        state = BydAmbientLampHold.beforeApply(state, menu, 2_000, menu).state
+        assertFalse(BydAmbientLampHold.beforeApply(state, menu, HOLD_MILLIS - 1, menu).write)
+        val after = BydAmbientLampHold.beforeApply(state, menu, HOLD_MILLIS, menu)
+        assertTrue(after.write)
+        assertNull(after.state.outsideAtMillis)
+    }
+
+    @Test fun originalColourWithoutAHoldIsStillAnOutsideChangeFirst() {
+        val menu = BydAmbientLightPolicy.Snapshot(7, 23, 2, 5, 2)
+        val first = BydAmbientLampHold.beforeApply(baseline(music), menu, 1_000, menu)
+        assertFalse(first.write) // The same quiet period applies before DiPlay writes again.
+        assertTrue(BydAmbientLampHold.beforeApply(first.state, menu, 1_000 + HOLD_MILLIS, menu).write)
+    }
+
+    @Test fun seededBeginTakesItsBaselineUncheckedSoAnOutOfRangeLampStillBegins() {
+        val token = "0123456789abcdef0123456789abcdef"
+        val seeded = requireNotNull(BydAmbientLightWorkerProtocol.parse("$token begin 7 23 2 5 2", token))
+        val off = BydAmbientLightPolicy.Snapshot(0, 15, 0, 6, 3) // What the checked read rejects.
+        val (snapshot, hold) = BydAmbientLightWorkerProtocol.beginWithBaseline(
+            seeded, read = { error("invalid-lamp-state") }, readRaw = { off },
+        )
+        assertEquals(BydAmbientLightPolicy.Snapshot(7, 23, 2, 5, 2), snapshot)
+        assertEquals(BydAmbientLampHold.State(off), hold)
+        val unseeded = requireNotNull(BydAmbientLightWorkerProtocol.parse("$token begin", token))
+        val (fresh, freshHold) = BydAmbientLightWorkerProtocol.beginWithBaseline(unseeded, { music }, { music })
+        assertEquals(music, fresh)
+        assertEquals(BydAmbientLampHold.State(music), freshHold)
+    }
+
+    @Test fun workerAcceptsRebaseWithoutArguments() {
+        val token = "0123456789abcdef0123456789abcdef"
+        assertEquals("rebase", BydAmbientLightWorkerProtocol.parse("$token rebase", token)?.op)
+        assertNull(BydAmbientLightWorkerProtocol.parse("$token rebase 1", token))
     }
 
     @Test fun diPlaysOwnReadbackBecomesTheValueToCompareWith() {

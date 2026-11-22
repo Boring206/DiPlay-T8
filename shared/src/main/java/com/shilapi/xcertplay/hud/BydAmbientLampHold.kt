@@ -8,12 +8,16 @@ package com.shilapi.xcertplay.hud
  * car keeps the colour it set.
  *
  * Nothing in DiPlay reads the blind-spot, lane-change or turn-indicator state, and it is not known whether the
- * car's warning shows in these lamp setting values at all. A change that never returns to DiPlay's values, such
- * as a colour picked in the car's own menu, keeps the writes paused until the lamp session ends.
+ * car's warning shows in these lamp setting values at all. A change that stays, such as a colour picked in the
+ * car's own menu, keeps the writes paused until the worker is rebased: a DiPlay Settings change, a new CarPlay
+ * session or a new lamp session (turning ambient off ends it) takes the lamp as read then as the new baseline.
  */
 internal object BydAmbientLampHold {
     /** Spans several turn-signal flashes, so the dark phase of a flashing warning does not end the hold. */
     const val HOLD_MILLIS = 2_500L
+
+    /** While held, the same value is asked for again only this often; a new value is asked for at once. */
+    const val RETRY_MILLIS = 2_000L
 
     /** [expected] is the lamp as DiPlay last left it; [outsideAtMillis] the last read that differed, while holding. */
     data class State(val expected: BydAmbientLightPolicy.Snapshot, val outsideAtMillis: Long? = null) {
@@ -22,11 +26,20 @@ internal object BydAmbientLampHold {
 
     data class Decision(val state: State, val write: Boolean)
 
-    /** [current] is the lamp read just before the write; [nowMillis] a monotonic clock. */
-    fun beforeApply(state: State, current: BydAmbientLightPolicy.Snapshot, nowMillis: Long): Decision {
+    /**
+     * [current] is the lamp read just before the write; [nowMillis] a monotonic clock. While held, [original] (the
+     * lamp before this session) settles the hold too: a car may put its own menu colour back after a warning.
+     */
+    fun beforeApply(
+        state: State,
+        current: BydAmbientLightPolicy.Snapshot,
+        nowMillis: Long,
+        original: BydAmbientLightPolicy.Snapshot? = null,
+    ): Decision {
         val outsideAt = state.outsideAtMillis
+        val settled = current == state.expected || (outsideAt != null && current == original)
         return when {
-            current != state.expected -> Decision(state.copy(outsideAtMillis = nowMillis), write = false)
+            !settled -> Decision(state.copy(outsideAtMillis = nowMillis), write = false)
             outsideAt == null -> Decision(state, write = true)
             nowMillis - outsideAt < HOLD_MILLIS -> Decision(state, write = false)
             else -> Decision(state.copy(outsideAtMillis = null), write = true)

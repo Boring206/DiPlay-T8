@@ -19,9 +19,11 @@ class AmbientLampSessionTest {
         val applies = mutableListOf<Pair<Triple<Int, Int, Int>, CompletableFuture<AmbientLampSession.Outcome>>>()
         var stops = 0
         var closed = false
+        val rebases = mutableListOf<CompletableFuture<Unit>>()
         override fun unhealthy() = failed
         override fun begin(seed: BydAmbientLightPolicy.Snapshot?): CompletableFuture<BydAmbientLightPolicy.Snapshot> { this.seed = seed; return begin }
         override fun apply(desired: Triple<Int, Int, Int>) = CompletableFuture<AmbientLampSession.Outcome>().also { applies.add(desired to it) }
+        override fun rebase() = CompletableFuture<Unit>().also { rebases.add(it) }
         override fun stop(): CompletableFuture<Unit> { stops++; return stopped }
         override fun close() { closed = true }
     }
@@ -161,18 +163,75 @@ class AmbientLampSessionTest {
         assertEquals(1, h.lines.size)
         assertTrue(h.lines[0], h.lines[0].startsWith("Ambient: lamp writes paused"))
         assertTrue(h.lines[0], "lamp=front 1/6 back 15/6 area 3" in h.lines[0])
-        // The same value is sent again: the worker reads the lamp before each one.
-        h.time = 200; h.engine.update(desired)
+        // The same value is sent again, every RETRY_MILLIS: the worker reads the lamp before each one.
+        h.time = 2_000; h.engine.update(desired)
         assertEquals(2, client.applies.size)
         client.applies.last().second.complete(warning); h.drain()
         assertEquals(1, h.lines.size)
-        h.time = 2_900; h.engine.update(desired)
+        h.time = 4_000; h.engine.update(desired)
         assertEquals(3, client.applies.size)
         client.applies.last().second.complete(WRITTEN); h.drain()
-        assertEquals(listOf("Ambient: lamp writes resumed after 2900 ms"), h.lines.drop(1))
+        assertEquals(listOf("Ambient: lamp writes resumed after 4000 ms"), h.lines.drop(1))
         assertEquals(1, h.applies)
-        h.time = 3_100; h.engine.update(desired)
+        h.time = 4_200; h.engine.update(desired)
         assertEquals(3, client.applies.size) // Written now, so deduplicated again.
+    }
+    @Test fun heldValueIsAskedForAgainOnlyEveryTwoSecondsButANewValueAtOnce() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(warning); h.drain()
+        for (t in 200L until 2_000L step 200) { h.time = t; h.engine.update(desired) }
+        assertEquals(1, client.applies.size) // Not 9 more worker round trips while the lamp stays changed.
+        val next = Triple(3, 22, 4)
+        h.time = 2_000 - 1; h.engine.update(next)
+        assertEquals(next, client.applies.last().first)
+        client.applies.last().second.complete(warning); h.drain()
+        h.time = 2_000 + 1_998; h.engine.update(next)
+        assertEquals(2, client.applies.size)
+        h.time = 2_000 + 1_999; h.engine.update(next)
+        assertEquals(3, client.applies.size)
+    }
+    @Test fun rebaseClearsAHoldAndTheNextApplyIsWritten() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(warning); h.drain()
+        h.time = 700; h.engine.rebase("DiPlay settings changed")
+        assertEquals(1, client.rebases.size)
+        assertEquals("Ambient: lamp hold cleared (DiPlay settings changed) after 700 ms", h.lines.last())
+        client.rebases.last().complete(Unit); h.drain()
+        // Not throttled: the same value goes at once, and the worker now compares it with the lamp as read.
+        h.time = 900; h.engine.update(desired)
+        assertEquals(2, client.applies.size)
+        client.applies.last().second.complete(WRITTEN); h.drain()
+        assertEquals(1, h.applies)
+        assertEquals(2, h.lines.size) // No "resumed" line: the hold was already reported as cleared.
+        assertEquals(0, client.stops)
+    }
+    @Test fun rebaseWithoutAHoldStillResetsTheWorkerButLogsNothing() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(WRITTEN); h.drain()
+        h.engine.rebase("new CarPlay session")
+        assertEquals(1, client.rebases.size)
+        assertEquals(emptyList<String>(), h.lines)
+    }
+    @Test fun rebaseBeforeTheLampIsReadyIsLeftToBegin() {
+        val h = Harness()
+        h.engine.setEnabled(true); h.engine.update(desired)
+        h.engine.rebase("new CarPlay session")
+        assertEquals(0, h.clients.last().rebases.size) // begin takes a fresh baseline anyway.
+    }
+    @Test fun heldReplyToAnApplySentBeforeARebaseStartsNoHold() {
+        val h = Harness(); val client = start(h)
+        h.engine.rebase("DiPlay settings changed")
+        client.applies.last().second.complete(warning); h.drain()
+        assertEquals(emptyList<String>(), h.lines)
+        h.time = 200; h.engine.update(desired)
+        assertEquals(2, client.applies.size)
+    }
+    @Test fun failedRebaseRecoversTheLampSession() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(WRITTEN); h.drain()
+        h.engine.rebase("DiPlay settings changed")
+        client.rebases.last().completeExceptionally(IllegalStateException("worker-rebase-failed")); h.drain()
+        assertEquals(1, client.stops)
     }
     @Test fun writtenApplyLogsNothing() {
         val h = Harness(); val client = start(h)

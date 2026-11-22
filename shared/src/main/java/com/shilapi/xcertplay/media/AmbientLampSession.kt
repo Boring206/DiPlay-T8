@@ -23,6 +23,8 @@ internal class AmbientLampSession(
         fun unhealthy(): Boolean
         fun begin(seed: BydAmbientLightPolicy.Snapshot?): CompletableFuture<BydAmbientLightPolicy.Snapshot>
         fun apply(desired: Triple<Int, Int, Int>): CompletableFuture<Outcome>
+        /** The lamp as read now becomes the worker's baseline, which ends a hold. */
+        fun rebase(): CompletableFuture<Unit>
         fun stop(): CompletableFuture<Unit>
         /** Called after stop completes; must close stdin/transport before returning control to future retries. */
         fun close()
@@ -38,6 +40,11 @@ internal class AmbientLampSession(
     private var restoreUnconfirmed = false
     private var lastApplied: Triple<Int, Int, Int>? = null
     private var heldSince: Long? = null
+    /** The value last held, and when it may be asked for again (#1332). */
+    private var heldDesired: Triple<Int, Int, Int>? = null
+    private var heldRetryAt = 0L
+    /** Counts rebases, so a held reply to an apply sent before one does not start a new hold. */
+    private var rebases = 0L
     private val cadence = AmbientMusicApplyCadence()
 
     /** Called on the owning controller executor; an active worker need not be probed again. */
@@ -84,8 +91,12 @@ internal class AmbientLampSession(
             } }
             return
         }
-        if (!ready || applying || lastApplied == desired || !cadence.trySubmit(now())) return
+        if (!ready || applying || lastApplied == desired) return
+        // While held, the worker is asked again for the same value only every RETRY_MILLIS; a new value goes at once.
+        if (heldSince != null && desired == heldDesired && now() < heldRetryAt) return
+        if (!cadence.trySubmit(now())) return
         applying = true
+        val sentAt = rebases
         val future = try { owned.apply(desired) } catch (error: Throwable) {
             CompletableFuture<Outcome>().also { it.completeExceptionally(error) }
         }
@@ -93,7 +104,11 @@ internal class AmbientLampSession(
             if (client !== owned || stopping) return@dispatch
             applying = false
             if (error == null && outcome?.held == true) {
-                // lastApplied stays, so the next tick asks again and the worker reads the lamp again first.
+                // The worker was rebased after this apply was read; the next tick asks again at once.
+                if (sentAt != rebases) return@dispatch
+                // lastApplied stays, so a later tick asks again and the worker reads the lamp again first.
+                heldDesired = desired
+                heldRetryAt = now() + BydAmbientLampHold.RETRY_MILLIS
                 if (heldSince == null) {
                     heldSince = now()
                     diagnostic("Ambient: lamp writes paused, lamp changed outside DiPlay" +
@@ -101,11 +116,29 @@ internal class AmbientLampSession(
                 }
             } else if (error == null) {
                 heldSince?.let { diagnostic("Ambient: lamp writes resumed after ${now() - it} ms") }
-                heldSince = null
+                heldSince = null; heldDesired = null
                 lastApplied = desired
                 failures = 0
                 applied(desired)
             } else if (!ambientApplyCancelled(error)) failOwned("apply")
+        } }
+    }
+
+    /**
+     * Ends a hold: the worker takes the lamp as read now as its baseline, so the next apply writes. Called for a
+     * DiPlay Settings change and a new CarPlay session; a lamp that is not ready yet gets a fresh baseline at begin.
+     */
+    fun rebase(reason: String) {
+        val owned = client
+        if (!enabled || stopping || !ready || owned == null) return
+        heldSince?.let { diagnostic("Ambient: lamp hold cleared ($reason) after ${now() - it} ms") }
+        heldSince = null; heldDesired = null; rebases++
+        val future = try { owned.rebase() } catch (error: Throwable) {
+            CompletableFuture<Unit>().also { it.completeExceptionally(error) }
+        }
+        future.whenComplete { _, error -> dispatch {
+            if (client !== owned || stopping || error == null || ambientApplyCancelled(error)) return@dispatch
+            failOwned("rebase")
         } }
     }
 
@@ -135,7 +168,7 @@ internal class AmbientLampSession(
         ready = false; applying = false; lastApplied = null; cadence.reset()
         // The stop restores the car's original lamp values, which ends the hold.
         heldSince?.let { diagnostic("Ambient: lamp hold ended after ${now() - it} ms, lamp session stopping") }
-        heldSince = null
+        heldSince = null; heldDesired = null
         val stopped = try { old.stop() } catch (error: Throwable) {
             CompletableFuture<Unit>().also { it.completeExceptionally(error) }
         }

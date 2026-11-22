@@ -27,7 +27,7 @@ internal object BydAmbientLightWorkerProtocol {
         if (!validToken(token) || line.toByteArray(Charsets.UTF_8).size > MAX_LINE_BYTES) return null
         val f = line.split(' ')
         if (f.firstOrNull() != token) return null
-        if (f.size == 2 && f[1] in setOf("ping", "read", "begin", "stop", "minimum-stop", "close")) return Request(f[1])
+        if (f.size == 2 && f[1] in setOf("ping", "read", "begin", "rebase", "stop", "minimum-stop", "close")) return Request(f[1])
         if (f.size == 7 && f[1] == "begin") {
             val a = f.drop(2).map { it.toIntOrNull() ?: return null }
             val seed = BydAmbientLightPolicy.Snapshot(a[0], a[1], a[2], a[3], a[4])
@@ -52,17 +52,33 @@ internal object BydAmbientLightWorkerProtocol {
     }
 
     /**
+     * Begin's restore snapshot and the hold baseline (#1332). The snapshot is checked as before; the baseline is
+     * read unchecked like each apply's read, so a seeded retry still begins when the lamp now reads outside
+     * DiPlay's range, and its first apply can write the lamp back.
+     */
+    fun beginWithBaseline(
+        request: Request,
+        read: () -> BydAmbientLightPolicy.Snapshot,
+        readRaw: () -> BydAmbientLightPolicy.Snapshot,
+    ): Pair<BydAmbientLightPolicy.Snapshot, BydAmbientLampHold.State> {
+        val snapshot = snapshotForBegin(request, read)
+        return snapshot to BydAmbientLampHold.State(readRaw())
+    }
+
+    /**
      * One apply. Reads the lamp first and calls [write] only when [BydAmbientLampHold] allows it; [write] sets the
      * lamp and returns its readback. Replies `applied=` after a write, or `held=` with the lamp as read.
+     * [original] is the session's restore snapshot, which also settles a hold.
      */
     fun applyOrHold(
         hold: BydAmbientLampHold.State,
         nowMillis: Long,
         read: () -> BydAmbientLightPolicy.Snapshot,
+        original: BydAmbientLightPolicy.Snapshot? = null,
         write: () -> BydAmbientLightPolicy.Snapshot,
     ): Pair<BydAmbientLampHold.State, String> {
         val current = read()
-        val decision = BydAmbientLampHold.beforeApply(hold, current, nowMillis)
+        val decision = BydAmbientLampHold.beforeApply(hold, current, nowMillis, original)
         if (!decision.write) return decision.state to "held=${current.encode()}"
         val readback = write()
         return BydAmbientLampHold.written(readback) to "applied=${readback.encode()}"
@@ -136,27 +152,33 @@ object BydAmbientLightTool {
                         "begin" -> {
                             if (snapshotRef.get() != null) "error already-begun"
                             else {
-                                val s = BydAmbientLightWorkerProtocol.snapshotForBegin(req, device::read)
+                                // A retry's seed is the original from an earlier session; compare with the lamp now.
+                                val (s, baseline) = BydAmbientLightWorkerProtocol.beginWithBaseline(req, device::read, device::readRaw)
                                 if (!BydAmbientLightPolicy.validSnapshot(s)) "error unsupported-state"
                                 else {
-                                    // A retry's seed is the original from an earlier session; compare with the lamp now.
-                                    val lamp = device.read()
                                     snapshotRef.compareAndSet(null, s)
-                                    hold = BydAmbientLampHold.State(lamp)
+                                    hold = baseline
                                     "begun=${s.encode()}"
                                 }
                             }
+                        }
+                        "rebase" -> {
+                            // The lamp as read now becomes the value applies are compared with, ending any hold.
+                            check(snapshotRef.get() != null) { "begin-required" }
+                            hold = BydAmbientLampHold.State(device.readRaw())
+                            "rebased"
                         }
                         "apply" -> {
                             val s = snapshotRef.get() ?: throw IllegalStateException("begin-required")
                             val (area, color, bright) = req.args
                             if (!BydAmbientLightPolicy.validSnapshot(s)) throw IllegalStateException("unsupported-state")
+                            // A held reply leaves lastSetNanos alone: nothing was written, so the spacing counts from the last write.
                             val wait = TimeUnit.NANOSECONDS.toMillis(200_000_000L - (System.nanoTime() - lastSetNanos)).coerceAtLeast(0)
                             if (wait > 0) Thread.sleep(wait)
                             val begun = hold ?: throw IllegalStateException("begin-required")
                             val now = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
                             // Unchecked: a warning may show values outside DiPlay's range, and those hold too.
-                            val (next, reply) = BydAmbientLightWorkerProtocol.applyOrHold(begun, now, device::readRaw) {
+                            val (next, reply) = BydAmbientLightWorkerProtocol.applyOrHold(begun, now, device::readRaw, s) {
                                 val result = device.set(color, bright, area)
                                 lastSetNanos = System.nanoTime()
                                 if (result != 0) throw IllegalStateException("set-result-$result")
