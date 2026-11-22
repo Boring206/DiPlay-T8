@@ -959,6 +959,60 @@ class AdaptiveSettingsUiTest {
     }
 
     @Test
+    @Config(sdk = [28])
+    fun sprdDecoderTuningAppearsOnlyForSprdAndMarksReconnect() {
+        AirPlayPersistence.saveSprdDecoderTuning(context, false)
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+        screen.selectedSprdDecoderName = { null }
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.settings_sprd_decoder_tuning) })
+
+        val decoderName = "OMX.sprd.h264.decoder"
+        screen.selectedSprdDecoderName = { decoderName }
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        assertTrue(texts(screen).any {
+            it.text == screen.getString(R.string.settings_sprd_decoder_tuning_description, decoderName)
+        })
+
+        val session = mock(CarPlayController::class.java)
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) {}
+        CarPlayBackgroundSession.active = true
+        try {
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_sprd_decoder_tuning) }
+            assertFalse(setting.isChecked)
+            setting.performClick()
+
+            assertTrue(AirPlayPersistence.loadSprdDecoderTuning(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+        } finally {
+            AirPlayPersistence.saveSprdDecoderTuning(context, false)
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28])
+    fun sprdDecoderTuningHidesWhenSoftwareHevcDecoderIsOn() {
+        AirPlayPersistence.saveHevcEnabled(context, true)
+        AirPlayPersistence.saveHevcSoftwareDecoderEnabled(context, true)
+        try {
+            val screen = openSettings()
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            screen.selectedSprdDecoderName = { "OMX.sprd.hevc.decoder" }
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            assertFalse(texts(screen).any { it.text == screen.getString(R.string.settings_sprd_decoder_tuning) })
+        } finally {
+            AirPlayPersistence.saveHevcEnabled(context, false)
+            AirPlayPersistence.saveHevcSoftwareDecoderEnabled(context, false)
+        }
+    }
+
+    @Test
     @Config(sdk = [28, 33])
     fun callAtCallRateIsOptInAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
         AirPlayPersistence.saveCallAtCallRate(context, false)

@@ -20,8 +20,10 @@ object SprdDecoderTuning {
     fun selectedDecoderName(mime: String): String? = candidates(mime).let(::selectedDecoder)?.name
 
     /** Prefer a hardware Spreadtrum decoder; fall back to any Spreadtrum decoder for [mime]. */
-    internal fun selectedDecoder(candidates: List<SprdDecoderCandidate>): SprdDecoderCandidate? =
-        candidates.firstOrNull { it.hardware } ?: candidates.firstOrNull()
+    internal fun selectedDecoder(candidates: List<SprdDecoderCandidate>): SprdDecoderCandidate? {
+        val sprd = candidates.filter { isDecoderName(it.name) }
+        return sprd.firstOrNull { it.hardware } ?: sprd.firstOrNull()
+    }
 
     // The codec list does not change while DiPlay runs, and Settings asks on every render.
     private val candidatesByMime = java.util.concurrent.ConcurrentHashMap<String, List<SprdDecoderCandidate>>()
@@ -34,7 +36,11 @@ object SprdDecoderTuning {
             if (info.isEncoder || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info.isAlias) ||
                 info.supportedTypes.none { it.equals(mime, ignoreCase = true) } ||
                 !isDecoderName(info.name)) return@mapNotNull null
-            SprdDecoderCandidate(info.name, info.isHardwareAccelerated)
+            // isHardwareAccelerated needs API 29; below that, mirror HevcSupport and treat a
+            // non-platform decoder as hardware. Sprd names are vendor decoders, so this is
+            // always true for the names that reach here.
+            SprdDecoderCandidate(info.name, if (Build.VERSION.SDK_INT >= 29) info.isHardwareAccelerated
+                else !info.name.startsWith("OMX.google.") && !info.name.startsWith("c2.android."))
         }
     }.getOrDefault(emptyList())
 }

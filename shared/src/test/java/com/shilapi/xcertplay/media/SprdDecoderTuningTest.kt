@@ -27,6 +27,16 @@ class SprdDecoderTuningTest {
         )
     }
 
+    @Test fun nonSpreadtrumDecoderIsNeverSelected() {
+        assertEquals(
+            SprdDecoderCandidate("OMX.sprd.h264.decoder"),
+            SprdDecoderTuning.selectedDecoder(listOf(
+                SprdDecoderCandidate("OMX.qcom.video.decoder.avc", hardware = true),
+                SprdDecoderCandidate("OMX.sprd.h264.decoder"),
+            )),
+        )
+    }
+
     @Test fun noSpreadtrumDecoderMeansNoSelection() {
         assertNull(SprdDecoderTuning.selectedDecoder(listOf(
             SprdDecoderCandidate("OMX.qcom.video.decoder.avc", hardware = true),

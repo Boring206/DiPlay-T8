@@ -2010,7 +2010,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     markReconnectNeeded()
                 }
             }
-            val sprdDecoder = selectedSprdDecoderName(selectedMime)
+            val sprdDecoder = if (hevc && AirPlayPersistence.loadHevcSoftwareDecoderEnabled(this)) null
+                else selectedSprdDecoderName(selectedMime)
             if (sprdDecoder != null) {
                 toggle(card, getString(R.string.settings_sprd_decoder_tuning),
                     getString(R.string.settings_sprd_decoder_tuning_description, sprdDecoder),

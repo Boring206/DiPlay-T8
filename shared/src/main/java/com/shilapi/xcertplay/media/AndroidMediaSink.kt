@@ -708,7 +708,15 @@ class AndroidMediaSink(
     private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true): VideoDecoder {
         // Keep the experimental decoder tunings on the main CarPlay picture only. Mirrors and the
         // cluster have separate timing and must retain their established decoder configuration.
-        val sprdTuning = sprdDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null
+        // The decoder's mime is only known at configure time, so the existence check covers
+        // both mimes. It guards the backup-restore case: a unit with no Spreadtrum decoder
+        // must not get the output thread (and the tuning) from a restored preference, when
+        // there is no visible toggle to turn it off.
+        val sprdDecoderExists =
+            SprdDecoderTuning.selectedDecoderName(MediaFormat.MIMETYPE_VIDEO_AVC) != null ||
+                SprdDecoderTuning.selectedDecoderName(MediaFormat.MIMETYPE_VIDEO_HEVC) != null
+        val sprdTuning = sprdDecoderTuningEnabled && sprdDecoderExists &&
+            type == MAIN_SCREEN_TYPE && statsLabel == null
         return VideoDecoder(
             type,
             surface,
@@ -1225,7 +1233,12 @@ private class VideoDecoder(
             ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
         val requestedMtkMode = if (mtkDecoderTuningEnabled &&
             MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
-        val requestedSprdDecoder = if (sprdDecoderTuningEnabled) {
+        // With HEVC and the software HEVC decoder on (Android 10+), the named Spreadtrum
+        // attempt would run before createDecoder() and skip the user's software-decoder
+        // choice, so no attempt is requested. Mirrors the toggle hiding in DiPlayActivity.
+        val softwareHevcDecoderChosen = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            mime == MediaFormat.MIMETYPE_VIDEO_HEVC && preferSoftwareHevcDecoder
+        val requestedSprdDecoder = if (sprdDecoderTuningEnabled && !softwareHevcDecoderChosen) {
             SprdDecoderTuning.selectedDecoderName(mime)
         } else null
         var configured: ConfiguredVideoDecoder? = null
@@ -1276,10 +1289,13 @@ private class VideoDecoder(
                     " mtkTuning=${configuredMtkMode.diagnosticName}"
                 else -> ""
             }
+            // The marker reports the explicit attempt, not the decoder: nothing when the
+            // toggle is off (the default first attempt is tuned too), "on" when the named
+            // Spreadtrum attempt configured the decoder, "fallback" when it was refused.
             val sprd = when {
-                SprdDecoderTuning.isDecoderName(configured.codecName) ->
-                    " sprdTuning=${if (used?.tuned == true) "tuned" else "untuned"}"
-                else -> ""
+                requestedSprdDecoder == null -> ""
+                used?.codecName.equals(requestedSprdDecoder, ignoreCase = true) == true -> " sprdTuning=on"
+                else -> " sprdTuning=fallback"
             }
             report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
                 "$rate$lowLatency$output$atOnceReport$mtk$sprd")
