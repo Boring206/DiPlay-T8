@@ -83,13 +83,12 @@ internal class CarMusicLinkGuard(private val journal: CarMusicLinkJournal) {
                 clear()
                 "car Bluetooth music reconnect requested"
             }
-            // Android 9 on an ECARX KX11 lets apps call disconnect() but not connect(): retrying can't help.
+            // No connect() to call (seen on an ECARX KX11, Android 9): a retry can't help.
             null -> {
                 clear()
-                "car Bluetooth music can't be reconnected on this head unit; it comes back when the iPhone " +
-                    "reconnects to the car's Bluetooth"
+                "car Bluetooth music can't be reconnected on this head unit: connect() is not available"
             }
-            // The iPhone rarely brings back a link the car dropped, so a refused request keeps the note for a retry.
+            // A refused request may succeed later, so it keeps the note for a retry.
             false -> "car Bluetooth music reconnect refused; DiPlay tries again when it opens"
         }
     }
@@ -122,9 +121,9 @@ internal class CarMusicLinkGuard(private val journal: CarMusicLinkJournal) {
  * AVRCP pause straight away, so the iPhone pauses CarPlay music (#877, #1343). Only the music link goes;
  * calls (HFP) and the pairing stay. Some seconds after the session ends, unless a new session took over,
  * only a link DiPlay dropped is connected again, if the iPhone is still paired. A note saved before each drop brings the link back after an app kill.
- * The calls are hidden platform methods; a head unit that refuses them is reported, not retried. Android 9
- * on an ECARX KX11 allows disconnect() but hides connect(), so there the link returns only when the iPhone
- * reconnects to the car's Bluetooth.
+ * The calls are hidden platform methods; a head unit that refuses them is reported, not retried. On an ECARX
+ * KX11 (Android 9) disconnect() works, but connect() throws NoSuchMethodException, so DiPlay can't bring the
+ * link back there; after a session it stayed down for at least a minute.
  */
 object CarMusicLinkDrop {
     private const val TAG = "DiPlay-CarMusicLink"

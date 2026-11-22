@@ -149,7 +149,7 @@ class CarMusicLinkGuardTest {
 
     @Test
     fun aMissingConnectCallClearsTheNoteInsteadOfRetryingForever() {
-        // Android 9 on an ECARX KX11: disconnect() is callable, connect() is hidden from apps.
+        // Seen on an ECARX KX11 (Android 9): disconnect() works, connect() throws NoSuchMethodException.
         val journal = FakeJournal(address = phone)
         val link = FakeLink(up = emptyList(), connectResult = null)
         val line = CarMusicLinkGuard(journal).restore(link)

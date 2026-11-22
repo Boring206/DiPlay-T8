@@ -785,7 +785,7 @@
     <string name="settings_car_bluetooth_audio">차량 Bluetooth로 CarPlay 오디오 재생 (실험 기능)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay는 iPhone에 CarPlay 오디오를 제공하지 않으므로 음악, 내비게이션 및 통화는 iPhone과 차량 간 Bluetooth 연결을 통해 재생되어야 합니다. iPhone을 차량과 페어링된 상태로 두고 차량의 오디오 소스로 Bluetooth를 선택하세요. 소리가 iPhone에서 재생되면 이 기능을 끄세요. CarPlay를 다시 연결합니다.</string>
     <string name="settings_car_music_link_drop">CarPlay 중 차량 Bluetooth 음악 연결 끊기 (실험 기능)</string>
-    <string name="settings_car_music_link_drop_description">일부 헤드 유닛에서는 차량 자체의 iPhone Bluetooth 음악 연결이 CarPlay 음악이 시작되자마자 일시 정지시킵니다. 켜면 CarPlay가 실행되는 동안 DiPlay가 이 세션의 iPhone과의 음악 연결만 끊고, CarPlay가 끝나면 다시 연결을 시도합니다. 일부 헤드 유닛에서는 iPhone이 차량 Bluetooth에 다시 연결될 때만 돌아옵니다. 차량 Bluetooth 통화와 페어링은 유지됩니다. CarPlay 오디오가 차량 Bluetooth로 재생될 때는 아무것도 하지 않습니다. 케이블 연결에서는 DiPlay에서 선택한 iPhone을 사용합니다. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_car_music_link_drop_description">일부 헤드 유닛에서는 차량 자체의 iPhone Bluetooth 음악 연결이 CarPlay 음악이 시작되자마자 일시 정지시킵니다. 켜면 CarPlay가 실행되는 동안 DiPlay가 이 세션의 iPhone과의 음악 연결만 끊고, CarPlay가 끝나면 다시 연결을 시도합니다. 일부 헤드 유닛에서는 이것이 불가능하며, 연결은 나중에 돌아옵니다. 차량 Bluetooth 통화와 페어링은 유지됩니다. CarPlay 오디오가 차량 Bluetooth로 재생될 때는 아무것도 하지 않습니다. 케이블 연결에서는 DiPlay에서 선택한 iPhone을 사용합니다. 다음 연결부터 적용됩니다.</string>
     <string name="call_echo_cancellation">통화 에코 제거 (실험 기능)</string>
     <string name="call_echo_cancellation_description">CarPlay 통화 중 상대방에게 전달되는 스피커 에코를 줄입니다. 결과는 헤드 유닛에 따라 다릅니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="call_voice_filter">더 선명한 통화 음성 (실험 기능)</string>

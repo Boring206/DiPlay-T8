@@ -760,7 +760,7 @@
     <string name="settings_car_bluetooth_audio">透過車輛藍牙播放 CarPlay 音訊（實驗性）</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音訊，因此音樂、導航和通話應透過 iPhone 與車輛的藍牙連線傳輸。請保持 iPhone 與車輛配對，並將車輛音源設為藍牙。如果聲音改從 iPhone 播放，請關閉此選項。變更後會重新連線至 CarPlay。</string>
     <string name="settings_car_music_link_drop">CarPlay 期間中斷車機藍牙音樂（實驗性）</string>
-    <string name="settings_car_music_link_drop_description">在部分車機上，車輛自身與 iPhone 的藍牙音樂連線會在 CarPlay 音樂開始時立即將其暫停。開啟後，CarPlay 執行期間 DiPlay 只中斷與本次工作階段 iPhone 的音樂連線，CarPlay 結束後嘗試重新連線；在部分車機上，只有 iPhone 重新連線車輛藍牙時才會恢復。車輛藍牙通話和配對保持不變。CarPlay 音訊透過車輛藍牙播放時不起作用。有線連線時使用在 DiPlay 中選擇的 iPhone。下次連線時生效。</string>
+    <string name="settings_car_music_link_drop_description">在部分車機上，車輛自身與 iPhone 的藍牙音樂連線會在 CarPlay 音樂開始時立即將其暫停。開啟後，CarPlay 執行期間 DiPlay 只中斷與本次工作階段 iPhone 的音樂連線，CarPlay 結束後嘗試重新連線；在部分車機上無法做到，連線會稍後恢復。車輛藍牙通話和配對保持不變。CarPlay 音訊透過車輛藍牙播放時不起作用。有線連線時使用在 DiPlay 中選擇的 iPhone。下次連線時生效。</string>
     <string name="call_echo_cancellation">通話回音消除（實驗性）</string>
     <string name="call_echo_cancellation_description">嘗試減少 CarPlay 通話中傳送給對方的喇叭回音。效果取決於車用主機。下次連線至 CarPlay 時生效。</string>
     <string name="call_voice_filter">更清晰的通話人聲（實驗性）</string>
