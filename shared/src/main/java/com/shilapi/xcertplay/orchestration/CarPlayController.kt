@@ -37,6 +37,7 @@ import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.airplay.VideoInCar
 import com.shilapi.xcertplay.airplay.VideoPlaybackDelivery
 import com.shilapi.xcertplay.hud.BydBluetoothSuspend
+import com.shilapi.xcertplay.hud.CarMusicLinkDrop
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.mfi.Iap2MfiAuthenticationClient
@@ -267,6 +268,8 @@ class CarPlayController(
     @Volatile private var csm: Iap2Session? = null
     @Volatile private var activeSession: AirPlaySession? = null
     @Volatile private var requestedDashboardUrl: String? = airPlayConfig.cluster?.initialUrl
+    /** The iPhone this controller opened the wireless iAP2 link to, for [CarMusicLinkDrop]. */
+    @Volatile private var wirelessIphoneAddress: String? = null
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
     private var clusterUiShown = true
@@ -427,6 +430,17 @@ class CarPlayController(
                     !closed && activeSession === session && !session.isClosed
                 }
             }
+            // Wireless: the iPhone the iAP2 link was opened to, so no iPhone has to be chosen. Wired: the chosen one.
+            val sessionIphone = if (config.transport == CarPlayTransport.WIRELESS) {
+                wirelessIphoneAddress
+            } else {
+                config.wirelessBluetoothDeviceAddress
+            }
+            // Settings → Advanced → Video and audio (#1343).
+            CarMusicLinkDrop.start(appContext, this@CarPlayController,
+                enabled = btPrefs.getBoolean("car_music_link_drop", false),
+                carBluetoothAudio = airPlayConfig.disableAudioOutput, address = sessionIphone,
+                stillActive = { !closed && activeSession === session && !session.isClosed }) { debugLog(it) }
             if (replacement) restoreDashboardContent(session)
             debugLog(
                 "AirPlay session active controller=${session.controllerId ?: "unknown"} " +
@@ -443,6 +457,8 @@ class CarPlayController(
                 synchronized(albumReplayLock) { initialArtworkReplay = null }
                 BydNavigationOutputs.endNow(preserveTurnOverlay = !closed && config.transport == CarPlayTransport.WIRELESS)
                 BydBluetoothSuspend.resume(appContext, this@CarPlayController) { debugLog(it) }
+                // Marked as connection diagnostics: the restore lands after the session, and the report keeps those.
+                CarMusicLinkDrop.stop(appContext, this@CarPlayController) { connectionDiagnostic(it) }
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
                 videoListener?.onVideoSessionEnded()
                 synchronized(playbackStatus) {
@@ -800,6 +816,7 @@ class CarPlayController(
         wiredStartWatchdog?.terminate()
         cancelSetupKeepAlive()
         BydBluetoothSuspend.resume(appContext, this) { debugLog(it) }
+        CarMusicLinkDrop.stop(appContext, this) { connectionDiagnostic(it) }
         startupTimer.shutdownNow()
         (hotspot as? ManualHotspotManager)?.close()
         val teardownStarted = System.nanoTime()
@@ -1530,6 +1547,7 @@ class CarPlayController(
             if (!adapter.isEnabled) throw IOException(BluetoothRadioCheck.RADIO_OFF)
             if (!bluetoothRecoveryComplete) throw IOException("Bluetooth recovery did not complete before the handshake")
             val device = selectWirelessBluetoothDevice(adapter)
+            wirelessIphoneAddress = device.address
             val hostBluetoothMac = accessoryBluetoothMac(adapter)
             debugLog(
                 "wireless selected Bluetooth target name=${device.name ?: "unknown"} " +
