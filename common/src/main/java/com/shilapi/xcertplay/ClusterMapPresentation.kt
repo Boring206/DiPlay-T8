@@ -294,7 +294,9 @@ internal class ClusterMapPresentation(
             appendLine("projectionShapeRequested=${com.shilapi.xcertplay.hud.BydOutputSettings.clusterProjectionShape(context)} (request, not measured vehicle state)")
             appendLine("playerSelected=${com.shilapi.xcertplay.airplay.ClusterPlayerSettings.selected(context)}")
             appendLine("playerFitVisible=${com.shilapi.xcertplay.airplay.ClusterPlayerSettings.fitVisible(context)} (foreground only; native composition unchanged)")
-            appendLine("navigationReceiverAvailable=${com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context)}")
+            val receivers = com.shilapi.xcertplay.hud.BydOutputSettings.navigationReceivers(context)
+            appendLine("navigationReceiverAvailable=${receivers.isNotEmpty()} " +
+                "receivers=${receivers.joinToString(",").ifEmpty { "none" }}")
             appendLine("allDisplays=${describeDisplays(context)}")
             val presentations = context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()

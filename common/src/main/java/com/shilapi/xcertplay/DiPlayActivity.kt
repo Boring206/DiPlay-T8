@@ -4883,6 +4883,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 getString(R.string.video_while_parked_description),
                 BydOutputSettings.videoWhileParked(this), enabled = !adbSwitchChangePending) {
                 BydOutputSettings.setVideoWhileParked(this, it)
+                // A stale "cannot read the gear" line must not come back when the setting is turned on again.
+                if (!it) LastConnectionProblem.clearVideoGear(this)
                 onVehicleDataSettingChanged(it)
             }
         }
@@ -4935,6 +4937,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 val status = result.getOrNull()
                 adbAccessState = status?.state
                 if (!legacy) defaultVehicleStatus = status
+                // #1180: the gear reads, so Home stops saying that video cannot play.
+                if (status?.state == BydAdbAccess.State.READY && status.gear != null) {
+                    LastConnectionProblem.clearVideoGear(applicationContext)
+                }
                 if (!legacy && adbAccessState == BydAdbAccess.State.READY) {
                     vehicleProbeOutcome = null
                 }
@@ -6017,7 +6023,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             else -> getString(R.string.ready_when_you_are)
         }
         homeLastProblem?.apply {
-            val line = if (CarPlayBackgroundSession.active) null else LastConnectionProblem.homeLine(this@DiPlayActivity)
+            val line = LastConnectionProblem.homeLine(this@DiPlayActivity, sessionActive = CarPlayBackgroundSession.active)
             visibility = if (line == null) View.GONE else View.VISIBLE
             if (line != null) text = line
         }

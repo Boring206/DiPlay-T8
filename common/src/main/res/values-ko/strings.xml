@@ -594,6 +594,8 @@
     <string name="wheel_speed_for_tunnels_description">‘iPhone에 위치 정보 전송’을 켜면 DiPlay가 차량의 휠 속도와 기어도 전송해 Apple 지도가 터널과 주차장에서도 위치를 계속 갱신할 수 있습니다. CarPlay를 다시 연결합니다. 헤드 유닛에서 네트워크 ADB가 필요합니다.</string>
     <string name="video_while_parked">주차 중 동영상 재생</string>
     <string name="video_while_parked_description">iOS 27: iPhone에서 CarPlay로 보낸 동영상이 차량이 P에 있을 때 차량 화면에서 재생됩니다. P에서 다른 기어로 바꾸면 플레이어가 닫힙니다. ADB가 없으면 동영상은 꺼지고 iPhone에서 오디오만 재생됩니다. 일반 HTTPS 동영상(예: Safari)은 재생됩니다. Apple TV+처럼 FairPlay로 보호된 동영상은 인증된 수신기가 필요하므로 여기서 재생되지 않습니다. CarPlay를 다시 연결합니다. 헤드 유닛에서 네트워크 ADB가 필요합니다.</string>
+    <string name="video_off_gear_unreadable">차량 화면에서 동영상을 재생할 수 없습니다. DiPlay가 기어를 읽을 수 없습니다.</string>
+    <string name="video_gear_no_reply">헤드 유닛의 ADB가 기어 읽기에 응답하지 않았습니다.</string>
     <string name="cluster_song">계기판에 노래 표시</string>
     <string name="cluster_song_description">CarPlay의 노래 제목과 아티스트가 재생 및 일시 정지 버튼과 함께 계기판 음악 카드에 표시됩니다. 계기판은 CarPlay 자체 소스를 표시하지 않으므로 BYD의 ‘기타’ 음악 소스로 표시됩니다. 즉시 적용됩니다. 헤드 유닛에서 네트워크 ADB가 필요합니다.</string>
     <string name="cluster_song_gate">음악 카드 자동 활성화</string>
@@ -1062,6 +1064,7 @@
     <string name="hotspot_interface_not_found">DiPlay에 저장된 핫스팟 인터페이스가 이 차량에 없습니다</string>
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>
+    <string name="last_carplay_connection_problem">마지막 CarPlay 연결(%1$s): %2$s</string>
     <string name="last_connection_attempt">마지막 연결 시도(%1$s): %2$s</string>
     <string name="settings_fit_screen_shape">노치와 둥근 모서리 피하기</string>
     <string name="settings_fit_screen_shape_description">헤드 유닛으로 사용하는 휴대폰이나 태블릿용 기능입니다. CarPlay 버튼과 도크를 카메라 노치와 둥근 모서리에서 떨어뜨립니다. 지도는 계속 화면 전체에 표시됩니다. 세션 메뉴에서 설정한 안전 영역이 우선합니다. 다음 연결부터 적용됩니다.</string>

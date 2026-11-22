@@ -536,6 +536,8 @@
     <string name="wheel_speed_for_tunnels_description">Коли ввімкнено передавання геопозиції на iPhone, DiPlay також надсилає швидкість коліс і передачу автомобіля, щоб Apple Maps могли відстежувати рух у тунелях і паркінгах. CarPlay перепідключиться. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="video_while_parked">Відео під час стоянки</string>
     <string name="video_while_parked_description">iOS 27: відео, яке ви надсилаєте з iPhone до CarPlay, відтворюється на екрані автомобіля, коли вибрано передачу P. Плеєр закривається після виходу з P; без ADB відео вимкнено, а iPhone відтворює лише звук. Звичайне HTTPS-відео (наприклад, із Safari) працює; для відео, захищеного FairPlay, зокрема Apple TV+, потрібен ліцензований приймач, тому тут воно не відтворюється. CarPlay перепідключиться. Потрібен ADB через мережу на головному пристрої.</string>
+    <string name="video_off_gear_unreadable">Відео не відтворюється на екрані автомобіля: DiPlay не може зчитати передачу.</string>
+    <string name="video_gear_no_reply">ADB головного пристрою не відповів на зчитування передачі.</string>
     <string name="video_back_to_carplay">Повернутися до CarPlay</string>
     <string name="video_play">Відтворити</string>
     <string name="video_pause">Пауза</string>
@@ -925,6 +927,7 @@
     <string name="connection_help_hotspot_interface_not_found">У розділі «Налаштування підключення» натисніть «Змінити збережену точку доступу», очистьте поле «Інтерфейс точки доступу (необов’язково)» та повторіть спробу.</string>
     <string name="connection_help_car_hotspot_off">Увімкніть точку доступу автомобіля в налаштуваннях автомобіля та повторіть спробу.</string>
     <string name="last_connection_attempt">Остання спроба підключення (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Останнє підключення CarPlay (%1$s): %2$s</string>
     <string name="connection_help_hotspot">Перевірте, чи ввімкнено точку доступу авто та чи збігаються назва й пароль із налаштуваннями DiPlay. За можливості виберіть 5 ГГц і повторіть спробу.</string>
     <string name="connection_help_iphone_wifi">Увімкніть Wi-Fi і Bluetooth. Підключіть iPhone до точки доступу авто й увімкніть автопідключення. Повторіть спробу; за помилки збережіть звіт.</string>
     <string name="connection_help_permissions">Надайте DiPlay потрібні дозволи на USB, пристрої поблизу або геолокацію на головному пристрої та повторіть спробу.</string>

@@ -296,6 +296,11 @@ class CarPlayController(
     /** Video in car; set before [start] to offer it to the iPhone (with AirPlayConfig.videoInCar). */
     @Volatile var videoListener: CarPlayVideoListener? = null
     @Volatile private var videoGate: VideoInCarGate? = null
+    /** Android's own Wi-Fi station while a wired session runs (#1233). */
+    @Volatile private var wifiStationWatch: com.shilapi.xcertplay.network.WifiStationWatch? = null
+    /** The iPhone's route guidance during the current session, summarized when it ends (#1196). */
+    private val routeGuidance = com.shilapi.xcertplay.hud.RouteGuidanceTally()
+    private val routeGuidanceSession = AtomicBoolean(false)
 
     /** Answers the iPhone on a video in car remote control session; a network write, any thread. */
     fun sendVideoMessage(streamId: Long, message: Map<String, Any?>): Boolean =
@@ -397,6 +402,7 @@ class CarPlayController(
             if (currentCornerMask?.session !== session) currentCornerMask = null
             val replacement = activeSession !== session
             if (replacement) {
+                routeGuidanceSession.set(true)
                 BydNavigationOutputs.start(appContext)
                 BydNavigationOutputs.carPlaySessionStarted()
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(true)
@@ -428,6 +434,7 @@ class CarPlayController(
             if (currentCornerMask?.session === session) currentCornerMask = null
             if (activeSession === session) {
                 activeSession = null
+                finishRouteGuidance()
                 synchronized(albumReplayLock) { initialArtworkReplay = null }
                 BydNavigationOutputs.endNow(preserveTurnOverlay = !closed && config.transport == CarPlayTransport.WIRELESS)
                 BydBluetoothSuspend.resume(appContext, this@CarPlayController) { debugLog(it) }
@@ -537,6 +544,12 @@ class CarPlayController(
         }
         connectionDiagnostic("start transport=${config.transport}")
         if (!hasRequiredUsbService()) return
+        // Lines from outputs that started with the app, before this log existed, arrive as their current state.
+        com.shilapi.xcertplay.hud.NavigationOutputLog.attach(this) { debugLog(it) }
+        if (config.transport == CarPlayTransport.WIRED && wifiStationWatch == null) {
+            wifiStationWatch = com.shilapi.xcertplay.network.WifiStationWatch(appContext) { connectionDiagnostic(it) }
+                .also { it.start() }
+        }
         videoListener?.let { listener ->
             videoGate = VideoInCarGate(
                 readParked = listener::readParked,
@@ -546,9 +559,12 @@ class CarPlayController(
                     debugLog("video in car allowed=$allowed delivery=$delivery")
                     listener.onVideoAllowedChanged(allowed)
                 },
-                onObserved = { parked ->
-                    debugLog("video in car gear=${when (parked) { true -> "P"; false -> "not-P"; null -> "unknown" }}")
+                onObserved = { parked, reason ->
+                    debugLog(VideoInCarDiagnostics.gearLine(parked, reason))
+                    runCatching { listener.onGearObserved(parked) }
+                        .onFailure { Log.w(IphoneCarPlayConfiguration.TAG, "gear observer failed", it) }
                 },
+                unreadableReason = listener::gearUnreadableReason,
             ).also { it.start() }
         }
         if (config.transport == CarPlayTransport.WIRED) {
@@ -758,6 +774,10 @@ class CarPlayController(
         val teardownStarted = System.nanoTime()
         connectionDiagnostic("teardown begin transport=${config.transport}")
         videoGate?.close()
+        wifiStationWatch?.close()
+        wifiStationWatch = null
+        finishRouteGuidance()
+        com.shilapi.xcertplay.hud.NavigationOutputLog.detach(this)
         BydNavigationOutputs.endNow()
         com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
         BydNavigationOutputs.clearClusterStreamControl(::applyClusterUi)
@@ -887,6 +907,19 @@ class CarPlayController(
         }
     }
 
+    /** One summary line per session that became active: what route guidance the iPhone sent (#1196). */
+    private fun finishRouteGuidance() {
+        if (!routeGuidanceSession.compareAndSet(true, false)) return
+        try {
+            debugLog(routeGuidance.finish(
+                com.shilapi.xcertplay.hud.BydOutputSettings.enabled(appContext),
+                com.shilapi.xcertplay.hud.BydOutputSettings.navigationReceivers(appContext),
+            ))
+        } catch (error: RuntimeException) {
+            Log.w(IphoneCarPlayConfiguration.TAG, "route guidance summary failed", error)
+        }
+    }
+
     /** Waits for USB, iAP2, MFi and VPN teardown; intended for a non-main lifecycle thread. */
     fun awaitClosed(timeoutMillis: Long): Boolean {
         require(timeoutMillis >= 0) { "timeoutMillis must not be negative" }
@@ -900,6 +933,7 @@ class CarPlayController(
 
     // HUD (SOME/IP) and cluster (AMap broadcast) keep separate state so one failing cannot stall the other.
     private fun onRouteFrame(frame: com.shilapi.xcertplay.iap2.wire.Iap2Frame) {
+        routeGuidance.accept(frame.messageId, frame.payload)
         BydNavigationOutputs.onFrame(frame)
         com.shilapi.xcertplay.glance.CarPlayGlance.onFrame(frame)
         synchronized(playbackStatus) {

@@ -591,6 +591,8 @@
     <string name="wheel_speed_for_tunnels_description">Con Invia la posizione all’iPhone attivo, DiPlay invia anche la velocità delle ruote e la marcia dell’auto, così Apple Maps può far avanzare la tua posizione in gallerie e parcheggi. Riconnette CarPlay. Richiede ADB via rete sulla head unit.</string>
     <string name="video_while_parked">Video con l’auto ferma</string>
     <string name="video_while_parked_description">iOS 27: un video inviato a CarPlay dall’iPhone viene riprodotto sullo schermo dell’auto mentre l’auto è in P. Il lettore si chiude quando esci da P; senza ADB il video resta disattivato e l’iPhone riproduce solo l’audio. I video HTTPS semplici (ad esempio da Safari) vengono riprodotti; i video protetti con FairPlay, come Apple TV+, richiedono un ricevitore con licenza e qui non vengono riprodotti. Riconnette CarPlay. Richiede ADB via rete sulla head unit.</string>
+    <string name="video_off_gear_unreadable">I video non possono essere riprodotti sullo schermo dell’auto: DiPlay non riesce a leggere la marcia.</string>
+    <string name="video_gear_no_reply">L’ADB della head unit non ha risposto alla lettura della marcia.</string>
     <string name="cluster_song">Brano sul cruscotto</string>
     <string name="cluster_song_description">Titolo e artista del brano di CarPlay appaiono nella scheda musicale del quadro strumenti, con riproduci e pausa. La scheda compare come sorgente musicale “Altro” di BYD, perché il cruscotto non disegna la sorgente di CarPlay. Si applica subito. Richiede ADB via rete sulla head unit.</string>
     <string name="video_back_to_carplay">Torna a CarPlay</string>
@@ -1051,6 +1053,7 @@
     <string name="connection_help_hotspot_interface_not_found">In Configurazione connessione tocca Modifica hotspot salvato, svuota Interfaccia dell’hotspot (facoltativa), poi riprova.</string>
     <string name="connection_help_car_hotspot_off">Accendi l’hotspot dell’auto nelle impostazioni dell’auto, poi riprova.</string>
     <string name="last_connection_attempt">Ultimo tentativo di connessione (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Ultima connessione CarPlay (%1$s): %2$s</string>
     <string name="cluster_projection_shape">Forma della mappa sul quadro strumenti</string>
     <string name="cluster_projection_shape_half">Mezza schermata</string>
     <string name="cluster_projection_shape_full">Schermo intero</string>

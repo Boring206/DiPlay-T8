@@ -524,6 +524,8 @@
     <string name="wheel_speed_for_tunnels_description">Если включено «Передавать местоположение на iPhone», DiPlay также передаёт скорость колёс и передачу, чтобы Apple Карты продолжали вести вашу позицию в тоннелях и на парковках. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
     <string name="video_while_parked">Видео на стоянке</string>
     <string name="video_while_parked_description">iOS 27: видео, которое вы отправляете в CarPlay с iPhone, показывается на экране машины, пока включён P. Плеер закрывается, когда вы выходите из P; без ADB видео выключено и iPhone играет только звук. Обычное видео по HTTPS (например, из Safari) работает; видео под защитой FairPlay, как Apple TV+, требует лицензированного приёмника и здесь не воспроизводится. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
+    <string name="video_off_gear_unreadable">Видео не воспроизводится на экране автомобиля: DiPlay не может прочитать передачу.</string>
+    <string name="video_gear_no_reply">ADB головного устройства не ответил на чтение передачи.</string>
     <string name="cluster_song">Песня на приборной панели</string>
     <string name="cluster_song_description">Название и исполнитель песни из CarPlay показываются в музыкальной карточке на приборной панели, вместе с воспроизведением и паузой. Карточка отображается как источник BYD «другое», потому что панель не рисует собственный источник CarPlay. Применяется сразу. Нужен ADB по сети на головном устройстве.</string>
     <string name="cluster_song_gate">Автоактивация музыкальной карточки</string>
@@ -913,6 +915,7 @@
     <string name="connection_help_hotspot_interface_not_found">В разделе «Настройка подключения» нажмите «Изменить сохранённую точку доступа», очистите поле «Интерфейс точки доступа (необязательно)» и повторите попытку.</string>
     <string name="connection_help_car_hotspot_off">Включите точку доступа автомобиля в настройках автомобиля и повторите попытку.</string>
     <string name="last_connection_attempt">Последняя попытка подключения (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Последнее подключение CarPlay (%1$s): %2$s</string>
     <string name="connection_help_hotspot">Убедитесь, что точка доступа автомобиля включена, а имя и пароль совпадают с настройками DiPlay. Если возможно, выберите 5 ГГц и повторите попытку.</string>
     <string name="connection_help_iphone_wifi">Включите Wi-Fi и Bluetooth. Подключите iPhone к точке доступа автомобиля и включите автоподключение. Повторите попытку; при сбое сохраните отчёт.</string>
     <string name="connection_help_permissions">Разрешите DiPlay доступ к USB, устройствам поблизости или геолокации на головном устройстве, если требуется, и повторите попытку.</string>

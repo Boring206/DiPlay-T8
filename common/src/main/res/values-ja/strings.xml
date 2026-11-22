@@ -597,6 +597,8 @@
     <string name="wheel_speed_for_tunnels_description">iPhoneへの位置情報送信が有効な場合、車輪速度とギア位置も送ります。トンネルや駐車場内でもAppleマップが車両位置を追跡しやすくなります。CarPlayを再接続すると反映されます。車載端末のネットワークADBが必要です。</string>
     <string name="video_while_parked">駐車中の動画再生</string>
     <string name="video_while_parked_description">iOS 27向けの機能です。車を駐車（シフト位置P）した状態では、iPhoneからCarPlayへ送った動画を車載画面で再生できます。P以外に切り替えるとプレーヤーを閉じます。ADBがない場合は映像再生を無効にし、音声のみiPhoneで再生します。Safariなどから送る通常のHTTPS動画には対応しますが、Apple TV+などFairPlayで保護された動画にはライセンスを持つレシーバーが必要なため再生できません。CarPlayを再接続すると反映されます。車載端末のネットワークADBが必要です。</string>
+    <string name="video_off_gear_unreadable">車の画面で動画を再生できません：DiPlay がギア位置を読み取れません。</string>
+    <string name="video_gear_no_reply">車載端末のADBがギア位置の読み取りに応答しませんでした。</string>
     <string name="cluster_song">メーターに曲を表示</string>
     <string name="cluster_song_description">CarPlayの曲名とアーティストを、再生・一時停止状態とともにメーターの音楽カードに表示します。メーターがCarPlayの音源を直接表示できないため、BYDの「その他の音楽」として表示されます。変更はすぐに反映されます。車載端末のネットワークADBが必要です。</string>
     <string name="cluster_song_gate">音楽カードを自動起動</string>
@@ -1015,6 +1017,7 @@
     <string name="connection_help_hotspot_interface_not_found">「接続設定」で「保存済みのホットスポットを編集」をタップし、「ホットスポットのインターフェース（任意）」を空欄にしてから再試行してください。</string>
     <string name="connection_help_car_hotspot_off">車の設定で車載ホットスポットをオンにしてから再試行してください。</string>
     <string name="last_connection_attempt">前回の接続試行（%1$s）：%2$s</string>
+    <string name="last_carplay_connection_problem">前回のCarPlay接続（%1$s）：%2$s</string>
     <string name="connection_help_hotspot">車載端末のテザリングがオンで、名前とパスワードがDiPlayの設定と一致するか確認してください。可能なら5 GHzにして再試行してください。</string>
     <string name="connection_help_iphone_wifi">Wi-FiとBluetoothをオンにしてください。iPhoneで車載端末のWi-Fiに接続し、「自動接続」を有効にして再試行してください。改善しない場合は診断レポートを保存してください。</string>
     <string name="connection_help_permissions">車載端末でDiPlayにUSB、「付近のデバイス」、位置情報の権限を必要に応じて許可してから、再試行してください。</string>

@@ -559,6 +559,8 @@
     <string name="wheel_speed_for_tunnels_description">开启“向 iPhone 报告位置”后，DiPlay 还会发送车轮速度和挡位，让 Apple 地图在隧道和停车场里也能继续推算你的位置。会重新连接 CarPlay。需要在车机上开启网络 ADB。</string>
     <string name="video_while_parked">驻车时播放视频</string>
     <string name="video_while_parked_description">iOS 27：在 iPhone 上投送到 CarPlay 的视频会在车辆处于 P 挡时在车机屏幕上播放。挂出 P 挡时播放器会关闭；没有 ADB 时视频保持关闭，iPhone 只播放声音。普通 HTTPS 视频（例如来自 Safari）可以播放；受 FairPlay 保护的视频（例如 Apple TV+）需要获得授权的接收器，在这里无法播放。会重新连接 CarPlay。需要车机开启网络 ADB。</string>
+    <string name="video_off_gear_unreadable">车机屏幕无法播放视频：DiPlay 读不到挡位。</string>
+    <string name="video_gear_no_reply">车机的 ADB 没有回应挡位读取。</string>
     <string name="cluster_song">仪表盘显示歌曲</string>
     <string name="cluster_song_description">CarPlay 正在播放的歌曲名和歌手会显示在仪表盘的音乐卡片中，并同步播放和暂停状态。卡片以比亚迪的“其他”音源显示，因为仪表盘不会绘制 CarPlay 自身的音源。立即生效。需要车机开启网络 ADB。</string>
     <string name="cluster_song_gate">自动激活音乐卡片</string>
@@ -973,6 +975,7 @@
     <string name="connection_help_hotspot_interface_not_found">请在“连接设置”中点击“编辑已保存的热点”，清空“热点网络接口（可选）”，然后重试。</string>
     <string name="connection_help_car_hotspot_off">请在车机设置中开启车机热点，然后重试。</string>
     <string name="last_connection_attempt">上次连接尝试（%1$s）：%2$s</string>
+    <string name="last_carplay_connection_problem">上次 CarPlay 连接（%1$s）：%2$s</string>
     <string name="connection_help_hotspot">请确认车机热点已开启，且名称和密码与 DiPlay 设置一致。若支持，使用 5 GHz 后重试。</string>
     <string name="connection_help_iphone_wifi">保持 Wi-Fi 和蓝牙开启。在 iPhone 上连接车机热点并启用自动加入，然后重试。若仍失败，请保存诊断报告。</string>
     <string name="connection_help_permissions">请在车机上允许 DiPlay 所需的 USB、附近设备或位置信息权限，然后重试。</string>

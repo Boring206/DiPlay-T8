@@ -245,6 +245,25 @@ class ClusterMapPresentationTest {
         }
     }
 
+    // #1196: the report names which navigation receiver the head unit has, not only whether one exists.
+    @Test fun theReportNamesEachNavigationReceiverInstalled() {
+        val packages = shadowOf(context.packageManager)
+        val installed = listOf("com.byd.amapservice", "com.ts.car.someip.service")
+        installed.forEach { name ->
+            packages.installPackage(android.content.pm.PackageInfo().apply {
+                packageName = name
+                applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = name }
+            })
+        }
+        try {
+            assertEquals(installed, com.shilapi.xcertplay.hud.BydOutputSettings.navigationReceivers(context))
+            assertTrue(ClusterMapPresentation.diagnosticReport(context).lines().contains(
+                "navigationReceiverAvailable=true receivers=com.byd.amapservice,com.ts.car.someip.service"))
+        } finally {
+            installed.forEach(packages::deletePackage)
+        }
+    }
+
     @Test fun disabledClusterStillReportsDisplayWithoutNavigationReceiver() {
         val enabled = AirPlayPersistence.loadClusterMapEnabled(context)
         AirPlayPersistence.saveClusterMapEnabled(context, false)
@@ -253,7 +272,7 @@ class ClusterMapPresentationTest {
             assertFalse(com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context))
             val report = ClusterMapPresentation.diagnosticReport(context)
             assertTrue(report.contains("clusterEnabled=false"))
-            assertTrue(report.contains("navigationReceiverAvailable=false"))
+            assertTrue(report.contains("navigationReceiverAvailable=false receivers=none"))
             assertTrue(report.contains("1920x720"))
             assertTrue(report.contains("selectedCluster=$id:${DiLink4ClusterDisplay.NAME}"))
         } finally {

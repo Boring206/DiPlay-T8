@@ -200,10 +200,18 @@ object BydOutputSettings {
     fun clusterSongDiagnosticReport(context: Context): String = BydClusterSong.report(context.applicationContext)
 
     /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
-    fun navigationAvailable(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) ||
-            BydAmapAdapter.find { installed(context, it) } != null ||
-            installed(context, "com.ts.car.someip.service")
+    fun navigationAvailable(context: Context): Boolean = navigationReceivers(context).isNotEmpty()
+
+    /**
+     * The navigation receivers this head unit has, by package (#1196): the standalone HUD receiver on its
+     * tested firmware, the AMap cluster adapters (com.byd.amapservice, com.example.amapservice) and the
+     * SOME/IP gateway that feeds the windshield HUD.
+     */
+    fun navigationReceivers(context: Context): List<String> = buildList {
+        if (BydStandaloneHudOutput.available(context)) add(BydStandaloneHudOutput.RECEIVER_PACKAGE)
+        BydAmapAdapter.entries.filter { installed(context, it.packageName) }.forEach { add(it.packageName) }
+        if (installed(context, NavigationOutputLines.SOMEIP_PACKAGE)) add(NavigationOutputLines.SOMEIP_PACKAGE)
+    }
 
     /** Whether the head unit has the FCE vehicle-property service that feeds its cluster's navigation view. */
     fun fceClusterAvailable(): Boolean = FceClusterBridge.available()

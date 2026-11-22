@@ -524,6 +524,8 @@
     <string name="wheel_speed_for_tunnels_description">Con «Informar la ubicación al iPhone» activado, DiPlay también envía la velocidad de las ruedas y la marcha, para que Apple Maps siga moviendo tu posición en túneles y aparcamientos. Reconecta CarPlay. Requiere ADB por red en la unidad principal.</string>
     <string name="video_while_parked">Vídeo con el coche aparcado</string>
     <string name="video_while_parked_description">iOS 27: el vídeo que envías a CarPlay desde el iPhone se reproduce en la pantalla del coche mientras está en P. El reproductor se cierra al salir de P; sin ADB el vídeo queda desactivado y el iPhone solo reproduce el audio. El vídeo HTTPS normal (por ejemplo, de Safari) funciona; el vídeo protegido con FairPlay, como Apple TV+, necesita un receptor con licencia y aquí no se reproduce. Vuelve a conectar CarPlay. Requiere ADB por red en la unidad principal.</string>
+    <string name="video_off_gear_unreadable">Los vídeos no se pueden reproducir en la pantalla del coche: DiPlay no puede leer la marcha.</string>
+    <string name="video_gear_no_reply">El ADB de la unidad principal no respondió a la lectura de la marcha.</string>
     <string name="cluster_song">Canción en el cuadro</string>
     <string name="cluster_song_description">El título y el artista de la canción de CarPlay aparecen en la tarjeta de música del cuadro de instrumentos, con reproducción y pausa. La tarjeta se muestra como la fuente de música «otra» de BYD, porque el cuadro no dibuja la fuente propia de CarPlay. Se aplica al instante. Requiere ADB por red en la unidad principal.</string>
     <string name="cluster_song_gate">Activar la tarjeta de música automáticamente</string>
@@ -913,6 +915,7 @@
     <string name="connection_help_hotspot_interface_not_found">En «Configuración de conexión», toca «Editar punto de acceso guardado», borra «Interfaz del punto de acceso (opcional)» y reintenta.</string>
     <string name="connection_help_car_hotspot_off">Activa el punto de acceso del coche en la configuración del coche y reintenta.</string>
     <string name="last_connection_attempt">Último intento de conexión (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Última conexión de CarPlay (%1$s): %2$s</string>
     <string name="connection_help_hotspot">Comprueba que el punto de acceso del coche esté activo y que su nombre y contraseña coincidan con DiPlay. Si es posible, usa 5 GHz y reintenta.</string>
     <string name="connection_help_iphone_wifi">Mantén Wi-Fi y Bluetooth activos. Conecta el iPhone al punto de acceso del coche y activa la conexión automática. Reintenta o guarda un informe de diagnóstico.</string>
     <string name="connection_help_permissions">Concede a DiPlay los permisos necesarios de USB, dispositivos cercanos o ubicación en la unidad y reintenta.</string>

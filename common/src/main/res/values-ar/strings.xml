@@ -524,6 +524,8 @@
     <string name="wheel_speed_for_tunnels_description">عند تشغيل «إرسال الموقع إلى iPhone»، يرسل DiPlay أيضًا سرعة عجلات السيارة وناقل الحركة، لتواصل «خرائط Apple» تحريك موقعك في الأنفاق ومواقف السيارات. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="video_while_parked">الفيديو أثناء التوقف</string>
     <string name="video_while_parked_description">iOS 27: يُعرض الفيديو الذي ترسله إلى CarPlay من iPhone على شاشة السيارة ما دامت السيارة على وضع P. يُغلق المشغل عند الخروج من P؛ وبدون ADB يبقى الفيديو متوقفًا ويشغّل iPhone الصوت فقط. يعمل فيديو HTTPS العادي (مثل Safari)؛ أما الفيديو المحمي بـ FairPlay مثل Apple TV+ فيحتاج إلى مستقبل مرخّص ولا يعمل هنا. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="video_off_gear_unreadable">لا يمكن تشغيل الفيديو على شاشة السيارة: لا يستطيع DiPlay قراءة وضع ناقل الحركة.</string>
+    <string name="video_gear_no_reply">لم يستجب ADB في وحدة القيادة لقراءة وضع ناقل الحركة.</string>
     <string name="cluster_song">الأغنية على لوحة العدادات</string>
     <string name="cluster_song_description">يظهر اسم أغنية CarPlay والفنان في بطاقة الموسيقى على لوحة العدادات، مع التشغيل والإيقاف المؤقت. تظهر البطاقة كمصدر الموسيقى «آخر» من BYD، لأن لوحة العدادات لا تعرض مصدر CarPlay الخاص. يُطبَّق فورًا. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="cluster_song_gate">تنشيط بطاقة الموسيقى تلقائياً</string>
@@ -962,6 +964,7 @@
     <string name="connection_help_hotspot_interface_not_found">في «إعداد الاتصال»، اضغط «تعديل نقطة الاتصال المحفوظة» وامسح «واجهة نقطة الاتصال (اختياري)»، ثم أعد المحاولة.</string>
     <string name="connection_help_car_hotspot_off">شغّل نقطة اتصال السيارة في إعدادات السيارة، ثم أعد المحاولة.</string>
     <string name="last_connection_attempt">آخر محاولة اتصال (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">آخر اتصال CarPlay (%1$s): %2$s</string>
     <string name="connection_help_hotspot">تأكد من تشغيل نقطة اتصال السيارة وأن اسمها وكلمة مرورها يطابقان إعدادات DiPlay. استخدم تردد 5 غيغاهرتز إن توفر ثم أعد المحاولة.</string>
     <string name="connection_help_iphone_wifi">أبقِ Wi-Fi وبلوتوث قيد التشغيل. اتصل بنقطة اتصال السيارة من iPhone وفعّل الانضمام التلقائي ثم حاول مجددًا. احفظ تقرير تشخيص إذا استمر الفشل.</string>
     <string name="connection_help_permissions">اسمح لـ DiPlay بأذونات USB أو الأجهزة القريبة أو الموقع المطلوبة على وحدة السيارة، ثم أعد المحاولة.</string>

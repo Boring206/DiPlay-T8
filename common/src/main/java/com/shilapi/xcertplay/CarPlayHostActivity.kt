@@ -5157,29 +5157,20 @@ open class CarPlayHostActivity : ComponentActivity() {
         )
     }
 
-    /** Car Bluetooth audio: shows whether the iPhone keeps A2DP/HFP with the car now and once CarPlay runs. */
+    /** Car Bluetooth audio: shows whether the iPhone keeps A2DP/HFP with the car now and once CarPlay runs (#1222). */
     private fun logCarBluetoothAudio() {
         appendLog("Car Bluetooth audio: on; CarPlay audio not offered")
         val adapter = runCatching { getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter ?: android.bluetooth.BluetoothAdapter.getDefaultAdapter() }.getOrNull()
             ?: return appendLog("Car Bluetooth audio: no Bluetooth adapter")
-        fun probe(moment: String) {
-            for ((name, profile) in listOf("A2DP" to android.bluetooth.BluetoothProfile.A2DP,
-                    "HFP" to android.bluetooth.BluetoothProfile.HEADSET)) {
-                runCatching {
-                    adapter.getProfileProxy(applicationContext, object : android.bluetooth.BluetoothProfile.ServiceListener {
-                        override fun onServiceConnected(id: Int, proxy: android.bluetooth.BluetoothProfile) {
-                            val devices = runCatching { proxy.connectedDevices.map { it.name ?: "?" } }
-                                .getOrElse { listOf("unreadable:${it.javaClass.simpleName}") }
-                            appendLog("Car Bluetooth audio: $moment $name connected=$devices")
-                            adapter.closeProfileProxy(id, proxy)
-                        }
-                        override fun onServiceDisconnected(id: Int) = Unit
-                    }, profile)
-                }.onFailure { appendLog("Car Bluetooth audio: $moment $name unavailable ${it.javaClass.simpleName}") }
-            }
-        }
-        probe("start")
-        mainHandler.postDelayed({ if (!isDestroyed) probe("after30s") }, 30_000L)
+        val probe = CarBluetoothAudioProbe(
+            connectionState = adapter::getProfileConnectionState,
+            requestProxy = { profile, listener -> adapter.getProfileProxy(applicationContext, listener, profile) },
+            closeProxy = adapter::closeProfileProxy,
+            after = { delayMillis, action -> mainHandler.postDelayed(action, delayMillis) },
+            log = ::appendLog,
+        )
+        probe.probe("start")
+        mainHandler.postDelayed({ if (!isDestroyed) probe.probe("after30s") }, 30_000L)
     }
 
     private fun loadAirPlayIcon(): AirPlayIcon {

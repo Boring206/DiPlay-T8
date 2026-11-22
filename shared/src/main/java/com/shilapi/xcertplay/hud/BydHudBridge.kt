@@ -44,6 +44,7 @@ internal object BydHudBridge {
     private var lastSendResult: Int? = null
     private var icons: Map<Int, ByteArray>? = null
     private var refusedBinds = 0
+    private var transactionFailing = false
     private var nextBindAtMillis = 0L
 
     // The gateway pings registered callbacks and drops registrations that do not answer like an AIDL stub.
@@ -59,7 +60,7 @@ internal object BydHudBridge {
             FIRST_CALL_TRANSACTION + 1 -> {
                 data.enforceInterface(CALLBACK_TOKEN)
                 val ready = data.readInt() != 0
-                Log.i(TAG, "SOME/IP HAL ready=$ready")
+                NavigationOutputLog.note(TAG, "hud.hal", NavigationOutputLines.hudHalReady(ready))
                 reply?.writeNoException()
                 true
             }
@@ -138,6 +139,7 @@ internal object BydHudBridge {
         if (accepted && !guidanceSentLogged) {
             guidanceSentLogged = true
             Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): gateway accepted guidance; rendering unconfirmed")
+            NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceAccepted(), logcat = false)
         }
         if (accepted) showing = true
     }
@@ -147,6 +149,7 @@ internal object BydHudBridge {
         if (!sendLocked(BydHudPayload.clear())) return
         showing = false
         guidanceSentLogged = false
+        NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceCleared())
     }
 
     // Arrow-less maneuvers (roundabouts, destination) are only visible through the field-8 icon.
@@ -188,6 +191,7 @@ internal object BydHudBridge {
             binding = appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)
             if (binding) {
                 Log.i(TAG, "bindService=true")
+                NavigationOutputLog.note(TAG, "hud.bind", NavigationOutputLines.hudBindRequested(), logcat = false)
                 refusedBinds = 0
             } else {
                 refused()
@@ -195,15 +199,17 @@ internal object BydHudBridge {
         } catch (error: Throwable) {
             binding = false
             if (refusedBinds == 0) Log.w(TAG, "cannot bind SOME/IP service", error)
-            refused()
+            refused(error)
         }
     }
 
     // Logged once per run of refusals; the retries back off instead of repeating every tick.
-    private fun refused() {
+    private fun refused(error: Throwable? = null) {
         refusedBinds++
         nextBindAtMillis = SystemClock.elapsedRealtime() + BydHudProtocol.bindRetryMillis(refusedBinds)
         if (refusedBinds == 1) Log.i(TAG, "bindService=false; retrying with backoff up to ${BydHudProtocol.MAX_BIND_RETRY_MILLIS / 1000}s")
+        NavigationOutputLog.note(TAG, "hud.bind", logcat = false, message = error?.let(NavigationOutputLines::hudBindFailed)
+            ?: NavigationOutputLines.hudBindRefused(BydHudProtocol.MAX_BIND_RETRY_MILLIS / 1000))
     }
 
     private fun onGatewayCallback(action: () -> Unit) {
@@ -223,6 +229,8 @@ internal object BydHudBridge {
             // Firmware explicitly treats 13 as an already-started service.
             started = BydHudProtocol.serviceStarted(startResult)
             Log.i(TAG, "SOME/IP connected, callback=$registered startResult=$startResult started=$started")
+            NavigationOutputLog.note(TAG, "hud.gateway",
+                NavigationOutputLines.hudConnected(registered, startResult, started), logcat = false)
             showing = false
             sendCurrentLocked()
         }
@@ -231,10 +239,17 @@ internal object BydHudBridge {
         override fun onServiceDisconnected(name: ComponentName) = onGatewayCallback {
             binder = null
             started = false
+            NavigationOutputLog.note(TAG, "hud.gateway", NavigationOutputLines.hudGatewayLost("disconnected"))
         }
 
-        override fun onBindingDied(name: ComponentName) = onGatewayCallback { resetBindingLocked() }
-        override fun onNullBinding(name: ComponentName) = onGatewayCallback { resetBindingLocked() }
+        override fun onBindingDied(name: ComponentName) = onGatewayCallback {
+            NavigationOutputLog.note(TAG, "hud.gateway", NavigationOutputLines.hudGatewayLost("binding died"))
+            resetBindingLocked()
+        }
+        override fun onNullBinding(name: ComponentName) = onGatewayCallback {
+            NavigationOutputLog.note(TAG, "hud.gateway", NavigationOutputLines.hudGatewayLost("returned a null binding"))
+            resetBindingLocked()
+        }
     }
 
     private inline fun transactLocked(code: Int, returnsValue: Boolean = true, write: (Parcel) -> Unit): Int {
@@ -246,9 +261,16 @@ internal object BydHudBridge {
             write(data)
             check(target.transact(code, data, reply, 0)) { "Unsupported transaction $code" }
             reply.readException()
-            if (returnsValue) reply.readInt() else 0
+            (if (returnsValue) reply.readInt() else 0).also {
+                if (transactionFailing) {
+                    transactionFailing = false
+                    NavigationOutputLog.note(TAG, "hud.transaction", NavigationOutputLines.hudTransactionsAnswer())
+                }
+            }
         } catch (error: Throwable) {
             Log.w(TAG, "SOME/IP transaction $code failed", error)
+            transactionFailing = true
+            NavigationOutputLog.note(TAG, "hud.transaction", NavigationOutputLines.hudTransactionFailed(code, error), logcat = false)
             -1
         } finally {
             reply.recycle()
@@ -267,6 +289,7 @@ internal object BydHudBridge {
         }
         if (lastSendResult != result) {
             Log.i(TAG, "HUD fireEvent result=$result bytes=${payload.size}")
+            NavigationOutputLog.note(TAG, "hud.send", NavigationOutputLines.hudFireEvent(result), logcat = false)
             lastSendResult = result
         }
         if (result != 0) {

@@ -579,6 +579,8 @@
     <string name="wheel_speed_for_tunnels_description">Konumu iPhone\'a bildir açıkken, DiPlay aracın tekerlek hızını ve vitesini de gönderir, böylece Apple Haritalar tünellerde ve otoparklarda konumunuzu ilerletmeye devam edebilir. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
     <string name="video_while_parked">Park halindeyken video</string>
     <string name="video_while_parked_description">iOS 27: iPhone\'da CarPlay\'e gönderdiğiniz bir video, araç P konumundayken araç ekranında oynatılır. P konumundan çıktığınızda oynatıcı kapanır; ADB olmadan video kapalı kalır ve iPhone yalnızca ses çalar. Düz HTTPS video (örneğin Safari\'den) oynatılır; Apple TV+ gibi FairPlay korumalı videolar lisanslı bir alıcı gerektirir ve burada oynatılamaz. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
+    <string name="video_off_gear_unreadable">Videolar araç ekranında oynatılamıyor: DiPlay vitesi okuyamıyor.</string>
+    <string name="video_gear_no_reply">Ana ünitenin ADB\'si vites okumasına yanıt vermedi.</string>
     <string name="cluster_song">Gösterge panelinde parça</string>
     <string name="cluster_song_description">CarPlay şarkı adı ve sanatçısı, oynat ve duraklat ile birlikte gösterge panelindeki müzik kartında görünür. Gösterge paneli CarPlay\'in kendi kaynağını çizmediğinden kart BYD\'nin “Diğer” müzik kaynağı olarak gösterilir. Hemen uygulanır. Ana ünitede ağ üzerinden ADB gerektirir.</string>
     <string name="video_back_to_carplay">CarPlay\'e Geri Dön</string>
@@ -1033,6 +1035,7 @@
     <string name="hotspot_interface_not_found">Yapılandırılan erişim noktası arayüzü bu ana ünitede bulunamadı</string>
     <string name="iphone_sent_no_picture">iPhone bağlandı ancak görüntü göndermedi</string>
     <string name="last_connection_attempt">Son bağlantı denemesi (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Son CarPlay bağlantısı (%1$s): %2$s</string>
     <string name="option_size_custom">Özel</string>
     <string name="preview_decoder_hardware">donanımsal</string>
     <string name="preview_decoder_software">yazılımsal</string>

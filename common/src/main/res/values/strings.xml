@@ -599,6 +599,8 @@
     <string name="wheel_speed_for_tunnels_description">With Report location to iPhone on, DiPlay also sends the car\'s wheel speed and gear, so Apple Maps can keep your position moving in tunnels and car parks. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
     <string name="video_while_parked">Video while parked</string>
     <string name="video_while_parked_description">iOS 27: a video you send to CarPlay on the iPhone plays on the car screen while the car is in P. The player closes when you shift out of P; without ADB video stays off and the iPhone plays audio only. Plain HTTPS video (for example from Safari) plays; video protected with FairPlay, such as Apple TV+, needs a licensed receiver and does not play here. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
+    <string name="video_off_gear_unreadable">Videos can’t play on the car screen: DiPlay can’t read the gear.</string>
+    <string name="video_gear_no_reply">The head unit’s ADB did not answer the gear read.</string>
     <string name="cluster_song">Song on the dashboard</string>
     <string name="cluster_song_description">The CarPlay song title and artist appear in the music card on the instrument cluster, with play and pause. The card shows as BYD’s “Other” music source, because the dashboard does not draw CarPlay’s own source. Applies at once. Needs ADB over network on the head unit.</string>
     <string name="cluster_song_gate">Auto-activate music card</string>
@@ -1016,6 +1018,7 @@
     <string name="connection_help_hotspot_interface_not_found">In Connection setup, tap Edit saved hotspot, clear Hotspot interface (optional), then retry.</string>
     <string name="connection_help_car_hotspot_off">Turn on the car hotspot in the car settings, then retry.</string>
     <string name="last_connection_attempt">Last connection attempt (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Last CarPlay connection (%1$s): %2$s</string>
     <string name="connection_help_hotspot">Check that the car hotspot is on and its name and password match DiPlay settings. If available, use 5 GHz, then retry.</string>
     <string name="connection_help_iphone_wifi">Keep Wi-Fi and Bluetooth on. On the iPhone, join the car hotspot and enable Auto-Join, then retry. Save a diagnostic report if it still fails.</string>
     <string name="connection_help_permissions">Allow the requested USB, Nearby devices or Location permissions for DiPlay on the head unit, then retry.</string>
