@@ -2599,6 +2599,13 @@ class CarPlayController(
                         opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
                 )
             }
+            // #1338: SYNs reached DiPlay but no session followed. Name where they went and what DiPlay answered.
+            val advertisedAddress = runCatching { InetAddress.getByName(config.linkLocal).address }.getOrNull()
+            fun logConnectionAttempts() {
+                ncm.connectionAttemptSummary(advertisedAddress)?.let {
+                    debugLog("wired start: NCM connection attempts $it")
+                }
+            }
             lateinit var startWatchdog: WiredStartWatchdog
             startWatchdog = WiredStartWatchdog(
                 schedule = { delay, action ->
@@ -2617,6 +2624,7 @@ class CarPlayController(
                             "wired start: no AirPlay session $waitedSeconds s " +
                                 "after carplay-start-session; NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                         )
+                        logConnectionAttempts()
                         fail(IphoneUsbException.TimedOut("The iPhone did not open CarPlay over USB in time"))
                     }
                 },
@@ -2628,6 +2636,7 @@ class CarPlayController(
                             "${WiredStartWatchdog.HELD_TIMEOUT_MILLIS / 1000} s for the second request; " +
                             "NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                     )
+                    logConnectionAttempts()
                 },
             )
             wiredStartWatchdog = startWatchdog
