@@ -55,4 +55,28 @@ class PacingDelayTest {
         assertEquals(30 * ms, low.nanos)
         assertEquals(200 * ms, PacingDelay(500 * ms).nanos)
     }
+
+    @Test fun invalidTuningParametersAreRejectedAtConstruction() {
+        assertTrue(runCatching { PacingDelay(90 * ms, window = 0) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, window = -1) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, percentile = -1) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, percentile = 101) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, refreshEvery = 0) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, minNanos = 200 * ms, maxNanos = 30 * ms) }
+            .exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, minNanos = -2 * ms, maxNanos = -1 * ms) }
+            .exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, fallPerFrame = -2 * ms) }
+            .exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, risePerFrame = -2 * ms) }
+            .exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test fun theHundredthPercentilePicksTheLargestNeed() {
+        val delay = PacingDelay(120 * ms, window = 20, percentile = 100, refreshEvery = 20)
+        (1..20).forEach { delay.onFrame(it * 5 * ms) }
+        // Largest need 100 ms + 20 ms margin = the starting 120 ms.
+        // The 90th percentile would aim for 110 ms and drop to 119.5 ms.
+        assertEquals(120 * ms, delay.nanos)
+    }
 }
