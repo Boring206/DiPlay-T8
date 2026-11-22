@@ -16,6 +16,9 @@ internal class MicrophoneCaptureStats(
 ) {
     private val type = typeAndSource(config.audioType).first
     private val format = format(config)
+    private val streamRate = config.sampleRate
+    private var sourceLabel = typeAndSource(config.audioType).second
+    private var captureRateLabel = ""
     private var metadata = metadata(config)
     private var windowStart = nowNs()
     private var readStart = windowStart
@@ -43,7 +46,19 @@ internal class MicrophoneCaptureStats(
      * not the VOICE_COMMUNICATION its audio type suggests (#987). Call before the capture thread starts, or on
      * that thread when it falls back to another source; [metadata] is not volatile.
      */
-    fun useSource(source: Int) { metadata = "type=$type source=${sourceName(source)} $format" }
+    fun useSource(source: Int) {
+        sourceLabel = sourceName(source)
+        metadata = "type=$type source=$sourceLabel $format$captureRateLabel"
+    }
+
+    /**
+     * The rate the recorder runs at when it is below the stream's: a call that recorded too slowly or silently is
+     * rebuilt at the vocoder's rate and upsampled (#1172). Like [useSource], only from the capture thread.
+     */
+    fun useCaptureRate(rate: Int) {
+        captureRateLabel = if (rate == streamRate) "" else " captureRate=$rate"
+        metadata = "type=$type source=$sourceLabel $format$captureRateLabel"
+    }
 
     fun reading() { readStart = nowNs() }
 
@@ -120,6 +135,21 @@ internal class MicrophoneCaptureStats(
     fun sourceFallback(from: Int, to: Int, failedRecorders: Int) {
         emit("Microphone: source fallback type=$type from=${sourceName(from)} to=${sourceName(to)} " +
             "failedRecorders=$failedRecorders")
+    }
+
+    /**
+     * The verdict of a call's [MicrophoneCaptureCheck] and what capture does about it: "keep" the recorder, or
+     * "rebuild" one from [nextSource] at [nextCaptureRate]. One line per check, with no audio and no addresses.
+     */
+    fun captureCheck(result: MicrophoneCaptureCheck.Result, nextSource: Int? = null, nextCaptureRate: Int? = null) {
+        val action = if (nextSource != null && nextCaptureRate != null) {
+            "rebuild nextSource=${sourceName(nextSource)} nextCaptureRate=$nextCaptureRate"
+        } else {
+            "keep"
+        }
+        emit("Microphone: capture check $metadata realtimePercent=${result.realtimePercent} " +
+            "peakDbfs=${peakDbfs(result.peak)} audioMode=${result.audioMode ?: "unknown"} " +
+            "verdict=${result.verdict.label} action=$action")
     }
 
     private fun recorderKind(newRecorder: Boolean) = if (newRecorder) "new" else "same"
