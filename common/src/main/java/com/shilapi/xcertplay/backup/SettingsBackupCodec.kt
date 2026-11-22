@@ -47,6 +47,49 @@ object SettingsBackupCodec {
 
     /** Families of layout settings with many keys and nothing sensitive in them. */
     private val AIRPLAY_PREFIXES = listOf("cluster_", "carplay_night_")
+
+    // The main file's getBoolean / getInt / getString keys. A key that is not stored yet has no type
+    // to compare with, so an untyped guess on import could write a value that later crashes its reader
+    // (getString throws on an Int just as getBoolean / getInt do on a String). The three fixed
+    // carplay_night_ keys below are declared too; the rest of that family and the cluster_ family build
+    // keys at runtime (cluster_safe_area_<WxH>, cluster_music_*), so they still rely on inference.
+    private val AIRPLAY_BOOLEAN_KEYS = setOf(
+        "hevc_enabled", "hevc_software_decoder",
+        "advanced_audio_channel_mapping", "audio_focus_enabled", "audio_focus_auto_yield",
+        "navigation_prompt_audio_focus", "disable_media_key_audio_focus",
+        "wireless_enabled", "wifi_direct_scan_pause", "main_buffered_audio",
+        "speech_without_8_16_khz", "car_bluetooth_audio", "call_echo_cancellation",
+        "call_voice_filter", "call_speakerphone",
+        "smooth_video", "direct_video_output", "low_latency_decoder", "mtk_decoder_tuning", "fps_counter",
+        "adb_cluster_activity_enabled", "platform21_cluster_enabled",
+        "center_map_overlay", "center_map_auto_hide", "center_map_follows_dashboard",
+        "right_hand_drive", "hide_top_bar", "hide_bottom_bar", "temporary_system_bars",
+        "harman_fullscreen", "carplay_same_task", "safe_area_draw_outside",
+        "main_display_disable_safe_area",
+        "adapt_pip_resolution", "auto_start_on_boot", "bt_suspend_during_carplay",
+        "hide_byd_call_popup", "launcher_bubble",
+        "location_reporting_enabled", "external_controller",
+    )
+    private val AIRPLAY_INT_KEYS = setOf(
+        "ui_scale_percent", "display_scale_tenths", "display_scale_percent",
+        "media_audio_channel", "navigation_audio_channel", "navigation_stream_type",
+        "wifi_p2p_preferred_channel", "navigation_audio_attenuation_db",
+        "manual_hotspot_channel", "ambient_lux_threshold", "display_fps",
+        "media_buffer_ms", "wired_media_buffer_ms", "ambient_delay_seconds",
+        "settings_gesture_fingers", "display_width_physical_mm",
+        "black_corner_radius_dp", "launcher_bubble_size", "bt_suspend_delay_seconds",
+        // Fixed keys of the carplay_night_ prefix family.
+        "carplay_night_start_minute", "carplay_night_end_minute",
+    )
+    private val AIRPLAY_STRING_KEYS = setOf(
+        "app_appearance", "manual_hotspot_band", "manual_hotspot_security",
+        "display_physical_size_basis", "usb_charging_current", "wireless_hotspot_mode",
+        "carplay_night_mode",
+    )
+    private val AIRPLAY_TYPES = AIRPLAY_BOOLEAN_KEYS.associateWith { KeyType.BOOLEAN } +
+        AIRPLAY_INT_KEYS.associateWith { KeyType.INT } +
+        AIRPLAY_STRING_KEYS.associateWith { KeyType.STRING }
+
     private val DIPLAY_KEYS = setOf(
         "auto_connect",
         "connect_on_phone_bluetooth",
@@ -57,19 +100,28 @@ object SettingsBackupCodec {
         "picture_controls",
         "settings_gesture_fingers",
     )
+    // The diplay file's getBoolean / getInt / getString keys; settings_gesture_fingers is shared with the main file.
+    private val DIPLAY_BOOLEAN_KEYS = setOf(
+        "auto_connect", "connect_on_phone_bluetooth", "settings_force_full_layout",
+    )
+    private val DIPLAY_INT_KEYS = setOf("settings_gesture_fingers")
+    private val DIPLAY_STRING_KEYS = setOf("default_connection_mode")
+    private val DIPLAY_TYPES = DIPLAY_BOOLEAN_KEYS.associateWith { KeyType.BOOLEAN } +
+        DIPLAY_INT_KEYS.associateWith { KeyType.INT } +
+        DIPLAY_STRING_KEYS.associateWith { KeyType.STRING }
     private val PICTURE_KEYS = CarPlayPicture.keys.toSet()
     // The driver's choices only. "ignore_off_report" records what one car's firmware reports, so it stays out.
     private val CAR_HOTSPOT_KEYS = setOf("auto_enable", "config_write")
     private val FILES = mapOf(
-        "xcertplay_airplay" to Policy.Allow(AIRPLAY_KEYS, AIRPLAY_PREFIXES),
-        "diplay" to Policy.Allow(DIPLAY_KEYS),
+        "xcertplay_airplay" to Policy.Allow(AIRPLAY_KEYS, AIRPLAY_PREFIXES, types = AIRPLAY_TYPES),
+        "diplay" to Policy.Allow(DIPLAY_KEYS, types = DIPLAY_TYPES),
         // These readers call getInt and getBoolean, which throw on any other stored type. A key that is not stored yet
         // has no type to compare with, so the type is declared here.
         "carplay_picture" to Policy.Allow(PICTURE_KEYS, types = PICTURE_KEYS.associateWith { KeyType.INT }),
         "diplay_car_hotspot" to Policy.Allow(CAR_HOTSPOT_KEYS, types = CAR_HOTSPOT_KEYS.associateWith { KeyType.BOOLEAN }),
     )
 
-    private enum class KeyType { BOOLEAN, INT }
+    private enum class KeyType { BOOLEAN, INT, STRING }
 
     private sealed interface Policy {
         fun includes(key: String): Boolean
@@ -153,6 +205,7 @@ object SettingsBackupCodec {
     private fun storeTyped(editor: Editor, key: String, value: Any?, type: KeyType): Boolean = when (type) {
         KeyType.BOOLEAN -> if (value is Boolean) { editor.putBoolean(key, value); true } else false
         KeyType.INT -> integral(value)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.let { editor.putInt(key, it.toInt()); true } ?: false
+        KeyType.STRING -> if (value is String) { editor.putString(key, value); true } else false
     }
 
     private fun inferred(editor: Editor, key: String, value: Any?): Boolean = when (value) {
