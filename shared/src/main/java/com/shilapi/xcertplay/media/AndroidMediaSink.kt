@@ -228,7 +228,7 @@ class AndroidMediaSink(
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
     private val appContext = context?.applicationContext
-    private val ambientSinkToken = AmbientMusicController.openSink(appContext)
+    private val ambientSinkToken = AmbientMusicController.openSink(appContext, onAudioDiagnostic)
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
         appContext,
