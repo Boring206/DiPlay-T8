@@ -100,6 +100,21 @@ class WirelessStartupRecoveryTest {
         assertEquals(View.VISIBLE, retry.visibility)
     }
 
+    // PR 1178 report (XTRONS IX): every RFCOMM connect returns in 1 to 5 ms, so a silent link looked like
+    // Bluetooth that reaches no phone, although an earlier link had carried iAP2. That silence is retried.
+    @Test fun aSilentLinkOnAnAdapterThatCarriedDataIsRetried() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val failure = BluetoothLinkCheck.failure(BluetoothLinkCheck.Verdict.ADAPTER_PROVEN,
+            BluetoothLinkCheck.Trigger.SILENCE, controlMillis = 4)!!
+        assertFalse(failure is WirelessStartupException)
+        report(status = CarPlayStatus.Failed(failure.message!!))
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.GONE, retry.visibility)
+        assertNotEquals(activity.getString(R.string.bluetooth_connections_not_real), stage.text.toString())
+    }
+
     // Issue 709: every connect fails inside Android. The iPhone is not what is missing, and no retry helps.
     @Test fun bluetoothThatCannotOpenConnectionsSaysSoAndDoesNotRetry() {
         val stage = TextView(activity)

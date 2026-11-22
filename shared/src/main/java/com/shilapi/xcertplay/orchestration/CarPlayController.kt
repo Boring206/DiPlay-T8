@@ -63,6 +63,7 @@ import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
+import com.shilapi.xcertplay.transport.BluetoothAdapterProof
 import com.shilapi.xcertplay.transport.BluetoothLinkCheck
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
@@ -314,6 +315,8 @@ class CarPlayController(
     private val wirelessResourceLock = Any()
     private val wirelessFailureReported = AtomicBoolean(false)
     @Volatile private var instantBluetoothLink: InstantBluetoothLink? = null
+    /** Times the unreal-Bluetooth control connect; tests replace it so the 50 ms gate does not depend on the machine. */
+    @Volatile private var bluetoothLinkCheckNanos: () -> Long = { System.nanoTime() }
     @Volatile private var firstTcpWatchdog: FirstTcpWatchdog? = null
     @Volatile private var wiredStartWatchdog: WiredStartWatchdog? = null
     @Volatile private var wiredSessionActive = false
@@ -1624,10 +1627,13 @@ class CarPlayController(
             if (isStaleWirelessRun(generation)) {
                 return
             }
+            val bluetoothAdapterKey = BluetoothAdapterProof.key(Build.BOARD, hostBluetoothMac)
             val stream = synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
                 try {
-                    BluetoothRfcommDuplexStream(socket, ::connectionDiagnostic).also { bluetoothStream = it }
+                    BluetoothRfcommDuplexStream(socket, ::connectionDiagnostic) {
+                        recordBluetoothAdapterProof(bluetoothAdapterKey)
+                    }.also { bluetoothStream = it }
                 } finally {
                     // The stream owns the connected socket and also closes it if stream getters
                     // fail. Do not retain a second socket owner in bootstrap teardown.
@@ -1635,7 +1641,7 @@ class CarPlayController(
                 }
             }
             if (BluetoothLinkCheck.looksUnreal(bluetoothConnectMillis, 0L)) {
-                InstantBluetoothLink(generation, device, stream, bluetoothConnectMillis).also {
+                InstantBluetoothLink(generation, device, stream, bluetoothConnectMillis, bluetoothAdapterKey).also {
                     instantBluetoothLink = it
                     watchForUnrealBluetooth(it)
                 }
@@ -1790,7 +1796,7 @@ class CarPlayController(
                 // A link that "connected" at once and failed without a byte may never have been
                 // real: say so instead of retrying into the same failure.
                 val unreal = instantBluetoothLink?.takeIf { it.generation == generation }
-                    ?.let { unrealBluetoothFailure(it, "failure") }
+                    ?.let { unrealBluetoothFailure(it, BluetoothLinkCheck.Trigger.FAILURE) }
                 fail(unreal ?: error, generation)
                 closeWirelessStack(generation = generation)
             }
@@ -2900,6 +2906,8 @@ class CarPlayController(
         val device: BluetoothDevice,
         val stream: BluetoothRfcommDuplexStream,
         val connectMillis: Long,
+        /** The [BluetoothAdapterProof] key of the head unit's adapter. */
+        val adapter: String,
     )
 
     /**
@@ -2917,7 +2925,7 @@ class CarPlayController(
                 return@Thread
             }
             if (isStaleWirelessRun(link.generation)) return@Thread
-            val failure = unrealBluetoothFailure(link, "silence") ?: return@Thread
+            val failure = unrealBluetoothFailure(link, BluetoothLinkCheck.Trigger.SILENCE) ?: return@Thread
             if (isStaleWirelessRun(link.generation)) return@Thread
             fail(failure, link.generation)
             closeWirelessStack(generation = link.generation)
@@ -2927,30 +2935,52 @@ class CarPlayController(
     /**
      * The failure to report when [link] was never real, or null when it was or cannot be told.
      * The claim is put to a service no phone offers, which a real stack cannot connect to; only
-     * when that "succeeds" at once as well is the link called unreal. A link that has delivered
-     * a single byte is not tested at all.
+     * when that "succeeds" at once as well, on an adapter that has never carried a byte, is the
+     * link called unreal. A link that has delivered a single byte is not tested at all.
+     *
+     * On an adapter that has carried bytes before, a silent link ends with a failure that is
+     * retried, and a failed attempt keeps its own failure (see [BluetoothLinkCheck.failure]).
      */
-    private fun unrealBluetoothFailure(link: InstantBluetoothLink, trigger: String): WirelessStartupException? {
+    private fun unrealBluetoothFailure(link: InstantBluetoothLink, trigger: BluetoothLinkCheck.Trigger): IOException? {
         val received = link.stream.bytesReceived
         if (!BluetoothLinkCheck.looksUnreal(link.connectMillis, received)) return null
-        val started = System.nanoTime()
+        val proofSource = bluetoothAdapterProof.source(link.adapter, bluetoothAdapterStore())
+        val adapterProven = proofSource != null
+        val clock = bluetoothLinkCheckNanos
+        val started = clock()
         val control = runCatching {
             link.device.createRfcommSocketToServiceRecord(UUID.randomUUID())
                 .use { connectBluetoothSocket(it, link.device.address) }
         }
-        val controlMillis = elapsedMillis(started)
-        val unreal = BluetoothLinkCheck.controlProvesUnreal(control.isSuccess, controlMillis)
+        val controlMillis = ((clock() - started) / 1_000_000L).coerceAtLeast(0)
+        val verdict = BluetoothLinkCheck.verdict(control.isSuccess, controlMillis, adapterProven)
         connectionDiagnostic(
-            "Bluetooth link check trigger=$trigger connectMs=${link.connectMillis} receivedBytes=$received " +
+            "Bluetooth link check trigger=${trigger.label} connectMs=${link.connectMillis} receivedBytes=$received " +
                 "controlConnect=${if (control.isSuccess) "succeeded" else "failed"} " +
-                "controlMs=$controlMillis unreal=$unreal",
+                "controlMs=$controlMillis unreal=${verdict == BluetoothLinkCheck.Verdict.UNREAL} " +
+                "adapterProven=$adapterProven source=${proofSource?.label ?: "none"} verdict=$verdict",
         )
-        if (!unreal) return null
-        return WirelessStartupException(
-            WirelessStartupFailure.BLUETOOTH_UNUSABLE,
-            "Android Bluetooth on this head unit reports ${BluetoothLinkCheck.UNREAL_MARK}: " +
-                "a connection to a service no phone offers also succeeded in ${controlMillis}ms",
-        )
+        if (verdict == BluetoothLinkCheck.Verdict.ADAPTER_PROVEN) {
+            debugLog(
+                "wireless Bluetooth link check trigger=${trigger.label}: a connection to a service no phone " +
+                    "offers succeeded at once, but an earlier RFCOMM link on this adapter carried data, so " +
+                    "Bluetooth is not reported unusable and the attempt is retried",
+            )
+        }
+        return BluetoothLinkCheck.failure(verdict, trigger, controlMillis)
+    }
+
+    /** Notes that an RFCOMM link on [adapter] has carried data, which keeps [unrealBluetoothFailure] from stopping retries. */
+    private fun recordBluetoothAdapterProof(adapter: String) {
+        if (bluetoothAdapterProof.record(adapter, bluetoothAdapterStore())) {
+            debugLog("wireless Bluetooth adapter carried RFCOMM data; the link check will not call it unreal")
+        }
+    }
+
+    private fun bluetoothAdapterStore(): BluetoothAdapterProof.Store = object : BluetoothAdapterProof.Store {
+        private val prefs get() = appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
+        override fun read(): String? = prefs.getString(PROVEN_BLUETOOTH_ADAPTER_KEY, null)
+        override fun write(adapter: String) = prefs.edit().putString(PROVEN_BLUETOOTH_ADAPTER_KEY, adapter).apply()
     }
 
     private fun connectBluetoothSocket(socket: BluetoothSocket, address: String) {
@@ -3484,6 +3514,9 @@ class CarPlayController(
         private const val VPN_CONNECT_TIMEOUT_MILLIS = 10_000L
         private const val WIRELESS_PREFS = "diplay_wireless"
         private const val HOTSPOT_FAMILY_PREFERENCE_KEY = "hotspot_address_family"
+        private const val PROVEN_BLUETOOTH_ADAPTER_KEY = "proven_bluetooth_adapter"
+        /** Process-wide, so a new controller still knows what an earlier one's links carried. */
+        private val bluetoothAdapterProof = BluetoothAdapterProof()
         private const val CONTROL_LOOP_TIMEOUT_MILLIS = 5 * 60_000L
         private const val LOCATION_CONTROL_LOOP_TIMEOUT_MILLIS = 24 * 60 * 60 * 1_000L
         private const val PERMISSION_POLL_INTERVAL_MILLIS = 500L
