@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.update
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -41,5 +42,14 @@ class UpdateVersionTest {
     fun unparseableInstalledVersionAcceptsAnyParseableRemote() {
         assertTrue(UpdateVersion.isNewer("0.2.15", "psa.2"))
         assertFalse(UpdateVersion.isNewer("public-preview", "psa.2"))
+    }
+
+@Test
+    fun overflowingNumericFieldsAreTreatedAsUnparseable() {
+        assertNull(UpdateVersion.parse("v99999999999999999999.0.0"))
+        assertFalse(UpdateVersion.isNewer("v99999999999999999999.0.0", "0.2.22"))
+        assertFalse(UpdateVersion.isNewer("v0.99999999999999999999.0", "0.2.22"))
+        assertFalse(UpdateVersion.isNewer("v0.2.99999999999999999999", "0.2.22"))
+        assertTrue(UpdateVersion.isNewer("v0.2.23", "0.2.22"))
     }
 }

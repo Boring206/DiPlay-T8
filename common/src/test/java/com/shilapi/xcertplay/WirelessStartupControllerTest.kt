@@ -1,12 +1,14 @@
 package com.shilapi.xcertplay
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Looper
+import android.os.ParcelUuid
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.network.*
 import com.shilapi.xcertplay.orchestration.*
@@ -34,6 +36,7 @@ class WirelessStartupControllerTest {
     private fun controller(
         chosenIphone: String? = null,
         mode: WirelessHotspotMode = WirelessHotspotMode.WIFI_P2P,
+        logs: MutableList<String>? = null,
     ) = CarPlayController(object : ContextWrapper(RuntimeEnvironment.getApplication()) {
         override fun getApplicationContext(): Context = this
         override fun bindService(service: Intent, conn: ServiceConnection, flags: Int): Boolean = false
@@ -45,7 +48,9 @@ class WirelessStartupControllerTest {
             manualHotspotSsid = "Car", manualHotspotPassphrase = "12345678"),
         AirPlayConfig("test", "test", "", "1", AirPlayDisplayConfig(800, 480)),
         AirPlayIdentity(ByteArray(32), ByteArray(32), "test"), PairingStore(),
-        object : AirPlaySessionListener {}, object : AirPlayMediaHandler {}, statuses::add)
+        object : AirPlaySessionListener {
+            override fun onDebugLog(message: String) { logs?.add(message) }
+        }, object : AirPlayMediaHandler {}, statuses::add)
 
     private fun fail(controller: CarPlayController, generation: Int, error: Throwable) {
         controller.javaClass.getDeclaredMethod("fail", Throwable::class.java, Int::class.javaObjectType)
@@ -173,12 +178,53 @@ class WirelessStartupControllerTest {
             selectionFailure(null, "Headset" to "00:11:22:33:44:03", "Pixel" to "00:11:22:33:44:04"))
     }
 
+    // #1151: these counts went to logcat only, so a report could not tell "no iPhone paired" from "two iPhones".
+    @Test fun theIphoneChoiceLeavesItsCountsInTheReport() {
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>()
+        selectionFailure(null, "Jane's iPhone" to "00:11:22:33:44:01", "Work iPhone" to "00:11:22:33:44:02",
+            "Headset" to "00:11:22:33:44:03", logs = logs)
+        selectionFailure("00:11:22:33:44:99", "Jane's iPhone" to "00:11:22:33:44:01", logs = logs)
+        val choices = logs.filter { it.contains("wireless Bluetooth iPhone choice=") }
+        assertEquals(listOf(
+            ConnectionDiagnosticLines.automaticBluetoothIphone(bonded = 3, bondedIphones = 2, directlyConnected = 0, connected = 0),
+            ConnectionDiagnosticLines.savedBluetoothIphone(bonded = 1, stillPaired = false),
+        ), choices.map { it.substringAfter(" phase=").substringAfter(' ') })
+        for (line in choices) {
+            assertTrue(line, line.startsWith(CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX + " "))
+            assertEquals(line, DiagnosticRedactor.redact(line))
+            assertFalse(line, line.contains("Jane") || line.contains("00:11:22"))
+        }
+    }
+
+    // #1151: an inline "bondName=" made the redactor drop every snapshot; the controller must use the shared builder.
+    @Test fun theBluetoothSnapshotIsTheSharedLineAndSurvivesTheRedactor() {
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        shadowOf(adapter).setState(BluetoothAdapter.STATE_ON)
+        val device = adapter.getRemoteDevice("00:11:22:33:44:05")
+        shadowOf(device).setName("Jane's iPhone")
+        shadowOf(device).setBondState(BluetoothDevice.BOND_BONDED)
+        shadowOf(device).setUuids(arrayOf(ParcelUuid.fromString("00000000-deca-fade-deca-deafdecacafe")))
+        val controller = controller(logs = logs)
+        try {
+            controller.javaClass.getDeclaredMethod("logBluetoothConnectionSnapshot", BluetoothDevice::class.java,
+                String::class.java).apply { isAccessible = true }.invoke(controller, device, "test")
+        } finally { controller.close(); controller.awaitClosed(2_000) }
+        val line = logs.single { it.contains("Bluetooth snapshot") }
+        assertEquals(ConnectionDiagnosticLines.bluetoothSnapshot(point = "test", adapterEnabled = true,
+            bondState = BluetoothDevice.BOND_BONDED, cachedServicesReadable = true, cachedServiceCount = 1,
+            cachedIap2Service = true), line.substringAfter(" phase=").substringAfter(' '))
+        assertEquals(line, DiagnosticRedactor.redact(line))
+        assertFalse(line, line.contains("Jane") || line.contains("00:11:22"))
+    }
+
     private fun assertCause(cause: ConnectionFailureCause, message: String, failure: Throwable) {
         assertEquals(message, failure.message)
         assertEquals(cause, (failure as? ConnectionFailureException)?.reason)
     }
 
-    private fun selectionFailure(chosenIphone: String?, vararg bonded: Pair<String, String>): Throwable {
+    private fun selectionFailure(chosenIphone: String?, vararg bonded: Pair<String, String>,
+        logs: MutableList<String>? = null): Throwable {
         val adapter = BluetoothAdapter.getDefaultAdapter()
         // No profile service answers in a test, so each profile query would wait out its timeout.
         // Setting any proxy, even null, makes Robolectric's getProfileProxy return false for every profile left unset.
@@ -186,7 +232,7 @@ class WirelessStartupControllerTest {
         shadowOf(adapter).setBondedDevices(bonded.mapTo(mutableSetOf()) { (name, address) ->
             adapter.getRemoteDevice(address).also { shadowOf(it).setName(name) }
         })
-        val controller = controller(chosenIphone)
+        val controller = controller(chosenIphone, logs = logs)
         try {
             return assertThrows(InvocationTargetException::class.java) {
                 controller.javaClass.getDeclaredMethod("selectWirelessBluetoothDevice", BluetoothAdapter::class.java)

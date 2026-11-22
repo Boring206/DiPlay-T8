@@ -55,6 +55,12 @@ internal object BydClusterMapPause {
         val control = streamControl
         val pauseMap = control != null && clusterMapShown && BydOutputSettings.clusterStreamPause(app)
         val followNavi = onNaviMode != null
+        // Local player needs no map video, regardless of mirrors or wheel navigation mode.
+        // Send before any optional blocking ADB read so it cannot delay the switch.
+        if (com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(app)) {
+            control?.invoke(false)
+            if (!followNavi) { shell.close(); lastNaviMode = null; return }
+        }
         if (!pauseMap && !followNavi) {
             control?.invoke(true)
             shell.close()

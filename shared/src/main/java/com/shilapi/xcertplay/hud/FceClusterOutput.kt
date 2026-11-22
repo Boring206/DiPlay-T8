@@ -130,7 +130,10 @@ internal class FceClusterOutput(private val writer: FcePropertyWriter) {
  */
 internal class FceNavigationState {
     private var state: Int? = null
-    private var source: String? = null
+
+    /** The navigation app the iPhone last named; "" once it reported that navigation ended. */
+    var source: String? = null
+        private set
 
     val active: Boolean
         get() = when {

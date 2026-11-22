@@ -191,6 +191,7 @@ class AndroidMediaSink(
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
     navigationAttenuationDb: Int = 0,
+    callAttenuationDb: Int = 0,
     context: Context? = null,
     private val navigationStreamType: Int = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
     onScreenStreamActiveChanged: ((Int, Boolean) -> Unit)? = null,
@@ -279,6 +280,14 @@ class AndroidMediaSink(
     fun setNavigationAttenuationDb(db: Int) {
         navigationAttenuationDb = NavigationAudioGain.clamp(db)
         audioRenderers.values.forEach { it.setNavigationAttenuationDb(navigationAttenuationDb) }
+    }
+
+    @Volatile private var callAttenuationDb = NavigationAudioGain.clamp(callAttenuationDb)
+
+    /** Apply a saved Audio setting to calls already playing, without reconnecting CarPlay. */
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+        audioRenderers.values.forEach { it.setCallAttenuationDb(callAttenuationDb) }
     }
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
     private val audioModeLock = Any()
@@ -755,10 +764,12 @@ class AndroidMediaSink(
         ).also {
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.callBufferMillis = callBufferMillis
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.onRoutedToEarpiece = { moveCallToLoudspeaker(id) }
             audioRenderers[id] = it
             // Cover a Settings change made while this renderer was being prepared.
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
         }
     }
 
@@ -1673,6 +1684,8 @@ private class VideoDecoder(
         synchronized(outputLock) {
             codec = decoder
             decoder = null
+            // A failure reported for this codec must not retire its replacement.
+            outputFailure = null
             // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
             awaitNotDequeuing(codec)
         }
@@ -1775,7 +1788,10 @@ private class AudioRenderer(
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
 ) : Closeable {
-    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long)
+    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long) {
+        /** Packets Wi-Fi lost right before this one, by sequence number. */
+        var lostBefore = 0
+    }
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
     private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
@@ -1789,12 +1805,19 @@ private class AudioRenderer(
     private val mediaLagGuard = if (format.audioType == "media") MediaPacketLagGuard(format.rtpClockRate) else null
     @Volatile private var newestRtpSample = 0
     private var lagRecoveryReports = 0
+    private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
+    private val sequenceGap = if (lostMusicFill != null) RtpSequenceGap() else null
+    private var underrunsAfterLastWrite = 0
+    private var silence = ByteArray(0)
+    private var lostFramesFilled = 0L
     @Volatile private var running = true
     @Volatile private var started = false
     private var codec: MediaCodec? = null
     private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
+    @Volatile private var callAttenuationDb = 0
+    private var appliedCallAttenuationDb: Int? = null
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -1807,6 +1830,8 @@ private class AudioRenderer(
     private var inputQueued = 0
     private var inputDropped = 0
     private var shortOpusPackets = 0
+    private var oversizeAacPackets = 0
+    private var firstOversizeAacLogged = false
     /**
      * Start level for a call, set before [start]; 0 keeps the low-latency level. A property, not a
      * constructor parameter: tests find the constructor by its parameter count.
@@ -1881,7 +1906,7 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now))) {
+        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { lostBefore = sequenceGap?.lostBefore(rtp) ?: 0 })) {
             if (started) {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
@@ -1922,6 +1947,7 @@ private class AudioRenderer(
             while (running) {
                 // Report Settings changes from this worker, never from the UI thread, also between prompts.
                 applyNavigationAttenuation()
+                applyCallAttenuation()
                 diagnosticStage = "packet"
                 queue.poll(AUDIO_POLL_MILLIS, TimeUnit.MILLISECONDS)?.let(::handle)
                 // Output becomes ready asynchronously, including after the last packet of a burst.
@@ -2137,6 +2163,26 @@ private class AudioRenderer(
         NavigationAudioGain.scalePcm16(data, offset, length, navigationAttenuationDb)
     }
 
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+    }
+
+    /** Worker-thread only. Reports each call level change once, when it reaches this call. */
+    private fun applyCallAttenuation() {
+        if (format.audioType != "telephony") return
+        val requestedDb = callAttenuationDb
+        if (requestedDb == 0 && appliedCallAttenuationDb == null) return
+        if (appliedCallAttenuationDb == requestedDb) return
+        appliedCallAttenuationDb = requestedDb
+        runCatching { report("Audio: call attenuation=" + requestedDb + "dB channel=" + mappedChannel + " applied=true") }
+    }
+
+    /** Lowers a call in the PCM itself, whichever output it plays on; other streams and 0 dB pass through untouched. */
+    private fun attenuateCall(data: ByteArray, offset: Int, length: Int) {
+        if (format.audioType != "telephony") return
+        NavigationAudioGain.scalePcm16(data, offset, length, callAttenuationDb)
+    }
+
     private fun audioAttributesFor(
         selection: AudioChannelSelection,
         streamOverride: Int,
@@ -2259,11 +2305,25 @@ private class AudioRenderer(
         }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
+        if (packet.lostBefore > 0 && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs, packet.lostBefore)
         when (format.codec) {
             AudioCodecKind.LPCM -> writePcm(byteSwapS16(rtp.copyOfRange(12, rtp.size)))
             AudioCodecKind.AAC_LC -> {
                 val accessUnit = rtp.copyOfRange(12, rtp.size)
                 if (accessUnit.isNotEmpty()) {
+                    val frame =
+                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels)
+                    if (frame.isEmpty()) {
+                        oversizeAacPackets++
+                        if (!firstOversizeAacLogged) {
+                            firstOversizeAacLogged = true
+                            Log.i(
+                                TAG,
+                                "audio AAC skipping oversize access unit bytes=${accessUnit.size}",
+                            )
+                        }
+                        return
+                    }
                     if (!firstAacPayloadLogged) {
                         firstAacPayloadLogged = true
                         Log.i(
@@ -2271,10 +2331,7 @@ private class AudioRenderer(
                             "audio AAC access unit bytes=${accessUnit.size}",
                         )
                     }
-                    feedCodec(
-                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels),
-                        timestampUs,
-                    )
+                    feedCodec(frame, timestampUs)
                 }
             }
             AudioCodecKind.OPUS -> {
@@ -2394,12 +2451,32 @@ private class AudioRenderer(
                     } finally {
                         codec.releaseOutputBuffer(index, false)
                     }
-                    if (copied) writePcm(pcm, 0, size)
+                    if (copied) {
+                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes, fillLimitFrames()) ?: 0
+                        if (fill > 0) writeSilence(fill)
+                        writePcm(pcm, 0, size)
+                        if (lostMusicFill != null) underrunsAfterLastWrite = track?.underrunCount ?: 0
+                    }
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
             }
         }
+    }
+
+    /** The start level while the track still plays what it held before this buffer's hole, else 0. */
+    private fun fillLimitFrames(): Int {
+        val track = track ?: return 0
+        if (!playbackStarted || track.underrunCount != underrunsAfterLastWrite) return 0
+        return startThresholdBytes / frameBytes
+    }
+
+    private fun writeSilence(frames: Int) {
+        val bytes = frames * frameBytes
+        if (silence.size < bytes) silence = ByteArray(bytes) else silence.fill(0, 0, bytes)
+        if (lostFramesFilled == 0L) Log.i(TAG, "audio first lost music filled frames=$frames")
+        lostFramesFilled += frames
+        writePcm(silence, 0, bytes)
     }
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
@@ -2415,6 +2492,8 @@ private class AudioRenderer(
         voiceFilter?.process(data, offset, length)
         applyNavigationAttenuation()
         attenuateNavigation(data, offset, length)
+        applyCallAttenuation()
+        attenuateCall(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
@@ -2615,8 +2694,10 @@ private class AudioRenderer(
             // Keep this separate: the exported diagnostic recorder caps each line at 700 characters.
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
-                "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
-                "outputBuffersTotal=$outputBuffers ended=$force"
+                "shortOpusPacketsTotal=$shortOpusPackets oversizeAacPacketsTotal=$oversizeAacPackets " +
+                "decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
+                "outputBuffersTotal=$outputBuffers " +
+                (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
             runCatching { report(decoderLine) }
         }

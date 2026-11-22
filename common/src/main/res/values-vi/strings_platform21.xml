@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform21_cluster_mode">Tác vụ cụm đồng hồ Platform 21 (thử nghiệm)</string>
+    <string name="platform21_cluster_description">Dành cho bản điều chỉnh bộ điều khiển 21 của Tang DM-i 2023. Mặc định tắt. Chỉ dùng màn hình chiếu đã xác minh, giữ bản đồ nửa chiều rộng ở giữa và không thay đổi các chế độ cụm đồng hồ gốc hay tắt bản đồ gốc. Cần ADB cục bộ đã được cấp quyền trước đó. Áp dụng cài đặt này sẽ kết nối lại CarPlay. Phần tích hợp vào dự án chính này cần được thử trên xe đang đỗ.</string>
+</resources>
