@@ -12,7 +12,9 @@ import java.util.Locale
  * without them a report could not tell a key the head unit kept from one the iPhone ignored (#610).
  *
  * Kept in memory since the app process started: storage on a key press would delay the head unit's own
- * key handling. A press is one entry; a held key's repeats and its release add nothing.
+ * key handling. A press is one entry. For a key DiPlay leaves alone, its release adds to that entry when the
+ * key went up, counted from its downTime, and any repeats (#1190): that shows whether a car sends a long
+ * press at its threshold or holds it until the driver lets go. A tap released at once keeps one line.
  *
  * The service is handed every hardware key, a connected keyboard's too. A key that writes text is counted
  * and never listed, and no input device name is kept.
@@ -20,7 +22,9 @@ import java.util.Locale
 internal object WheelKeyLog {
     internal const val ENTRIES = 40
 
-    private class Entry(val atMillis: Long, val text: String, var times: Int = 1, var lastMillis: Long = atMillis) {
+    /** [releaseKey] names the key whose release [released] may still add to [text]; null once it has. */
+    private class Entry(val atMillis: Long, var text: String, var times: Int = 1, var lastMillis: Long = atMillis,
+        var releaseKey: String? = null) {
         fun copy() = Entry(atMillis, text, times, lastMillis)
     }
 
@@ -39,29 +43,66 @@ internal object WheelKeyLog {
     @Synchronized
     fun note(message: String, nowMillis: Long = System.currentTimeMillis()) = add(message, nowMillis)
 
-    /** [text] is a key that writes text; [detail] says which feature kept the key or why one did not. */
+    /**
+     * A line whose key's release [released] may add to, under [releaseKey]: a media key DiPlay does not use.
+     */
+    @Synchronized
+    fun noteAwaitingRelease(releaseKey: String, message: String, nowMillis: Long = System.currentTimeMillis()) =
+        add(message, nowMillis, releaseKey)
+
+    /**
+     * [text] is a key that writes text; [detail] says which feature kept the key or why one did not. Returns
+     * whether the press waits for its release ([keyReleased]): a key DiPlay left alone with no detail.
+     */
     @Synchronized
     fun press(code: Int, scan: Int, device: Int, kept: Boolean, detail: String?, text: Boolean,
-        nowMillis: Long = System.currentTimeMillis()) {
+        nowMillis: Long = System.currentTimeMillis()): Boolean {
         if (text) {
             textKeys++
-            return
+            return false
         }
         presses++
         if (kept) this.kept++
+        val unused = !kept && detail == null
         add("key $code/$scan device $device ${if (kept) "kept" else "left to the head unit"}" +
-            (detail?.let { ": $it" } ?: ""), nowMillis)
+            (detail?.let { ": $it" } ?: ""), nowMillis, if (unused) wheelReleaseKey(code, scan, device) else null)
+        return unused
     }
 
+    /** The release of a key [press] said waits for it; [timing] is from [KeyHoldTiming]. */
+    fun keyReleased(code: Int, scan: Int, device: Int, timing: String) =
+        released(wheelReleaseKey(code, scan, device), timing)
+
+    /**
+     * Adds [timing] to the latest line still waiting for [releaseKey]'s release. A line that then reads as the
+     * one before it joins it, so taps released at once still count as one entry.
+     */
+    @Synchronized
+    fun released(releaseKey: String, timing: String) {
+        val index = entries.indexOfLast { it.releaseKey == releaseKey }
+        if (index < 0) return
+        val entry = entries[index]
+        entry.text += timing
+        entry.releaseKey = null
+        val before = entries.getOrNull(index - 1) ?: return
+        if (before.releaseKey == null && before.text == entry.text) {
+            before.times += entry.times
+            before.lastMillis = entry.lastMillis
+            entries.removeAt(index)
+        }
+    }
+
+    private fun wheelReleaseKey(code: Int, scan: Int, device: Int) = "wheel $code/$scan/$device"
+
     // Some head units send a held key as a new press every 100 ms; one entry counts them.
-    private fun add(text: String, nowMillis: Long) {
-        entries.lastOrNull()?.takeIf { it.text == text }?.let {
+    private fun add(text: String, nowMillis: Long, releaseKey: String? = null) {
+        entries.lastOrNull()?.takeIf { it.text == text && it.releaseKey == releaseKey }?.let {
             it.times++
             it.lastMillis = nowMillis
             return
         }
         if (entries.size == ENTRIES) entries.removeFirst()
-        entries.addLast(Entry(nowMillis, text))
+        entries.addLast(Entry(nowMillis, text, releaseKey = releaseKey))
     }
 
     /** [bound] is whether the service is running now. A key press waits only for the copy, not for the text. */

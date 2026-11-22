@@ -33,6 +33,37 @@ class ScreenCodecTest {
         assertArrayEquals(original, payload)
     }
 
+    @Test
+    fun overflowingLengthPrefixesLeavePayloadUntouched() {
+        // A length such as 0x7FFFFFFF is a large positive Int: the old `offset + length` wrapped
+        // negative and reached readU32Be with a negative index. Sign-bit lengths become negative
+        // Ints. Any thrown exception fails the test, so these must return the original array intact.
+        val malformed =
+            listOf(
+                byteArrayOf(0x7F, 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0, 0, 0, 1),
+                byteArrayOf(0x80.toByte(), 0, 0, 0, 0, 0, 0, 1),
+                byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0, 0, 0, 1),
+            )
+        for (payload in malformed) {
+            val original = payload.copyOf()
+            assertSame(payload, ScreenCodec.lengthPrefixedToAnnexB(payload))
+            assertArrayEquals(original, payload)
+        }
+    }
+
+    @Test
+    fun nalLengthExactlyFillsRemainingBytes() {
+        val nal = byteArrayOf(0x41, 0x02, 0x03, 0x04)
+        // The single NAL's length equals the bytes left after its 4-byte prefix; the strict
+        // `length > payload.size - offset` check must not reject this exact-fit boundary.
+        val payload = byteArrayOf(0, 0, 0, nal.size.toByte()) + nal
+
+        val converted = ScreenCodec.lengthPrefixedToAnnexB(payload)
+
+        assertSame(payload, converted)
+        assertArrayEquals(byteArrayOf(0, 0, 0, 1) + nal, converted)
+    }
+
     @Test fun readsTheFrameTimeFromTheScreenHeader() {
         val header = ByteArray(128)
         // NTP 32.32 little-endian at byte 8: 3 s + 0x40000000/2^32 s = 3.25 s.

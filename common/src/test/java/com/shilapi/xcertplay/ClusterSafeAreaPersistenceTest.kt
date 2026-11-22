@@ -26,6 +26,7 @@ class ClusterSafeAreaPersistenceTest {
 
     @Test fun mapWithBuiltInTurnCardDefaultsButSavedChoicesRemain() {
         val context = RuntimeEnvironment.getApplication()
+        installBydCarSettings(context)
         AirPlayPersistence.saveAdbClusterEnabled(context, true)
         assertEquals(com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.INSTRUMENTS,
             AirPlayPersistence.loadClusterContent(context))

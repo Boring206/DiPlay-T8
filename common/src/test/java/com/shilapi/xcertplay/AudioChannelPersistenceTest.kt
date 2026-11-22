@@ -87,9 +87,18 @@ class AudioChannelPersistenceTest {
         }
     }
 
+    /** A backup import writes the legacy key straight into prefs; the clamp in
+     * loadNavigationAudioChannel() is what keeps an out-of-range import out of routing (0 = automatic).
+     * Using saveNavigationStreamType() here would mask that clamp, since it already stores 0. */
     @Test fun invalidLegacyChannelUsesAutomaticRouting() {
-        AirPlayPersistence.saveNavigationStreamType(context, 21)
-        assertEquals(0, AirPlayPersistence.loadNavigationAudioChannel(context))
+        for (invalid in listOf(-1, 21, 99999, Int.MIN_VALUE, Int.MAX_VALUE)) {
+            prefs.edit().putInt("navigation_stream_type", invalid).apply()
+            assertEquals(
+                "invalid $invalid should fall back to automatic routing",
+                0,
+                AirPlayPersistence.loadNavigationAudioChannel(context),
+            )
+        }
     }
 
     @Test fun setupGuideDefaultIsOnlyAppliedOnce() {

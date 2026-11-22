@@ -36,6 +36,25 @@ class ClusterMusicTest {
         idle()
     }
 
+    @Test fun captionShadeReachesTransparentWithoutAHardBottomEdge() {
+        val view = ClusterMusicView(context)
+        val bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888)
+        ReflectionHelpers.callInstanceMethod<Unit>(view, "drawCaption",
+            ReflectionHelpers.ClassParameter(Canvas::class.java, Canvas(bitmap)),
+            ReflectionHelpers.ClassParameter(CarPlayNowPlaying::class.java, CarPlayNowPlaying(title = "Song", artist = "Artist")),
+            ReflectionHelpers.ClassParameter(android.graphics.RectF::class.java, android.graphics.RectF(0f, 0f, 1000f, 1000f)),
+            ReflectionHelpers.ClassParameter(Float::class.javaPrimitiveType, 1000f),
+            ReflectionHelpers.ClassParameter(Float::class.javaPrimitiveType, 1f))
+        var maximumStep = 0
+        for (y in 1 until 999) maximumStep = maxOf(maximumStep,
+            kotlin.math.abs(Color.alpha(bitmap.getPixel(5, y)) - Color.alpha(bitmap.getPixel(5, y - 1))))
+        assertTrue("Shade should fade rather than end abruptly: $maximumStep", maximumStep <= 5)
+        assertEquals(0, Color.alpha(bitmap.getPixel(5, 900)))
+        val directory = File("build/reports/cluster-music-ui").apply { mkdirs() }
+        File(directory, "caption-fade.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+    }
+
     @Test fun temporaryExpiresDespitePositionAndLateArtworkThenNewTrackShowsAgain() {
         val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val view = ClusterMusicView(controller.get())
@@ -159,6 +178,40 @@ class ClusterMusicTest {
         val speed = com.shilapi.xcertplay.airplay.ClusterSpeedometerOverlay.rect(1280, 480, 82, 30, 50)
         assertEquals(speed.height.toFloat(), ClusterMusicView.tileSide(1280, 480, 100), 0.01f)
         assertTrue(ClusterMusicView.tileSide(60, 200, 150) <= 60f)
+    }
+
+    @Test fun artworkBorderIsOnByDefaultAndCanBeRemoved() {
+        ClusterMusicSettings.saveEnabled(context, true)
+        ClusterMusicSettings.savePermanent(context, true)
+        ClusterMusicSettings.save(context, "x", 50)
+        ClusterMusicSettings.save(context, "y", 50)
+        ClusterMusicSettings.save(context, "size", 100)
+        val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val view = ClusterMusicView(controller.get())
+        controller.get().setContentView(view)
+        val art = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.BLUE)
+            Canvas(this).drawRect(0f, 0f, 12f, 64f, android.graphics.Paint().apply { color = Color.RED })
+        }
+        ClusterMusicState.publish(CarPlayNowPlaying(title = "Artwork", artworkTransferId = 1), art); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        view.measure(View.MeasureSpec.makeMeasureSpec(1280, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY))
+        view.layout(0, 0, 1280, 480)
+        val image = Bitmap.createBitmap(1280, 480, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(image))
+        val side = ClusterMusicView.tileSide(1280, 480, 100)
+        val left = 640f - side / 2f
+        assertTrue(ClusterMusicSettings.showBorder(context))
+        assertEquals(ClusterMusicView.coverFrameColor(art), image.getPixel(left.toInt(), 240))
+        assertEquals(Color.RED, image.getPixel((left + 3).toInt(), 240))
+        ClusterMusicSettings.saveShowBorder(context, false)
+        idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        image.eraseColor(Color.TRANSPARENT)
+        view.draw(Canvas(image))
+        assertEquals(Color.RED, image.getPixel(left.toInt(), 240))
+        image.recycle(); art.recycle(); controller.pause().stop().destroy()
     }
 
     @Test fun missingCoverKeepsLastImageUntilReplacementAndDisconnectClearsIt() {

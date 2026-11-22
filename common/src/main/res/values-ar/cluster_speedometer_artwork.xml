@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">تدرج غلاف الألبوم لخلفية عداد السرعة</string>
+    <string name="settings_cluster_speedometer_artwork_description">خيار مستقل يستبدل الخلفية الثابتة مع الحفاظ على الحجم والتعتيم. تعطيله يعيد لون الألبوم الثابت أو الأسود. الحركة اختيارية.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">تحريك خلفية عداد السرعة</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">معطّلة افتراضيًا. تتيح حركة بطيئة للخلفية أثناء التشغيل. تبقى انتقالات الأغاني متدرجة عند تعطيلها.</string>
+</resources>

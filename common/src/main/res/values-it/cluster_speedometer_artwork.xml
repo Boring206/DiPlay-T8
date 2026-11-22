@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Gradiente della copertina per lo sfondo del tachimetro</string>
+    <string name="settings_cluster_speedometer_artwork_description">Opzione separata. Sostituisce lo sfondo uniforme mantenendo dimensioni e opacità. Disattivandola torna il colore uniforme o nero. Il movimento è facoltativo.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Anima lo sfondo del tachimetro</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Disattivato per impostazione predefinita. Attiva un movimento lento durante la riproduzione. Le dissolvenze tra brani restano attive.</string>
+</resources>

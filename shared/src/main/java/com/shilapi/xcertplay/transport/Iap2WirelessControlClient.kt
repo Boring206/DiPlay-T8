@@ -164,11 +164,15 @@ class Iap2WirelessControlClient(
                     CARPLAY_AVAILABILITY -> {
                         onProgress("iap2 rx=0x4300 carplay-availability")
                         onProgress(carPlayAvailabilityDiagnostic(incoming))
-                        beforeStartSession()
-                        sendStartSession(endpoint, ::sendControl, onStartSessionSent)
-                        stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
-                        carPlayStartSessionsSent++
-                        onProgress("iap2 tx=0x4301 carplay-start-session")
+                        if (carPlayStartSessionsSent >= MAX_CARPLAY_START_SESSION_SENDS) {
+                            onProgress("iap2 0x4301 ignored: maximum CarPlay StartSession sends reached")
+                        } else {
+                            beforeStartSession()
+                            sendStartSession(endpoint, ::sendControl, onStartSessionSent)
+                            stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
+                            carPlayStartSessionsSent++
+                            onProgress("iap2 tx=0x4301 carplay-start-session")
+                        }
                     }
 
                     WIRELESS_CARPLAY_UPDATE -> {
@@ -179,14 +183,9 @@ class Iap2WirelessControlClient(
 
                     DEVICE_TRANSPORT_IDENTIFIER_NOTIFICATION -> {
                         transportNotificationSeen = true
-                        val identifiers = Iap2WirelessMessages.deviceTransportIdentifier(incoming)
+                        val diagnostic = deviceTransportIdentifierDiagnostic(incoming)
                         stage = later(stage, Iap2WirelessControlStage.TRANSPORT_NOTIFIED)
-                        onProgress(
-                            "iap2 rx=0x4e0e device-transport-identifier " +
-                                "bluetooth=${identifiers.bluetoothMac ?: "none"} " +
-                                "usb=${identifiers.usbTransportIdentifier ?: "none"}; " +
-                                "resending 0x5703",
-                        )
+                        onProgress("$diagnostic; resending 0x5703")
                         if (
                             postTransportWiFiConfigurationsSent >=
                             MAX_POST_TRANSPORT_WIFI_CONFIGURATION_SENDS
@@ -242,6 +241,7 @@ class Iap2WirelessControlClient(
         private const val MAX_TIMEOUT_MILLIS = 24 * 60 * 60 * 1_000L
         private const val MAX_PRE_TRANSPORT_WIFI_CONFIGURATION_SENDS = 5
         private const val MAX_POST_TRANSPORT_WIFI_CONFIGURATION_SENDS = 2
+        internal const val MAX_CARPLAY_START_SESSION_SENDS = 3
 
         /** Malformed optional availability metadata must not change existing control behavior. */
         internal fun carPlayAvailabilityDiagnostic(frame: Iap2Frame): String = try {
@@ -251,6 +251,17 @@ class Iap2WirelessControlClient(
                 "themeAssets=${value.themeAssets?.available ?: "unknown"}"
         } catch (error: Exception) {
             "iap2 availability decode=failed failureClass=${error.javaClass.simpleName}"
+        }
+
+        /** A malformed identifier is only logged; it must not end the control loop before 0x5703. */
+        internal fun deviceTransportIdentifierDiagnostic(frame: Iap2Frame): String = try {
+            val identifiers = Iap2WirelessMessages.deviceTransportIdentifier(frame)
+            "iap2 rx=0x4e0e device-transport-identifier " +
+                "bluetooth=${identifiers.bluetoothMac ?: "none"} " +
+                "usb=${identifiers.usbTransportIdentifier ?: "none"}"
+        } catch (error: Exception) {
+            "iap2 rx=0x4e0e device-transport-identifier decode=failed " +
+                "failureClass=${error.javaClass.simpleName}"
         }
 
         /** Optional AP hint is independent of the AirPlay receiver identity. */

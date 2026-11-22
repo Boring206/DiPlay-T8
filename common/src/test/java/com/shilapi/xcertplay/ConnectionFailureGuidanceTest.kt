@@ -61,6 +61,11 @@ class ConnectionFailureGuidanceTest {
             startup = WirelessStartupFailure.HOTSPOT_NOT_READY, known = ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT))
         assertEquals(R.string.connection_help_hotspot, guide("The car could not start its hotspot",
             startup = WirelessStartupFailure.HOTSPOT_NOT_READY, known = ConnectionFailureCause.CAR_HOTSPOT_START_FAILED))
+        assertEquals(R.string.connection_help_existing_wifi_needs_password, guide(
+            "Existing Wi-Fi is open; iPhones start wireless CarPlay only on a network with a password",
+            startup = WirelessStartupFailure.HOTSPOT_CONFIGURATION, known = ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD,
+            mode = WirelessHotspotMode.EXISTING_WIFI))
+        assertEquals(R.string.existing_wifi_needs_password, ConnectionFailureGuidance.stage(ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD))
     }
 
     @Test fun aResetComesFirstAndAKnownCauseBeforeAStartupFailure() {

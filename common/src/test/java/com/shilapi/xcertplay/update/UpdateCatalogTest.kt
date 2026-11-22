@@ -111,6 +111,36 @@ class UpdateCatalogTest {
         }
     }
 
+@Test
+    fun skipsAnIncompleteReleaseAndReturnsTheNextCompleteOne() {
+        val json = """
+            [
+              {"tag_name": "v0.2.23", "draft": false, "assets": [
+                {"name": "source.zip", "browser_download_url": "https://example.com/source.zip"}
+              ]},
+              {"tag_name": "v0.2.22", "draft": false, "assets": [
+                {"name": "DiPlay-0.2.22.apk", "browser_download_url": "${GITHUB}DiPlay-0.2.22.apk"},
+                {"name": "SHA256SUMS.txt", "browser_download_url": "${GITHUB}SHA256SUMS.txt"}
+              ]}
+            ]
+        """.trimIndent()
+        assertEquals("v0.2.22", UpdateCatalog.parse(json)?.tagName)
+    }
+
+    @Test
+    fun skipsAReleaseWithoutAnAssetsArray() {
+        val json = """
+            [
+              {"tag_name": "v0.2.23", "draft": false},
+              {"tag_name": "v0.2.22", "draft": false, "assets": [
+                {"name": "DiPlay-0.2.22.apk", "browser_download_url": "${GITHUB}DiPlay-0.2.22.apk"},
+                {"name": "SHA256SUMS.txt", "browser_download_url": "${GITHUB}SHA256SUMS.txt"}
+              ]}
+            ]
+        """.trimIndent()
+        assertEquals("v0.2.22", UpdateCatalog.parse(json)?.tagName)
+    }
+
     private companion object {
         const val GITHUB = "https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.22/"
     }
