@@ -237,13 +237,20 @@ object AirPlayPersistence {
             .apply()
     }
 
+    // Legacy key: routing moved to navigation_audio_channel in #64 (v0.2.8); the only live consumer
+    // is loadNavigationAudioChannel(), which inherits this value when the new key is absent and
+    // clamps out-of-range imports to 0. loadNavigationStreamType() feeds unused plumbing and
+    // saveNavigationStreamType() has no production caller, but backup imports write this key
+    // directly, so both ends validate against AUDIO_CHANNELS. The two readers fall back differently
+    // (14 here, 0 on the inheritance path); writes clamp to 0 to match the latter, not 14.
     fun loadNavigationStreamType(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt(KEY_NAVIGATION_STREAM_TYPE, 14)
+            .takeIf { it in AUDIO_CHANNELS } ?: 14
 
     fun saveNavigationStreamType(context: Context, streamType: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_NAVIGATION_STREAM_TYPE, streamType)
+            .putInt(KEY_NAVIGATION_STREAM_TYPE, streamType.takeIf { it in AUDIO_CHANNELS } ?: 0)
             .apply()
     }
 
