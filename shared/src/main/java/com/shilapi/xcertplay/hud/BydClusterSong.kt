@@ -81,7 +81,9 @@ internal class ClusterSongState {
         fun text(title: String?, artist: String?): String? {
             val name = title?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             val full = artist?.trim()?.takeIf { it.isNotEmpty() }?.let { "$name — $it" } ?: name
-            var end = full.length
+            // At most cap / 2 code units fit. Start two past that so the loop still checks for
+            // a split surrogate at the cut, without recopying the prefix for every character.
+            var end = minOf(full.length, MAX_TEXT_BYTES / 2 + 2)
             while (full.substring(0, end).toByteArray(Charsets.UTF_16LE).size > MAX_TEXT_BYTES) {
                 end--
                 if (end > 0 && Character.isLowSurrogate(full[end])) end--
