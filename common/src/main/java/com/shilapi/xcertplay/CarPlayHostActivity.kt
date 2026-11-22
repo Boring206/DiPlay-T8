@@ -677,6 +677,8 @@ open class CarPlayHostActivity : ComponentActivity() {
     private var requestedSmallWindowForStream: Boolean? = null
     @Volatile private var adbNaviMode: com.shilapi.xcertplay.hud.BydClusterNaviMode? = null
     private var sessionLog: SessionLogFile? = null
+    /** This screen's sink for [com.shilapi.xcertplay.telecom.PhoneAudioRoute.diagnostics]; cleared only if still ours. */
+    private var phoneAudioDiagnostics: ((String) -> Unit)? = null
     private var gestureFingerCount = 3
     private var settingsGestureHint: TextView? = null
     private var gestureSequenceActive = false
@@ -2034,6 +2036,12 @@ open class CarPlayHostActivity : ComponentActivity() {
         currentSurfaceTexture = null
         fallbackVideoView = null
         fallbackVideoBounds = null
+        phoneAudioDiagnostics?.let { own ->
+            if (com.shilapi.xcertplay.telecom.PhoneAudioRoute.diagnostics === own) {
+                com.shilapi.xcertplay.telecom.PhoneAudioRoute.diagnostics = null
+            }
+        }
+        phoneAudioDiagnostics = null
         sessionLog?.append("Activity destroyed")
         sessionLog?.close()
         sessionLog = null
@@ -6896,6 +6904,12 @@ open class CarPlayHostActivity : ComponentActivity() {
             )
         }
         sessionLog = activeLog
+        // Telecom's phone audio lines belong next to the call's microphone lines in the report (#1214).
+        val phoneAudio: (String) -> Unit = { message ->
+            activeLog.append(formattedLogLine(message, System.currentTimeMillis()))
+        }
+        phoneAudioDiagnostics = phoneAudio
+        com.shilapi.xcertplay.telecom.PhoneAudioRoute.diagnostics = phoneAudio
     }
 
     private fun refreshLogView(nowMillis: Long) {
