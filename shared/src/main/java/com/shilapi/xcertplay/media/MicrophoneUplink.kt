@@ -482,9 +482,14 @@ internal class MicrophoneUplink(
             val next = createRecorder(source)
             if (next == null) {
                 if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = null)
-                rebuildFailed()
-                leaveRejectedRecognitionSource()
-                leaveRejectedCaptureRate()
+                // A recorder below the stream's rate is blamed on the rate, so the source is kept: in the car's
+                // phone audio state, VOICE_COMMUNICATION would clip (see [telephonyMicrophoneSource]).
+                if (captureRate != config.sampleRate) {
+                    leaveRejectedCaptureRate()
+                } else {
+                    rebuildFailed()
+                    leaveRejectedRecognitionSource()
+                }
                 continue
             }
             if (!install(next)) {
@@ -508,6 +513,8 @@ internal class MicrophoneUplink(
             if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = state)
             rebuildFailed()
             retire(next)
+            // The retired recorder was still recording, so the remaining attempts go back to its rate.
+            leaveRejectedCaptureRate()
         }
         if (running.get()) stats.recoveryEnded(recoveryAttempts)
         return null
@@ -547,14 +554,21 @@ internal class MicrophoneUplink(
 
     /**
      * Acts on a call's [MicrophoneCaptureCheck] (#1172) and returns the recorder to carry on with: [current], or a
-     * new one that [recover] built, or null when capture ends. A recorder that is slow or silent is rebuilt at most
-     * twice per stream, so a call never loops: first at [VOCODER_RATE] from the same source, which is what the
+     * new one that [recover] built, or null when capture ends. A recorder that is slow, or silent once the stream
+     * was already rebuilt for a bad check, is rebuilt at most twice per stream, so a call never loops: first at [VOCODER_RATE] from the same source, which is what the
      * #1172 recorder delivered anyway, then once from [captureFallbackSource] at the stream's rate, as Siri records
      * on that unit. A step that does not apply is skipped, and each rebuild counts toward [MAX_RECOVERY_ATTEMPTS].
      * Every check reports one 'capture check' line with its verdict and action.
      */
     private fun afterCaptureCheck(current: MicrophoneRecorder, result: MicrophoneCaptureCheck.Result): MicrophoneRecorder? {
-        val step = if (result.verdict == MicrophoneCaptureCheck.Verdict.OK) null else nextCaptureStep()
+        // Some units record exact zeros at full rate for the first seconds of a call (#1279), so silence acts only
+        // once this stream has already been rebuilt for a bad check; on #1172 every silent window was also slow.
+        val actionable = when (result.verdict) {
+            MicrophoneCaptureCheck.Verdict.OK -> false
+            MicrophoneCaptureCheck.Verdict.SLOW -> true
+            MicrophoneCaptureCheck.Verdict.SILENT -> vocoderRateTried
+        }
+        val step = if (actionable) nextCaptureStep() else null
         stats.captureCheck(result, nextSource = step?.source, nextCaptureRate = step?.rate)
         if (step == null) return current
         Log.w(TAG, "microphone call capture ${result.verdict.label} at ${result.realtimePercent}% of real time; " +

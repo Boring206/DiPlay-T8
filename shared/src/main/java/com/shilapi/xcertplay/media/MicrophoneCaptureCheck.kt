@@ -12,8 +12,9 @@ import android.media.AudioManager
  * third of the call's Opus frames, so the far end heard nothing or broken speech.
  *
  * The first [warmUpNs] after the first data are not measured, so a recorder that opens slowly or hands over a
- * burst it buffered while starting is not judged on that. A real microphone never returns exact digital zeros for
- * two seconds, so [Verdict.SILENT] needs every sample to be zero, and the audio mode a call records in.
+ * burst it buffered while starting is not judged on that. [Verdict.SILENT] needs every sample to be zero, and the
+ * audio mode a call records in. Some working units also record exact zeros at full rate for the first seconds of a
+ * call (#1279), so [MicrophoneUplink] acts on it only after a stream was already rebuilt for a bad check.
  */
 internal class MicrophoneCaptureCheck(
     /** What a recorder that keeps up delivers: the stream's rate × channels × 2 bytes. */

@@ -76,14 +76,20 @@ class SlowCallMicrophoneTest {
     }
 
     @Test fun aSilentCallInCommunicationModeIsRebuiltThenMovedToVoiceRecognition() {
-        // #1172: full rate, every sample zero, while another recording holds the microphone.
-        start(pace = { recorder -> if (recorder.source == COMMUNICATION) Pace(sound = false) else Pace() })
+        // #1172: a third of real time with every sample zero; the 16 kHz recorder keeps up but is still silent.
+        start(pace = { recorder ->
+            when {
+                recorder.source != COMMUNICATION -> Pace()
+                recorder.rate == 48_000 -> Pace(speed = 1.0 / 3, sound = false)
+                else -> Pace(sound = false)
+            }
+        })
 
         awaitChecks(3)
 
-        assertTrue(checks()[0], checks()[0].contains("realtimePercent=100 peakDbfs=silent audioMode=3 verdict=silent-capture " +
+        assertTrue(checks()[0], checks()[0].contains("realtimePercent=33 peakDbfs=silent audioMode=3 verdict=slow-capture " +
             "action=rebuild nextSource=VOICE_COMMUNICATION nextCaptureRate=16000"))
-        assertTrue(checks()[1], checks()[1].contains("captureRate=16000"))
+        assertTrue(checks()[1], checks()[1].contains("captureRate=16000 realtimePercent=100 peakDbfs=silent"))
         assertTrue(checks()[1], checks()[1].endsWith("verdict=silent-capture action=rebuild nextSource=VOICE_RECOGNITION nextCaptureRate=48000"))
         assertTrue(checks()[2], checks()[2].endsWith("verdict=ok action=keep"))
         assertEquals(listOf(COMMUNICATION, COMMUNICATION, RECOGNITION), built.map { it.source })
@@ -91,6 +97,19 @@ class SlowCallMicrophoneTest {
         assertEquals(2, restarts.size)
         assertTrue(restarts[1], restarts[1].contains("source=VOICE_RECOGNITION"))
         assertTrue(restarts[1], restarts[1].contains("attempt=2 reason=silent-capture"))
+    }
+
+    @Test fun aFullRateSilentFirstCheckIsKept() {
+        // #1279: a working unit records exact zeros at full rate for the first seconds of a call.
+        start(pace = { Pace(sound = false) })
+
+        awaitChecks(1)
+        awaitTrue { built[0].dataReads.get() > 400 }
+
+        assertEquals(1, checks().size)
+        assertTrue(checks()[0], checks()[0].endsWith("realtimePercent=100 peakDbfs=silent audioMode=3 verdict=silent-capture action=keep"))
+        assertEquals(1, built.size)
+        assertTrue(diagnostics.none { it.startsWith("Microphone: recording restarted") })
     }
 
     @Test fun silenceOutsideCommunicationModeIsLeftAlone() {
@@ -183,6 +202,48 @@ class SlowCallMicrophoneTest {
         assertEquals(listOf(COMMUNICATION, COMMUNICATION, RECOGNITION), built.map { it.source })
     }
 
+    @Test fun aCallInTheCarsPhoneAudioStateWhoseUnitRefusesTheVocoderRateStaysOnVoiceRecognition() {
+        // VOICE_COMMUNICATION clips in the car's phone audio state, so a refused 16 kHz recorder is blamed on the rate.
+        start(pace = { Pace(speed = 1.0 / 3) }, carPhoneState = true, rejects = { _, rate -> rate == 16_000 })
+
+        awaitChecks(2)
+        awaitTrue { built.size == 2 && built[1].dataReads.get() > 300 }
+
+        assertTrue(checks()[0], checks()[0].endsWith("action=rebuild nextSource=VOICE_RECOGNITION nextCaptureRate=16000"))
+        assertTrue(line("Microphone: failure ").contains("source=VOICE_RECOGNITION"))
+        assertTrue(line("Microphone: failure ").contains("captureRate=16000 stage=RECORDER_CREATION"))
+        val restarted = line("Microphone: recording restarted")
+        assertTrue(restarted, restarted.contains("source=VOICE_RECOGNITION"))
+        assertFalse(restarted, restarted.contains("captureRate="))
+        assertEquals(listOf(RECOGNITION, RECOGNITION), built.map { it.source })
+        assertEquals(listOf(48_000, 48_000), built.map { it.rate })
+        assertTrue(diagnostics.none { it.contains("source=VOICE_COMMUNICATION") })
+    }
+
+    @Test fun aVocoderRateRecorderThatWillNotStartGivesWayToTheStreamRate() {
+        // A unit that builds a 16 kHz recorder but never starts it records at the stream's rate again.
+        start(pace = { recorder ->
+            when {
+                recorder.rate == 16_000 -> Pace(starts = false)
+                recorder.source == COMMUNICATION -> Pace(speed = 1.0 / 3)
+                else -> Pace()
+            }
+        })
+
+        awaitChecks(2)
+
+        val failed = line("Microphone: recording restart failed")
+        assertTrue(failed, failed.contains("captureRate=16000"))
+        assertTrue(failed, failed.contains("attempt=1 reason=slow-capture recorder=new recordingState="))
+        assertEquals(listOf(48_000, 16_000, 48_000), built.take(3).map { it.rate })
+        assertEquals(listOf(COMMUNICATION, COMMUNICATION, COMMUNICATION), built.take(3).map { it.source })
+        assertTrue(built[1].released)
+        val restarted = line("Microphone: recording restarted")
+        assertTrue(restarted, restarted.contains("attempt=2 reason=slow-capture"))
+        assertFalse(restarted, restarted.contains("captureRate="))
+        assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
+    }
+
     @Test fun aSixteenKilohertzStreamGoesStraightToTheSourceFallback() {
         start(pace = { recorder -> if (recorder.source == COMMUNICATION) Pace(speed = 1.0 / 3) else Pace() }, rate = 16_000)
 
@@ -258,8 +319,11 @@ class SlowCallMicrophoneTest {
         key = ByteArray(32),
     )
 
-    /** [speed] is the fraction of real time the recorder delivers; without [sound] every sample is zero. */
-    class Pace(val speed: Double = 1.0, val sound: Boolean = true)
+    /**
+     * [speed] is the fraction of real time the recorder delivers; without [sound] every sample is zero; without
+     * [starts] startRecording leaves it stopped.
+     */
+    class Pace(val speed: Double = 1.0, val sound: Boolean = true, val starts: Boolean = true)
 
     /** Fills every read it is asked for and moves the fake clock by how long that much audio takes at [pace]. */
     class PacedRecorder(val source: Int, val rate: Int, index: Int, private val clock: AtomicLong) : MicrophoneRecorder {
@@ -277,7 +341,7 @@ class SlowCallMicrophoneTest {
 
         override fun startRecording() {
             check(!released) { "released" }
-            recording = true
+            recording = pace.starts
         }
 
         override fun stop() {
