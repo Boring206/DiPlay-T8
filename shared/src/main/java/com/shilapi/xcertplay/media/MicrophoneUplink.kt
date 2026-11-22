@@ -54,6 +54,10 @@ internal class MicrophoneUplink(
     private val geelyHeadUnit: () -> Boolean = { GeelyHeadUnit.detected },
     /** Whether the car's phone audio state handles CarPlay calls; see [PhoneAudioRoute.carPlayCallsUseCarAudio]. */
     private val carPhoneState: () -> Boolean = { PhoneAudioRoute.carPlayCallsUseCarAudio() },
+    /** The audio mode a call's [MicrophoneCaptureCheck] reads; null when unknown. */
+    private val audioMode: () -> Int? = { audioManager?.mode },
+    /** The clock of a call's [MicrophoneCaptureCheck], so tests can run a recorder slower than real time. */
+    private val captureCheckClock: () -> Long = System::nanoTime,
 ) : Closeable {
     private val running = AtomicBoolean(false)
     private val stats = MicrophoneCaptureStats(config, report = { message ->
@@ -77,6 +81,14 @@ internal class MicrophoneUplink(
     private var failedCommunicationRecorders = 0
     /** This unit refused to build a VOICE_RECOGNITION recorder in [start], so a call never falls back to it. */
     private var recognitionRejected = false
+    /** The recorder's rate: the stream's, or the vocoder's after [afterCaptureCheck] rebuilt a call (#1172). */
+    private var captureRate = config.sampleRate
+    /** [afterCaptureCheck] has spent its rebuild at [VOCODER_RATE]. */
+    private var vocoderRateTried = false
+    /** [afterCaptureCheck] has spent its change of source. */
+    private var captureSourceChanged = false
+    /** The call left VOICE_COMMUNICATION because it recorded too slowly or silently; see [leaveRejectedRecognitionSource]. */
+    private var communicationCaptureFailed = false
 
     fun start(): Boolean {
         if (!running.compareAndSet(false, true)) return true
@@ -201,9 +213,12 @@ internal class MicrophoneUplink(
         }
     }
 
+    /** Builds a recorder from [source] at [captureRate]; below the stream's rate, its reads come back upsampled. */
     private fun createRecorder(source: Int): MicrophoneRecorder? {
+        val rate = captureRate
+        val factor = if (rate == config.sampleRate) 1 else config.sampleRate / rate
         val recorder = try {
-            recorderFactory.create(source, config.sampleRate, channelMask, bufferSize)
+            recorderFactory.create(source, rate, channelMask, if (factor == 1) bufferSize else lowRateBufferSize(rate, factor))
         } catch (error: Exception) {
             Log.e(TAG, "microphone recorder creation failed source=$source", error)
             stats.failure(MicrophoneFailureStage.RECORDER_CREATION, error)
@@ -215,7 +230,15 @@ internal class MicrophoneUplink(
             runCatching { recorder.release() }
             return null
         }
-        return recorder
+        return if (factor == 1) recorder else UpsamplingRecorder(recorder, factor, config.channels)
+    }
+
+    /** As in [start], for a recorder at [rate] whose reads [factor] multiplies. */
+    private fun lowRateBufferSize(rate: Int, factor: Int): Int {
+        val minBuffer = runCatching {
+            AudioRecord.getMinBufferSize(rate, channelMask, AndroidAudioFormat.ENCODING_PCM_16BIT)
+        }.getOrDefault(0)
+        return if (minBuffer > 0) maxOf(minBuffer * 2, config.frameBytes / factor * 4) else bufferSize
     }
 
     private fun createEchoCanceller(): CallEchoCanceller? {
@@ -314,10 +337,17 @@ internal class MicrophoneUplink(
         var filled = 0
         var noAudioRestarts = 0
         var lastAudioNs = System.nanoTime()
+        // Only calls are checked: on #1172 the call's recorder was slow or silent in communication mode, Siri's was not.
+        val check = if (config.audioType == TELEPHONY) {
+            MicrophoneCaptureCheck(bytesPerSecond = config.sampleRate.toLong() * config.channels * 2)
+        } else {
+            null
+        }
 
         /** Carries on with [next], which [recover] left recording; a new recorder starts a new frame and clock. */
         fun resume(next: MicrophoneRecorder) {
             lastAudioNs = System.nanoTime()
+            check?.reset()
             if (next === current) return
             current = next
             filled = 0
@@ -357,6 +387,7 @@ internal class MicrophoneUplink(
                         noAudioRestarts++
                         lastAudioNs = now
                         if (restartRecording(current)) {
+                            check?.reset()
                             stats.restarted(noAudioRestarts, "no-audio", current.routedDeviceType())
                         } else {
                             stats.failure(MicrophoneFailureStage.RECORDING, code = current.recordingState)
@@ -365,6 +396,15 @@ internal class MicrophoneUplink(
                         Thread.sleep(EMPTY_READ_PAUSE_MILLIS)
                     }
                     continue
+                }
+                val verdict = check?.read(readBuffer, count, captureCheckClock(), audioMode)
+                if (verdict != null) {
+                    val next = afterCaptureCheck(current, verdict) ?: return
+                    if (next !== current) {
+                        // The rest of the old recorder's read is dropped with its partial frame.
+                        resume(next)
+                        continue
+                    }
                 }
                 lastAudioNs = System.nanoTime()
                 var offset = 0
@@ -414,7 +454,9 @@ internal class MicrophoneUplink(
 
     /**
      * Gets capture recording again after [failed] stopped: [reason] is "start" when its first startRecording did
-     * not take, or "read-error". When [sameRecorder] allows, restarts [failed] once, which was enough for #647.
+     * not take, "read-error", or the verdict of a call's [MicrophoneCaptureCheck] when [afterCaptureCheck] replaces a
+     * recorder that records too slowly or silently. When [sameRecorder] allows, restarts [failed] once, which was
+     * enough for #647.
      * Then releases it and builds new recorders after each pause in [rebuildBackoffMillis], because on #1214 the
      * same recorder never came back. Every attempt counts toward [MAX_RECOVERY_ATTEMPTS] for the stream, whether
      * it works or not, so a recorder that keeps failing ends capture instead of looping for the whole call.
@@ -442,6 +484,7 @@ internal class MicrophoneUplink(
                 if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = null)
                 rebuildFailed()
                 leaveRejectedRecognitionSource()
+                leaveRejectedCaptureRate()
                 continue
             }
             if (!install(next)) {
@@ -477,12 +520,87 @@ internal class MicrophoneUplink(
     /**
      * As in [start]: a unit that cannot even build a VOICE_RECOGNITION recorder won't on the next try either,
      * so the remaining attempts go back to VOICE_COMMUNICATION instead of spending the budget on that source.
+     * A call that left VOICE_COMMUNICATION because it recorded too slowly or silently goes on to MIC instead,
+     * except in the car's phone audio state, which mutes that source (see [telephonyMicrophoneSource]).
      */
     private fun leaveRejectedRecognitionSource() {
         if (source != MediaRecorder.AudioSource.VOICE_RECOGNITION) return
         recognitionRejected = true
-        source = MediaRecorder.AudioSource.VOICE_COMMUNICATION
+        source = if (communicationCaptureFailed && !carPhoneState()) {
+            MediaRecorder.AudioSource.MIC
+        } else {
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION
+        }
         stats.useSource(source)
+    }
+
+    /** A unit that cannot build a recorder at [VOCODER_RATE] gets the remaining attempts at the stream's rate. */
+    private fun leaveRejectedCaptureRate() {
+        if (captureRate == config.sampleRate) return
+        useCaptureRate(config.sampleRate)
+    }
+
+    private fun useCaptureRate(rate: Int) {
+        captureRate = rate
+        stats.useCaptureRate(rate)
+    }
+
+    /**
+     * Acts on a call's [MicrophoneCaptureCheck] (#1172) and returns the recorder to carry on with: [current], or a
+     * new one that [recover] built, or null when capture ends. A recorder that is slow or silent is rebuilt at most
+     * twice per stream, so a call never loops: first at [VOCODER_RATE] from the same source, which is what the
+     * #1172 recorder delivered anyway, then once from [captureFallbackSource] at the stream's rate, as Siri records
+     * on that unit. A step that does not apply is skipped, and each rebuild counts toward [MAX_RECOVERY_ATTEMPTS].
+     * Every check reports one 'capture check' line with its verdict and action.
+     */
+    private fun afterCaptureCheck(current: MicrophoneRecorder, result: MicrophoneCaptureCheck.Result): MicrophoneRecorder? {
+        val step = if (result.verdict == MicrophoneCaptureCheck.Verdict.OK) null else nextCaptureStep()
+        stats.captureCheck(result, nextSource = step?.source, nextCaptureRate = step?.rate)
+        if (step == null) return current
+        Log.w(TAG, "microphone call capture ${result.verdict.label} at ${result.realtimePercent}% of real time; " +
+            "rebuilding source=${step.source} rate=${step.rate}")
+        if (step.source != source) {
+            if (source == MediaRecorder.AudioSource.VOICE_COMMUNICATION) communicationCaptureFailed = true
+            source = step.source
+            stats.useSource(source)
+        }
+        useCaptureRate(step.rate)
+        return recover(current, result.verdict.label, sameRecorder = false)
+    }
+
+    private class CaptureStep(val source: Int, val rate: Int)
+
+    private fun nextCaptureStep(): CaptureStep? {
+        if (recoveryAttempts >= MAX_RECOVERY_ATTEMPTS) return null
+        if (!vocoderRateTried) {
+            vocoderRateTried = true
+            val rate = config.sampleRate
+            if (captureRate == rate && rate > VOCODER_RATE && rate % VOCODER_RATE == 0) return CaptureStep(source, VOCODER_RATE)
+        }
+        if (!captureSourceChanged) {
+            captureSourceChanged = true
+            captureFallbackSource()?.let { return CaptureStep(it, config.sampleRate) }
+        }
+        return null
+    }
+
+    /**
+     * The source after a call's recorder stayed slow or silent: VOICE_RECOGNITION, which recorded Siri at full rate
+     * with sound on the #1172 head unit, or MIC where this unit refused VOICE_RECOGNITION. Geely/Lynk firmware only
+     * records from VOICE_COMMUNICATION, and the car's phone audio state mutes MIC, so neither gets a new source.
+     */
+    private fun captureFallbackSource(): Int? {
+        if (geelyHeadUnit()) return null
+        val micAllowed = !carPhoneState()
+        return when (source) {
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION -> when {
+                !recognitionRejected -> MediaRecorder.AudioSource.VOICE_RECOGNITION
+                micAllowed -> MediaRecorder.AudioSource.MIC
+                else -> null
+            }
+            MediaRecorder.AudioSource.VOICE_RECOGNITION -> if (micAllowed) MediaRecorder.AudioSource.MIC else null
+            else -> null
+        }
     }
 
     /**
@@ -702,6 +820,8 @@ internal class MicrophoneUplink(
         const val MAX_RECOVERY_ATTEMPTS = 8
         val REBUILD_BACKOFF_MILLIS = listOf(250L, 500L, 1_000L, 1_000L)
         const val FALLBACK_AFTER_FAILED_RECORDERS = 2
+        /** The iPhone's wideband call vocoder rate; #1172's 48 kHz recorder delivered about this many samples a second. */
+        const val VOCODER_RATE = 16_000
         const val PAUSE_STEP_MILLIS = 50L
         const val NO_AUDIO_RESTART_MILLIS = 1_000L
         const val MAX_NO_AUDIO_RESTARTS = 3
