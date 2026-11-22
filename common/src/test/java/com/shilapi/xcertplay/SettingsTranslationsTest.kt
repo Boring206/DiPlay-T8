@@ -37,6 +37,7 @@ class SettingsTranslationsTest {
         "values-ru" to "(экспериментально)",
         "values-tr" to "(deneysel)",
         "values-uk" to "(експериментально)",
+        "values-vi" to "(thử nghiệm)",
         "values-zh-rCN" to "（实验性）",
         "values-zh-rTW" to "（實驗性）",
     )

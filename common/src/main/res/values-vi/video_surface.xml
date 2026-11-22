@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_surface_output_unavailable">Không thể điều chỉnh hình ảnh với đầu ra video tương thích của màn hình này. Các điều chỉnh đã lưu của bạn được giữ lại.</string>
+</resources>
