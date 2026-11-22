@@ -3442,17 +3442,28 @@ class CarPlayController(
     private fun debugLog(message: String) {
         Log.i(IphoneCarPlayConfiguration.TAG, message)
         try {
-            uiListener?.onDebugLog(message)
+            uiListener?.onDebugLog(afterClose(message))
         } catch (error: Exception) {
             Log.w(IphoneCarPlayConfiguration.TAG, "debug log callback failed", error)
         }
     }
 
+    /**
+     * Lines from work that finishes after [close] (a Wi-Fi scan pause or a car Bluetooth pause released on a
+     * worker, a teardown failure) go out as connection diagnostics, which the report keeps after the CarPlay
+     * screen has gone.
+     */
+    private fun afterClose(message: String): String =
+        if (!closed || message.startsWith("$CONNECTION_DIAGNOSTIC_PREFIX ")) message
+        else runCatching { "$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=${diagnosticPhaseName()} $message" }
+            .getOrDefault(message)
+
+    private fun diagnosticPhaseName(): String = if (phase == Phase.IPHONE) "USB_DISCOVERY" else phase.name
+
     private fun connectionDiagnostic(message: String) {
         try {
-            // The redactor reserves "PHONE " for private phone-side log captures.
-            val diagnosticPhase = if (phase == Phase.IPHONE) "USB_DISCOVERY" else phase.name
-            debugLog("$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=$diagnosticPhase $message")
+            // The redactor reserves "PHONE " for private phone-side log captures (see diagnosticPhaseName).
+            debugLog("$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=${diagnosticPhaseName()} $message")
         } catch (_: Exception) {
             // Optional diagnostics must not change transport or shutdown behavior.
         }
@@ -3467,7 +3478,7 @@ class CarPlayController(
     private fun debugLog(message: String, error: Throwable) {
         Log.w(IphoneCarPlayConfiguration.TAG, message, error)
         try {
-            uiListener?.onDebugLog("$message: ${describeThrowable(error)}")
+            uiListener?.onDebugLog(afterClose("$message: ${describeThrowable(error)}"))
         } catch (callbackError: Exception) {
             Log.w(IphoneCarPlayConfiguration.TAG, "debug log callback failed", callbackError)
         }
