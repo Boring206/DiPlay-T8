@@ -921,6 +921,44 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    // #1190: it changes what the iPhone is told at connection, so it waits for the next one.
+    @Test fun wheelLongPressSeekIsAnAdvancedOptInForTheNextConnection() {
+        assertFalse(AirPlayPersistence.loadWheelLongPressSeek(context))
+        // The test framework names no DiLink 3 long-press key; a setting already on stays reachable.
+        AirPlayPersistence.saveWheelLongPressSeek(context, true)
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            val title = screen.getString(R.string.settings_wheel_long_press_seek)
+            assertTrue(title, title.endsWith(" (experimental)"))
+            fun switches(category: SettingsCategory): List<Switch> {
+                ReflectionHelpers.setField(screen, "settingsCategory", category)
+                ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+                return descendants(screen.window.decorView).filterIsInstance<Switch>()
+                    .filter { it.contentDescription == title }.toList()
+            }
+            for (category in SettingsCategory.entries.filter { it != SettingsCategory.ADVANCED }) {
+                assertEquals(category.name, 0, switches(category).size)
+            }
+            PendingReconnect.clear()
+            val setting = switches(SettingsCategory.ADVANCED).single()
+            assertTrue(setting.isChecked)
+            setting.performClick()
+
+            assertFalse(AirPlayPersistence.loadWheelLongPressSeek(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
     @Test
     @Config(sdk = [28])
     fun mtkDecoderTuningAppearsOnlyForMtkAndMarksReconnect() {

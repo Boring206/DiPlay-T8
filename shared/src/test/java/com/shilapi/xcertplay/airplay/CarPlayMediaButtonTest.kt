@@ -59,10 +59,62 @@ class CarPlayMediaButtonTest {
 
     @Test
     fun indicesMatchTheAdvertisedMediaHidReport() {
-        // Media report usages: 0 none, 1 play, 2 pause, 3 play/pause, 4 next, 5 previous.
+        // Media report usages: 0 none, 1 play, 2 pause, 3 play/pause, 4 next, 5 previous; with the seek keys
+        // declared, 7 fast forward and 8 rewind.
         assertEquals(3, CarPlayMediaButton.PLAY_PAUSE)
         assertEquals(4, CarPlayMediaButton.NEXT)
         assertEquals(5, CarPlayMediaButton.PREVIOUS)
+        assertEquals(7, CarPlayMediaButton.FAST_FORWARD)
+        assertEquals(8, CarPlayMediaButton.REWIND)
+    }
+
+    // #1190: DiLink 3 names its long-press keys; the numbers come from the head unit's framework.
+    private val dilink3 = mapOf("KEYCODE_AUTO_MEDIA_NEXT_LP" to 401, "KEYCODE_AUTO_MEDIA_PREVIOUS_LP" to 402)
+
+    @Test
+    fun dilink3LongPressNextAndPreviousSeek() {
+        val keys = LongPressSeekKeys { dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN }
+        assertTrue(keys.available)
+        assertEquals(CarPlayMediaButton.FAST_FORWARD, keys.seekFor(401))
+        assertEquals(CarPlayMediaButton.REWIND, keys.seekFor(402))
+        // The tap keys keep their presses, and the long-press keys are no tap.
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_MEDIA_NEXT))
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_MEDIA_PREVIOUS))
+        assertNull(keys.seekFor(KeyEvent.KEYCODE_UNKNOWN))
+        assertNull(CarPlayMediaButton.forKeyCode(401))
+        assertNull(CarPlayMediaButton.forKeyCode(402, experimentalDiLink3Keys = true))
+        assertNull(CarPlayMediaButton.forCarPlayWindow(401, sessionActive = true, inCall = false))
+        assertEquals("next=401 previous=402", keys.describe())
+    }
+
+    @Test
+    fun firmwareThatDoesNotNameTheLongPressKeysSeeksWithNothing() {
+        val unnamed = LongPressSeekKeys { KeyEvent.KEYCODE_UNKNOWN }
+        assertFalse(unnamed.available)
+        for (code in listOf(KeyEvent.KEYCODE_UNKNOWN, KeyEvent.KEYCODE_MEDIA_NEXT, 401)) assertNull(unnamed.seekFor(code))
+        // The SDK's stub, or a firmware whose lookup fails, is the same as a name it does not know.
+        val failing = LongPressSeekKeys { error("not available") }
+        assertFalse(failing.available)
+        assertNull(failing.seekFor(401))
+        val onlyNext = LongPressSeekKeys { if (it == "KEYCODE_AUTO_MEDIA_NEXT_LP") 401 else KeyEvent.KEYCODE_UNKNOWN }
+        assertTrue(onlyNext.available)
+        assertEquals(CarPlayMediaButton.FAST_FORWARD, onlyNext.seekFor(401))
+        assertNull(onlyNext.seekFor(KeyEvent.KEYCODE_UNKNOWN))
+        assertEquals("not named by this firmware", unnamed.describe())
+        assertEquals("next=401 previous=none", onlyNext.describe())
+    }
+
+    @Test
+    fun eachNameIsLookedUpOnce() {
+        val asked = mutableListOf<String>()
+        val keys = LongPressSeekKeys { asked += it; dilink3[it] ?: KeyEvent.KEYCODE_UNKNOWN }
+        assertTrue(asked.isEmpty())
+        repeat(5) {
+            keys.seekFor(401)
+            keys.seekFor(KeyEvent.KEYCODE_MEDIA_NEXT)
+            keys.available
+        }
+        assertEquals(listOf("KEYCODE_AUTO_MEDIA_NEXT_LP", "KEYCODE_AUTO_MEDIA_PREVIOUS_LP"), asked.sorted())
     }
 
     @Test

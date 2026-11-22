@@ -50,6 +50,7 @@ import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.AirPlayDisplaySettings
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
+import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.airplay.ClusterSpeedometerOverlay
 import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import com.shilapi.xcertplay.backup.SettingsBackupCodec
@@ -2073,6 +2074,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.loadCallAtCallRate(this)) {
                 AirPlayPersistence.saveCallAtCallRate(this, it)
                 markReconnectNeeded()
+            }
+            // Shown where the firmware knows DiLink 3's long-press keys (#1190); once on it stays reachable.
+            if (CarPlayMediaButton.longPressSeekKeys.available ||
+                AirPlayPersistence.loadWheelLongPressSeek(this)) {
+                toggle(card, getString(R.string.settings_wheel_long_press_seek),
+                    getString(R.string.settings_wheel_long_press_seek_description),
+                    AirPlayPersistence.loadWheelLongPressSeek(this)) {
+                    AirPlayPersistence.saveWheelLongPressSeek(this, it)
+                    markReconnectNeeded()
+                }
             }
             toggle(card, getString(R.string.settings_car_bluetooth_audio), getString(R.string.settings_car_bluetooth_audio_description),
                 AirPlayPersistence.loadCarBluetoothAudio(this)) {
@@ -5985,6 +5996,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("CarPlay setup: ${if (setupError == null) "ready" else "authentication unavailable"}")
         appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
         appendLine("Media-key audio focus: ${if (AirPlayPersistence.loadDisableMediaKeyAudioFocus(appContext)) "disabled" else "enabled"}")
+        appendLine("Wheel long-press seek: ${if (AirPlayPersistence.loadWheelLongPressSeek(appContext)) "on" else "off"}; " +
+            "long-press keys ${CarPlayMediaButton.longPressSeekKeys.describe()}")
         appendLine("MTK decoder tuning preference: ${if (AirPlayPersistence.loadMtkDecoderTuning(appContext)) "enabled" else "disabled"}")
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")

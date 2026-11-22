@@ -16,6 +16,23 @@ object CarPlayMediaButton {
     const val NEXT = 4
     const val PREVIOUS = 5
 
+    /**
+     * Fast Forward and Rewind, held while the iPhone seeks. The media HID device declares them only when
+     * [AirPlayConfig.mediaSeekKeys] is on (indices 7 and 8 of [AirPlayHid]'s media report).
+     */
+    const val FAST_FORWARD = 7
+    const val REWIND = 8
+
+    /**
+     * DiLink 3's long-press next and previous keys (#1190). The wheel sends a long press as a key of its own,
+     * once per hold. Their numbers are not in the SDK; BYD's framework knows them by these names.
+     */
+    const val KEYCODE_NAME_BYD_MEDIA_NEXT_LONG = "KEYCODE_AUTO_MEDIA_NEXT_LP"
+    const val KEYCODE_NAME_BYD_MEDIA_PREVIOUS_LONG = "KEYCODE_AUTO_MEDIA_PREVIOUS_LP"
+
+    /** The long-press keys of this head unit, looked up by name on first use. */
+    val longPressSeekKeys = LongPressSeekKeys(KeyEvent::keyCodeFromString)
+
     /** BYD's steering-wheel play/pause key; the firmware normally rewrites it to MEDIA_PLAY/PAUSE. */
     const val KEYCODE_BYD_AUTO_MEDIA_PLAY_PAUSE = 353
 
@@ -86,4 +103,32 @@ object CarPlayMediaButton {
             else -> null
         }
     }
+}
+
+/**
+ * The numbers this head unit gives [CarPlayMediaButton.KEYCODE_NAME_BYD_MEDIA_NEXT_LONG] and
+ * [CarPlayMediaButton.KEYCODE_NAME_BYD_MEDIA_PREVIOUS_LONG], from [resolve] (KeyEvent.keyCodeFromString).
+ * A firmware that does not know a name gives KEYCODE_UNKNOWN, and that key then maps to nothing.
+ */
+class LongPressSeekKeys(private val resolve: (String) -> Int) {
+    private val next by lazy { code(CarPlayMediaButton.KEYCODE_NAME_BYD_MEDIA_NEXT_LONG) }
+    private val previous by lazy { code(CarPlayMediaButton.KEYCODE_NAME_BYD_MEDIA_PREVIOUS_LONG) }
+
+    /** Whether this head unit's framework knows either long-press key. */
+    val available: Boolean get() = next != null || previous != null
+
+    /** For the diagnostic report: the numbers this firmware gives the keys. */
+    fun describe(): String =
+        if (available) "next=${next ?: "none"} previous=${previous ?: "none"}" else "not named by this firmware"
+
+    /** [CarPlayMediaButton.FAST_FORWARD] or [CarPlayMediaButton.REWIND] for a long-press key, else null. */
+    fun seekFor(keyCode: Int): Int? = when (keyCode) {
+        KeyEvent.KEYCODE_UNKNOWN -> null
+        next -> CarPlayMediaButton.FAST_FORWARD
+        previous -> CarPlayMediaButton.REWIND
+        else -> null
+    }
+
+    private fun code(name: String): Int? =
+        runCatching { resolve(name) }.getOrNull()?.takeIf { it != KeyEvent.KEYCODE_UNKNOWN }
 }

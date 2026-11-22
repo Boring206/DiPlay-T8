@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.KeyEvent
 import androidx.core.graphics.drawable.toBitmap
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
+import com.shilapi.xcertplay.airplay.LongPressSeekKeys
 import com.shilapi.xcertplay.compat.AudioFocusRequestCompat
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -42,6 +43,11 @@ internal object CarPlayMediaKeys {
         PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val seekHold = MediaSeekHold(
+        schedule = { task, delayMillis -> mainHandler.postDelayed(task, delayMillis) },
+        cancel = mainHandler::removeCallbacks,
+        note = ::noteMediaKey,
+    )
     private val artworkQueue = NowPlayingArtworkQueue(
         worker = Executors.newSingleThreadExecutor { task ->
             Thread(task, "diplay-now-playing-artwork").apply { isDaemon = true }
@@ -433,7 +439,43 @@ internal object CarPlayMediaKeys {
 
     private fun notUsed(source: String) {
         Log.i(TAG, "media key $source not used by CarPlay")
-        WheelKeyLog.note("media key $source not used by CarPlay")
+        WheelKeyLog.noteAwaitingRelease("media $source", "media key $source not used by CarPlay")
+    }
+
+    /** [timing] goes on the key's "not used" line: when its release came after its downTime (#1190). */
+    private fun notUsedReleased(source: String, timing: String) {
+        Log.i(TAG, "media key $source not used by CarPlay$timing")
+        WheelKeyLog.released("media $source", timing)
+    }
+
+    /**
+     * A wheel long press with the long-press seek setting on (#1190): Fast Forward or Rewind, held on the
+     * iPhone by [seekHold]. Main thread.
+     */
+    private fun seek(index: Int, source: String, event: KeyEvent) {
+        val skip = if (index == CarPlayMediaButton.FAST_FORWARD) CarPlayMediaButton.NEXT else CarPlayMediaButton.PREVIOUS
+        when {
+            event.action == KeyEvent.ACTION_UP -> seekHold.up(index, source, event.eventTime)
+            event.action != KeyEvent.ACTION_DOWN -> Unit
+            event.repeatCount > 0 -> seekHold.repeated(index)
+            // The car's video player skips for a long press as for next and previous; the iPhone is not asked.
+            CarPlayVideo.onMediaKey(skip) -> noteMediaKey("media key $source -> car video player $skip")
+            else -> {
+                val active = synchronized(this) { controller }
+                when {
+                    active == null -> noteMediaKey("media key $source not sent: no CarPlay session")
+                    // The iPhone was told of the seek keys when this connection started.
+                    !active.mediaSeekKeysDeclared() ->
+                        noteMediaKey("media key $source not sent: long-press seek starts at the next connection")
+                    else -> seekHold.down(index, source, event.eventTime, active::holdMediaButton, active::releaseMediaButton)
+                }
+            }
+        }
+    }
+
+    private fun noteMediaKey(message: String) {
+        Log.i(TAG, message)
+        WheelKeyLog.note(message)
     }
 
     /** A steering-wheel media key captured outside the Android key stream (Geely/Lynk). */
@@ -447,7 +489,10 @@ internal object CarPlayMediaKeys {
 
     private val callback = CarPlayMediaCallback(
         experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
+        longPressSeek = { appContext?.let(AirPlayPersistence::loadWheelLongPressSeek) == true },
+        seek = ::seek,
         notUsed = ::notUsed,
+        notUsedReleased = ::notUsedReleased,
         send = ::send,
     )
 
@@ -556,20 +601,40 @@ internal object CarPlayMediaKeys {
  * Media-session input → CarPlay presses. Hardware keys arrive as button events and keep the toggle;
  * media controllers (not hardware keys) call [onPlay] and [onPause] with an explicit intent.
  * A button that is not a CarPlay key goes to [notUsed]: a car that sends its own code for a wheel key
- * then shows that code in the report, instead of looking like a car that sent nothing (#610).
+ * then shows that code in the report, instead of looking like a car that sent nothing (#610). Its release
+ * goes to [notUsedReleased] with when it came, so the report shows whether a car sends a long press at its
+ * threshold or at the release (#1190).
+ *
+ * With [longPressSeek] on, DiLink 3's long-press next and previous keys ([seekKeys]) go to [seek] as
+ * Fast Forward and Rewind, press and release alike.
  */
 internal class CarPlayMediaCallback(
     private val experimentalDiLink3Keys: () -> Boolean = { false },
+    private val longPressSeek: () -> Boolean = { false },
+    private val seekKeys: LongPressSeekKeys = CarPlayMediaButton.longPressSeekKeys,
+    private val seek: (index: Int, source: String, event: KeyEvent) -> Unit = { _, _, _ -> },
     private val notUsed: (source: String) -> Unit = {},
+    private val notUsedReleased: (source: String, timing: String) -> Unit = { _, _ -> },
     private val send: (index: Int, source: String) -> Unit,
 ) : MediaSession.Callback() {
+    private val unusedTiming = KeyHoldTiming<Int>()
+
     override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
         @Suppress("DEPRECATION")
         val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
         val press = event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        seekKeys.seekFor(event.keyCode)?.takeIf { longPressSeek() }?.let { seekIndex ->
+            seek(seekIndex, KeyEvent.keyCodeToString(event.keyCode), event)
+            return true
+        }
         val index = CarPlayMediaButton.forKeyCode(event.keyCode, experimentalDiLink3Keys())
         if (index == null) {
-            if (press) notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            if (press) {
+                unusedTiming.pressed(event.keyCode, event)
+                notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            } else {
+                unusedTiming.after(event.keyCode, event)?.let { notUsedReleased(KeyEvent.keyCodeToString(event.keyCode), it) }
+            }
             return super.onMediaButtonEvent(mediaButtonIntent)
         }
         if (press) send(index, KeyEvent.keyCodeToString(event.keyCode))

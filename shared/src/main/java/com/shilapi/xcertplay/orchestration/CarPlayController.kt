@@ -712,6 +712,32 @@ class CarPlayController(
         }
     }
 
+    /** Whether this connection declared Fast Forward and Rewind to the iPhone ([AirPlayConfig.mediaSeekKeys]). */
+    fun mediaSeekKeysDeclared(): Boolean = airPlayConfig.mediaSeekKeys
+
+    /**
+     * Presses a seek key ([CarPlayMediaButton.FAST_FORWARD] or [CarPlayMediaButton.REWIND]) and keeps it
+     * down until [releaseMediaButton]. False when this connection did not declare the seek keys.
+     */
+    fun holdMediaButton(index: Int): Boolean {
+        if (!mediaSeekKeysDeclared()) return false
+        return onMediaSession { it.holdMedia(index) }
+    }
+
+    /** Lets go of the key [holdMediaButton] pressed. */
+    fun releaseMediaButton(): Boolean = onMediaSession { it.releaseMedia() }
+
+    private fun onMediaSession(action: (AirPlaySession) -> Unit): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute { action(session) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun close() {
         synchronized(wirelessResourceLock) {
             if (closed) return

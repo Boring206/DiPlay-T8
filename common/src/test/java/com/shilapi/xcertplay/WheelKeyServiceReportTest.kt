@@ -41,9 +41,9 @@ class WheelKeyServiceReportTest {
         WheelKeyLog.reset()
     }
 
-    private fun send(code: Int, action: Int, repeat: Int = 0, downTime: Long = time): Boolean = service.javaClass
+    private fun send(code: Int, action: Int, repeat: Int = 0, downTime: Long = time, eventTime: Long = downTime): Boolean = service.javaClass
         .getDeclaredMethod("onKeyEvent", KeyEvent::class.java).apply { isAccessible = true }
-        .invoke(service, KeyEvent(downTime, downTime, action, code, repeat, 0, 7, 0)) as Boolean
+        .invoke(service, KeyEvent(downTime, eventTime, action, code, repeat, 0, 7, 0)) as Boolean
 
     /** A new press; true when DiPlay kept its first DOWN. */
     private fun press(code: Int): Boolean {
@@ -62,7 +62,7 @@ class WheelKeyServiceReportTest {
     @Test fun aKeyNoFeatureUsesIsListedOnceAndStaysWithTheHeadUnit() {
         assertFalse(press(KeyEvent.KEYCODE_F7))
         assertEquals(
-            listOf("wheel key service connected", "key 137/0 device 7 left to the head unit"),
+            listOf("wheel key service connected", "key 137/0 device 7 left to the head unit; released at +0 s, 1 repeat"),
             entries(),
         )
         assertTrue(report().first(), report().first().startsWith(
@@ -144,19 +144,39 @@ class WheelKeyServiceReportTest {
         }
         assertFalse(press(KeyEvent.KEYCODE_MEDIA_NEXT))
         assertEquals(
-            listOf("wheel key service connected", "key 87/0 device 7 left to the head unit"),
+            listOf("wheel key service connected", "key 87/0 device 7 left to the head unit; released at +0 s, 1 repeat"),
             entries(),
         )
         assertTrue(report().first(), report().first().contains(" presses=1 kept=0 leftToHeadUnit=1 textKeysNotListed=4 "))
     }
 
-    @Test fun aHeldKeysRepeatsAndReleaseAddNothing() {
+    // #1190: a held key's repeats and release are no new press; they say how it was held, on its press's line.
+    @Test fun aHeldKeysRepeatsAndReleaseOnlyAddToItsPress() {
         time = 5_000
         assertFalse(send(KeyEvent.KEYCODE_F7, KeyEvent.ACTION_DOWN))
-        for (repeat in 1..30) assertFalse(send(KeyEvent.KEYCODE_F7, KeyEvent.ACTION_DOWN, repeat))
-        assertFalse(send(KeyEvent.KEYCODE_F7, KeyEvent.ACTION_UP))
-        assertEquals(listOf("wheel key service connected", "key 137/0 device 7 left to the head unit"), entries())
+        for (repeat in 1..30) assertFalse(send(KeyEvent.KEYCODE_F7, KeyEvent.ACTION_DOWN, repeat, eventTime = time + repeat * 100L))
+        assertFalse(send(KeyEvent.KEYCODE_F7, KeyEvent.ACTION_UP, eventTime = time + 3_100))
+        assertEquals(listOf("wheel key service connected",
+            "key 137/0 device 7 left to the head unit; released at +3.1 s, 30 repeats"), entries())
         assertTrue(report().first(), report().first().contains(" presses=1 "))
+    }
+
+    @Test fun aLongPressSentAsAnInstantPairAtItsThresholdShowsItsDownTime() {
+        time = 5_000
+        assertFalse(send(401, KeyEvent.ACTION_DOWN, eventTime = time + 800))
+        assertFalse(send(401, KeyEvent.ACTION_UP, eventTime = time + 805))
+        assertEquals(listOf("wheel key service connected",
+            "key 401/0 device 7 left to the head unit; released at +0.8 s, down event at +0.8 s"), entries())
+    }
+
+    @Test fun aKeptKeysReleaseAddsNothing() {
+        service.mapRoute = { "map" }
+        WheelZoomSettings.setEnabled(service, true)
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.MODE, WheelKey(KeyEvent.KEYCODE_F1, 0, "?"))
+        time = 5_000
+        assertTrue(send(KeyEvent.KEYCODE_F1, KeyEvent.ACTION_DOWN))
+        send(KeyEvent.KEYCODE_F1, KeyEvent.ACTION_UP, eventTime = time + 4_000)
+        assertEquals("key 131/0 device 7 kept", entries().last())
     }
 
     @Test fun aServiceThatStopsLeavesItsLastKeysAndSaysItStopped() {
@@ -164,7 +184,7 @@ class WheelKeyServiceReportTest {
         service.onUnbind(Intent())
         assertFalse(WheelKeyService.connected())
         assertEquals(
-            listOf("wheel key service connected", "key 137/0 device 7 left to the head unit", "wheel key service unbound"),
+            listOf("wheel key service connected", "key 137/0 device 7 left to the head unit; released at +0 s, 1 repeat", "wheel key service unbound"),
             entries(),
         )
         assertTrue(report().first(), report().first().endsWith(" textKeysNotListed=0 bound=false"))
@@ -180,7 +200,7 @@ class WheelKeyServiceReportTest {
         assertTrue(text, serviceLine >= 0)
         assertTrue(lines[serviceLine + 1], lines[serviceLine + 1].startsWith("Wheel keys since DiPlay started: presses=1 "))
         assertTrue(lines[serviceLine + 2], lines[serviceLine + 2].endsWith("  wheel key service connected"))
-        assertTrue(lines[serviceLine + 3], lines[serviceLine + 3].endsWith("  key 137/0 device 7 left to the head unit"))
+        assertTrue(lines[serviceLine + 3], lines[serviceLine + 3].endsWith("  key 137/0 device 7 left to the head unit; released at +0 s, 1 repeat"))
         assertEquals("", lines[serviceLine + 4])
     }
 }
