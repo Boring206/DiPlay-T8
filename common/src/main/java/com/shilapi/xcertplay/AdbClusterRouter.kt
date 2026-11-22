@@ -32,15 +32,38 @@ internal object AdbClusterRouter {
         DiLinkGeneration.detect().source == DiLinkGeneration.Source.SYSTEM_VERSION
 
     /**
-     * The last probe in this process read the display list and found no projection display. Until a probe
-     * finds one or the route settings change, the next connection does not ask for the 1920x720 stream
-     * (#1327). A display that appears later still confirms the route, and that asks for the native stream.
+     * Probes in this process read real display lists with no projection display for at least
+     * [MISSING_SPAN_MILLIS], and none ever found one. Until the route settings change, the next connection
+     * does not ask for the 1920x720 stream (#1327). A unit where the route has worked once in this process
+     * keeps asking for it, so a cluster display that is briefly gone (standby, re-creation) changes nothing,
+     * and the span lets xdja create its display after a cold boot. A display that appears later still
+     * confirms the route, and that asks for the native stream.
      */
     @Volatile var targetMissing = false
         private set
 
+    /** Probes that found no projection display since the first one, and how long they span (for the log). */
+    @Volatile var missingProbes = 0
+        private set
+    @Volatile var missingSpanMillis = 0L
+        private set
+
+    private const val MISSING_SPAN_MILLIS = 30_000L
+    @Volatile private var targetSeen = false
+    private var firstMissingAt = -1L
+
     /** Settings changed: the next connection asks for the native stream again. */
-    fun forgetMissingTarget() { targetMissing = false }
+    @Synchronized fun forgetMissingTarget() {
+        targetMissing = false
+        firstMissingAt = -1L
+        missingProbes = 0
+        missingSpanMillis = 0L
+    }
+
+    @Synchronized internal fun resetProbeForTest() {
+        forgetMissingTarget()
+        targetSeen = false
+    }
 
     // Match only the base logical display, not a device's layer-stack number or override record.
     internal fun displayId(dump: String): Int? {
@@ -53,11 +76,26 @@ internal object AdbClusterRouter {
         return candidates.singleOrNull()
     }
 
-    /** The projection display in [dump], remembering whether a real display list had none. */
-    internal fun probe(dump: String): Int? = displayId(dump).also { display ->
-        // Every display list has the built-in screen's base record; without one the dump failed and proves nothing.
-        if (display != null) targetMissing = false
-        else if (dump.contains("mBaseDisplayInfo=DisplayInfo{")) targetMissing = true
+    /** The projection display in [dump], remembering whether real display lists have kept having none. */
+    internal fun probe(dump: String, now: Long = android.os.SystemClock.elapsedRealtime()): Int? =
+        displayId(dump).also { display -> record(display != null, missing(dump), now) }
+
+    // Every display list has the built-in screen's base record; without one the dump failed and proves nothing.
+    // An xdja record that is ambiguous or does not match yet still shows the unit has the display.
+    private fun missing(dump: String) =
+        dump.contains("mBaseDisplayInfo=DisplayInfo{") && !dump.contains(DiLink4ClusterDisplay.NAME)
+
+    @Synchronized private fun record(found: Boolean, missing: Boolean, now: Long) {
+        if (found) {
+            targetSeen = true
+            forgetMissingTarget()
+            return
+        }
+        if (!missing || targetSeen) return
+        if (firstMissingAt < 0) firstMissingAt = now
+        missingProbes++
+        missingSpanMillis = now - firstMissingAt
+        if (missingSpanMillis >= MISSING_SPAN_MILLIS) targetMissing = true
     }
 
     // Direct shell launch, following Hanxu4131's legacy platform-21 adapter.
