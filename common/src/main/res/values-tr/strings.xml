@@ -1044,7 +1044,7 @@
     <string name="preview_list_separator">, </string>
     <string name="preview_transport_hevc">HEVC (H.265, %1$s)</string>
     <string name="settings_call_at_call_rate">Aramalar kendi örnekleme hızında (deneysel)</string>
-    <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
+    <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Yalnızca USB kablosu: Wi-Fi üzerinden iPhone bu durumda tüm CarPlay sesini kendinde tutuyordu, bu yüzden kablosuz bağlantı olağan biçimleri sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
     <string name="settings_carplay_same_task">CarPlay\'i başlatıcı kartında tut (deneysel)</string>
     <string name="settings_carplay_same_task_description">BYD\'nin DiYou masaüstü gibi DiPlay\'i bir kartta veya pencere içinde pencere görünümünde gösteren başlatıcılar içindir. CarPlay, ayrı bir tam ekran pencere yerine 0.2.11 ve önceki sürümlerdeki gibi DiPlay\'in kendi penceresinde açılır. Bağlantıyı kesmeden, CarPlay\'in bir sonraki açılışında geçerli olur.</string>
     <string name="settings_cluster_speedometer_album_color">Hız göstergesi arka planı için albüm rengini kullan</string>

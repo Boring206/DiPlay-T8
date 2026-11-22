@@ -94,6 +94,7 @@ import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.CarPlayMediaEngine
 import com.shilapi.xcertplay.airplay.SafeAreaRect
 import com.shilapi.xcertplay.airplay.ScreenShapeSafeArea
+import com.shilapi.xcertplay.airplay.forTransport
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.location.AndroidCarPlayLocationProvider
 import com.shilapi.xcertplay.media.AndroidMediaSink
@@ -5704,7 +5705,11 @@ open class CarPlayHostActivity : ComponentActivity() {
         } else {
             size
         }
-        val airPlayConfig = createAirPlayConfig(effectiveSize)
+        val requestedConfig = createAirPlayConfig(effectiveSize)
+        val airPlayConfig = requestedConfig.forTransport(config.transport == CarPlayTransport.WIRELESS)
+        if (airPlayConfig.callAtCallRate != requestedConfig.callAtCallRate) {
+            appendLog("Calls at the call's own rate: wired only, not offered over Wi-Fi")
+        }
         val locationProvider: Iap2LocationProvider? =
             when {
                 !config.locationReportingEnabled -> null
