@@ -29,7 +29,20 @@ Colors are picked from a grid of the car's 31 colors, drawn with the 31-color OE
 
 The controller samples every 50 ms and limits lamp submissions to one per 200 ms. Lamp calls run outside audio writes through a token-bound, bounded stdin worker. The worker accepts only interior-lamp operations. It holds a process lock, reads back writes, keeps one original-state snapshot and restores on normal stop or EOF. A five-second heartbeat and fifteen-second lease attempt restoration after a lost connection. Recovery uses bounded retry delays and retains the original snapshot when a stop is unconfirmed.
 
-Before each write the worker reads the lamp again. If it shows values DiPlay did not leave there, something else changed the lamp, such as the car's blind-spot warning ([#1332](https://github.com/shihabal3amri/DiPlay/issues/1332): on a 2023 Frigate 07 with **Follow music** on, the warning turned a door lamp red and DiPlay's next music colour replaced it). DiPlay then writes nothing and does not restore, so the car keeps its own colour. It writes again once the lamp shows DiPlay's last values and no other value has been read for 2.5 s; a flashing warning keeps the pause going. This is always on and has no switch. The diagnostic report gets one line when writes pause, with the lamp values read, and one when they resume. Nothing in DiPlay reads the blind-spot, lane-change or turn-signal state, and it is not known whether the car's warning shows in these lamp values; if it does not, this check never fires. A change that stays, such as a colour picked in the car's own menu, keeps DiPlay paused until its lamp session ends. A session that ends during a pause still restores the original lamp values once.
+Before each write the worker reads the lamp again. If it shows values DiPlay did not leave there, something else changed the lamp. DiPlay then writes nothing and does not restore, so the car keeps its own colour. While the lamp stays changed, DiPlay asks again about every 2 s for the same value, and at once for a new one. This is always on and has no switch.
+
+A pause ends in one of these ways:
+
+- The lamp reads DiPlay's last values again, or the values it had before DiPlay's session, and no other value has been read for 2.5 s. A flashing change keeps the pause going.
+- The driver changes any DiPlay ambient setting. DiPlay takes the lamp as it reads then as its new starting point, so the new choice is written.
+- A new CarPlay session starts. The lamp is taken as it reads then, in the same way.
+- Ambient lighting is turned off in DiPlay, or the lamp session stops for another reason. The stop restores the original lamp values once.
+
+A change that stays, such as a colour picked in the car's own menu, therefore pauses DiPlay until one of the last three happens.
+
+The diagnostic report gets one line when writes pause, with the lamp values read, and one when the pause ends and how. A pause that a new CarPlay session ends is reported in that session's report.
+
+This was added for [#1332](https://github.com/shihabal3amri/DiPlay/issues/1332): on a 2023 Frigate 07 with **Follow music** on, the car's blind-spot warning turned the driver-side or passenger-side lamp red, and DiPlay's next music colour replaced it. It probably does not fix that. DiPlay reads only the front and back setting values, and the warning is on the left or right side. It most likely does not show in these values, and then this check never fires. Nothing in DiPlay reads the blind-spot, lane-change or turn-signal state.
 
 Restoration is best effort. Power loss, forced process death, a permanently blocked vehicle service or repeated failed readback can prevent restoration. The worker's final failed restore is reported before it exits. This patch does not guarantee recovery under those conditions.
 
