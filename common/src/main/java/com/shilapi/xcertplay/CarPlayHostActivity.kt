@@ -6122,6 +6122,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return
         val size = activeDisplaySize ?: return
         startupRetryBudget.disconnected()
+        // Every caller starts a new attempt, a display change or a switch to USB included, so the stop of the
+        // last one no longer holds: its failure must be shown and a lost session reconnected.
+        startupRetryStopped = false
         startupRetryButton?.visibility = View.GONE
         appendLog(reason)
         activeScreenStreamTypes.clear()
