@@ -71,11 +71,13 @@ If the car rejects the channel or creates a different one, DiPlay reports an
 error. Choose Auto or another channel and reconnect. Switching to the built-in
 hotspot preserves this choice without applying it to the car hotspot.
 
-Some head unit firmware has no Wi-Fi Direct at all, for example the XPeng P7
-E28 on Android 9 (#1256). Connection setup then shows "Wi-Fi Direct · Not
-available" and the choice cannot be selected. If Wi-Fi Direct was already
-selected, connecting stops at once with "This head unit does not support
-Wi-Fi Direct." instead of retrying. Choose Built-in car hotspot or Existing Wi-Fi / Same LAN.
+Some head unit firmware has no Wi-Fi Direct at all: either it has no Wi-Fi
+Direct service, for example the XPeng P7 E28 on Android 9 (#1256), or the
+framework refuses Wi-Fi Direct when DiPlay asks for a group. Without the
+service, Connection setup shows "Wi-Fi Direct · Not available" and the choice
+cannot be selected. In both cases a Wi-Fi Direct connection stops at once with
+"This head unit does not support Wi-Fi Direct." instead of retrying. Choose
+Built-in car hotspot or Existing Wi-Fi / Same LAN.
 
 OPTIONAL: DIPLAY BYD FEATURES REQUIRING ADB
 Settings → BYD features · needs ADB appears only when BYD navigation services or
