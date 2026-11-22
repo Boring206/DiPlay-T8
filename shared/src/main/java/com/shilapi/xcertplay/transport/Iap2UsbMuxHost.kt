@@ -6,6 +6,13 @@ import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
+ * Bounds the queued receive bytes for one wired TCP connection. Wired sessions disable iAP2
+ * acknowledgements and ACK a payload as soon as it is queued, so a slow reader has no backpressure;
+ * 8 MiB clears the 2 MiB artwork limit with room for a busy head unit to fall behind.
+ */
+internal const val MAX_RECEIVED_BYTES = 8 * 1024 * 1024
+
+/**
  * USBMUX version-2 host over an already claimed iPhone bulk pipe.
  *
  * This is deliberately limited to USBMUX framing and one minimal outbound TCP connection. It
@@ -340,6 +347,7 @@ class Iap2UsbMuxTcpConnection internal constructor(
     private val stateLock = Object()
     private val writeLock = Any()
     private val received = ArrayDeque<ByteArray>()
+    private var receivedBytes = 0
     private var nextSequence = 0
     private var nextAcknowledgement = 0
     private var connected = false
@@ -396,10 +404,13 @@ class Iap2UsbMuxTcpConnection internal constructor(
                 return ByteArray(0)
             }
             val packet = received.removeFirst()
+            receivedBytes -= packet.size
             return if (packet.size <= maxBytes) {
                 packet
             } else {
-                received.addFirst(packet.copyOfRange(maxBytes, packet.size))
+                val tail = packet.copyOfRange(maxBytes, packet.size)
+                received.addFirst(tail)
+                receivedBytes += tail.size
                 packet.copyOf(maxBytes)
             }
         }
@@ -504,11 +515,38 @@ class Iap2UsbMuxTcpConnection internal constructor(
             return
         }
         if (payload.isNotEmpty()) {
+            var overflow = false
             synchronized(stateLock) {
                 if (closed) return
-                nextAcknowledgement += payload.size
-                received.addLast(payload)
-                stateLock.notifyAll()
+                if (receivedBytes + payload.size > MAX_RECEIVED_BYTES) {
+                    // TCP is a reliable ordered stream: silently dropping the oldest payload would
+                    // corrupt the stream and then ACK bytes we never delivered. Fail the connection
+                    // loudly instead, matching the other bounded receive queues in this module.
+                    failure = IphoneUsbException.Protocol(
+                        "USBMUX TCP receive buffer for port $destinationPort exceeded $MAX_RECEIVED_BYTES bytes",
+                    )
+                    closed = true
+                    received.clear()
+                    receivedBytes = 0
+                    stateLock.notifyAll()
+                    overflow = true
+                } else {
+                    nextAcknowledgement += payload.size
+                    received.addLast(payload)
+                    receivedBytes += payload.size
+                    stateLock.notifyAll()
+                }
+            }
+            if (overflow) {
+                // Leave the phone a reset before dropping the connection, as abort() does, so its
+                // service is not left half-open until its own timeout. Best effort: the pipe may be gone.
+                try {
+                    sendControl(TCP_RST or TCP_ACK)
+                } catch (_: IphoneUsbException) {
+                    // A failed reset cannot make the local connection usable again.
+                }
+                host.removeConnection(this)
+                return
             }
             sendControl(TCP_ACK)
         }

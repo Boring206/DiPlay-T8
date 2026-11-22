@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Hız göstergesi arka planı için albüm kapağı gradyanı</string>
+    <string name="settings_cluster_speedometer_artwork_description">Ayrı bir seçenektir. Boyut ve opaklığı koruyarak düz arka planı değiştirir. Kapatılınca albümün düz rengi veya siyah geri gelir. Hareket isteğe bağlıdır.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Hız göstergesi arka planını hareket ettir</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Varsayılan olarak kapalıdır. Çalma sırasında yavaş arka plan hareketini açar. Kapalıyken de şarkı geçişleri yumuşaktır.</string>
+</resources>

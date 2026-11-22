@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_background_motion">Fondo en movimiento</string>
+    <string name="settings_cluster_background_motion_description">Desactivado por defecto. Activa el movimiento suave del fondo durante la reproducción. Los cambios de canción conservan el fade aunque esté desactivado.</string>
+</resources>

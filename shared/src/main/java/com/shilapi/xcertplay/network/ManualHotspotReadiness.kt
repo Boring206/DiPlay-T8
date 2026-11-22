@@ -21,6 +21,8 @@ internal data class HotspotNetworkSnapshot(
     val defaultInterface: String?,
     val consistent: Boolean = true,
     val apEnabled: Boolean? = true,
+    /** The Wi-Fi interfaces the platform itself reports as tethered, or null when it cannot be read. */
+    val platformAp: Set<String>? = null,
 )
 
 internal data class HotspotSelection(val name: String, val index: Int, val address: InetAddress) {
@@ -47,8 +49,12 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
         val address = if (owned) hotspotAddress else hotspotAddress?.takeIf {
             it !is Inet4Address || it.isSiteLocalAddress
         }
+        // A Unisoc UMS512 head unit (#1187) read isUp() false for the wlan0 that the platform listed as its
+        // tethered hotspot and that held the hotspot address, so the car hotspot never became ready. The
+        // platform's own tether list outweighs that flag; a configured or inferred interface still has to be up.
+        val reportedDown = !iface.up && !(snapshot.platformAp?.contains(iface.name) == true && address != null)
         val reason = when {
-            !iface.up || iface.index <= 0 -> "interface_down"
+            reportedDown || iface.index <= 0 -> "interface_down"
             address == null -> "address_unavailable"
             owned -> "platform_ap"
             snapshot.apInterfaces != null -> "not_platform_ap"
@@ -62,7 +68,7 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
             "family=${if (address is Inet6Address) "IPv6" else if (address != null) "IPv4" else "none"} " +
             "scope=${(address as? Inet6Address)?.scopeId ?: 0} evidence=$reason " +
             "ap=${snapshot.apInterfaces?.let { if (owned) "yes" else "no" } ?: "unobservable"} " +
-            "defaultConflict=${owned && (upstream || snapshot.defaultInterface == iface.name)}")
+            "defaultConflict=${owned && (upstream || snapshot.defaultInterface == iface.name)} up=${iface.up}")
         if (reason != "platform_ap" && reason != "wireless_non_upstream") null
         else (if (owned) 100 else 0) to HotspotSelection(iface.name, iface.index, address!!)
     }.sortedWith(compareByDescending<Pair<Int, HotspotSelection>> { it.first }.thenBy { it.second.name })

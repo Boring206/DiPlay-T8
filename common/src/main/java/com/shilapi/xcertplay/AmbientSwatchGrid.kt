@@ -29,6 +29,8 @@ internal class AmbientSwatchGrid(
         private set
     private val swatches = HashMap<Int, FrameLayout>()
     private val density = context.resources.displayMetrics.density
+    private var columns = 1
+    private var rowHeight = 0
 
     init {
         for (index in 1..COLORS) {
@@ -39,49 +41,35 @@ internal class AmbientSwatchGrid(
         refresh()
     }
 
-    // Swatches wrap onto as many rows as the available width needs.
+    // Use the whole row width, with equal space around each fixed-size swatch.
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
-        val available = MeasureSpec.getSize(widthSpec)
-        var x = 0
-        var y = 0
-        var rowHeight = 0
-        var widest = 0
+        val minimumCellWidth = dp(SWATCH_DP) + dp(MARGIN_DP) * 2
+        val width = resolveSize(maxOf(MeasureSpec.getSize(widthSpec),
+            minimumCellWidth + paddingLeft + paddingRight), widthSpec)
+        val available = (width - paddingLeft - paddingRight).coerceAtLeast(0)
+        columns = (available / minimumCellWidth).coerceAtLeast(1)
+        val swatchSize = minOf(dp(SWATCH_DP),
+            (available / columns - dp(MARGIN_DP) * 2).coerceAtLeast(0))
+        val childSpec = MeasureSpec.makeMeasureSpec(swatchSize, MeasureSpec.EXACTLY)
         for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            measureChildWithMargins(child, widthSpec, 0, heightSpec, 0)
-            val lp = child.layoutParams as MarginLayoutParams
-            val w = child.measuredWidth + lp.leftMargin + lp.rightMargin
-            val h = child.measuredHeight + lp.topMargin + lp.bottomMargin
-            if (x > 0 && x + w > available) {
-                x = 0
-                y += rowHeight
-                rowHeight = 0
-            }
-            x += w
-            widest = maxOf(widest, x)
-            rowHeight = maxOf(rowHeight, h)
+            getChildAt(i).measure(childSpec, childSpec)
         }
-        setMeasuredDimension(resolveSize(widest, widthSpec), resolveSize(y + rowHeight, heightSpec))
+        rowHeight = swatchSize + dp(MARGIN_DP) * 2
+        val rows = (childCount + columns - 1) / columns
+        setMeasuredDimension(width, resolveSize(paddingTop + rows * rowHeight + paddingBottom, heightSpec))
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        val available = right - left
-        var x = 0
-        var y = 0
-        var rowHeight = 0
+        val available = (right - left - paddingLeft - paddingRight).coerceAtLeast(0)
         for (i in 0 until childCount) {
             val child = getChildAt(i)
-            val lp = child.layoutParams as MarginLayoutParams
-            val w = child.measuredWidth + lp.leftMargin + lp.rightMargin
-            val h = child.measuredHeight + lp.topMargin + lp.bottomMargin
-            if (x > 0 && x + w > available) {
-                x = 0
-                y += rowHeight
-                rowHeight = 0
-            }
-            child.layout(x + lp.leftMargin, y + lp.topMargin, x + lp.leftMargin + child.measuredWidth, y + lp.topMargin + child.measuredHeight)
-            x += w
-            rowHeight = maxOf(rowHeight, h)
+            val logicalColumn = i % columns
+            val column = if (layoutDirection == LAYOUT_DIRECTION_RTL) columns - 1 - logicalColumn else logicalColumn
+            val cellLeft = paddingLeft + available * column / columns
+            val cellRight = paddingLeft + available * (column + 1) / columns
+            val x = cellLeft + (cellRight - cellLeft - child.measuredWidth) / 2
+            val y = paddingTop + i / columns * rowHeight + dp(MARGIN_DP)
+            child.layout(x, y, x + child.measuredWidth, y + child.measuredHeight)
         }
     }
 
@@ -102,7 +90,6 @@ internal class AmbientSwatchGrid(
     }
 
     private fun swatchView(context: Context, index: Int): FrameLayout {
-        val size = dp(SWATCH_DP)
         val check = TextView(context).apply {
             text = "✓"
             textSize = 18f
@@ -112,7 +99,6 @@ internal class AmbientSwatchGrid(
             tag = CHECK
         }
         return FrameLayout(context).apply {
-            layoutParams = MarginLayoutParams(size, size).apply { setMargins(dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP)) }
             isClickable = true
             isFocusable = true
             addView(check, FrameLayout.LayoutParams(-1, -1))

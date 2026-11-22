@@ -355,7 +355,8 @@ class Iap2LinkChannel private constructor(
         private const val MAX_WAIT_MILLIS = Long.MAX_VALUE / NANOS_PER_MILLISECOND
         private const val MAX_PENDING_COMMANDS = 64
         private const val MAX_PENDING_COMMAND_BYTES = 1_048_576
-        private const val MAX_PENDING_CONTROLS = 64
+        // A burst the iPhone held back (route updates after a Wi-Fi stall) arrives as hundreds of small messages at once.
+        private const val MAX_PENDING_CONTROLS = 1_024
         private const val MAX_PENDING_CONTROL_BYTES = 1_048_576
 
         private val WIRED_LINK_CONFIG = Iap2LinkConfig(

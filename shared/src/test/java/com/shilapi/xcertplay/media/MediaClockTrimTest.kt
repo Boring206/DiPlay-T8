@@ -200,4 +200,28 @@ class MediaClockTrimTest {
         // song should not inherit a +1.5% learned pitch error caused by a temporary stall.
         assertEquals(0.0, MediaClockTrim.learnedTrim, 1e-8)
     }
+
+    @Test fun aNonFiniteLearnedTrimIsCleanedForBothPhases() {
+        MediaClockTrim.learnedTrim = Double.NaN
+        val trim = MediaClockTrim(48_000, 14_400)
+        trim.sample(14_400, 0)
+        assertNull(trim.rateDue(0))
+        assertTrue(MediaClockTrim.learnedTrim.isFinite())
+    }
+
+    @Test fun anOutOfRangeIntegralCannotGiveTheMeasuringPhaseAnAbsurdRate() {
+        val high = MediaClockTrim(48_000, 14_400, integral = 100.0, measuresTarget = true).rateDue(0)
+        assertTrue("rate=$high", (high ?: Int.MAX_VALUE) <= 48_720)
+        val low = MediaClockTrim(48_000, 14_400, integral = -2.0, measuresTarget = true).rateDue(0)
+        assertTrue("rate=$low", (low ?: Int.MIN_VALUE) >= 47_280)
+    }
+
+    @Test fun aBackwardsClockCannotCorruptTheLevelIntoNaN() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        trim.sample(14_400, 0L)
+        val backwards = -4_000_000_000_000L
+        trim.sample(14_400, backwards)
+        trim.rateDue(backwards)
+        assertEquals(48_000, trim.rate)
+    }
 }

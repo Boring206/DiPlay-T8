@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.app.AlertDialog
+import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -9,6 +10,8 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
@@ -37,6 +40,49 @@ import org.robolectric.util.ReflectionHelpers
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AmbientAlbumUiScreenshotsTest {
     private var previousFontScale = 1f
+
+    @Test
+    fun lightingCardHasAnIconAtCompactFullAndRtlWidths() {
+        for ((name, widthDp, language) in listOf(
+            Triple("card-compact", 320, "zh-rTW"),
+            Triple("card-full", 960, "zh-rTW"),
+            Triple("card-arabic", 320, "ar"),
+        )) {
+            RuntimeEnvironment.setQualifiers("$language-w${widthDp}dp-h960dp-xhdpi")
+            val app = RuntimeEnvironment.getApplication()
+            app.resources.updateConfiguration(Configuration(app.resources.configuration).apply {
+                fontScale = 1.5f
+            }, app.resources.displayMetrics)
+            val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
+            activity.applicationInfo.flags = activity.applicationInfo.flags or ApplicationInfo.FLAG_SUPPORTS_RTL
+            activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+            ReflectionHelpers.setField(activity, "page", "settings")
+            try {
+                val sections = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    layoutDirection = activity.resources.configuration.layoutDirection
+                }
+                DiPlayActivity::class.java.getDeclaredMethod("renderSections", LinearLayout::class.java, Set::class.java)
+                    .apply { isAccessible = true }
+                    .invoke(activity, sections, setOf(SettingsSection.AMBIENT_LIGHTING))
+                assertTrue("Lighting card must have a vector icon", descendants(sections)
+                    .filterIsInstance<ImageView>().any { it.drawable != null })
+                val width = (widthDp * activity.resources.displayMetrics.density).roundToInt()
+                sections.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+                sections.layout(0, 0, width, sections.measuredHeight)
+                val bitmap = Bitmap.createBitmap(width, sections.height, Bitmap.Config.ARGB_8888)
+                try {
+                    sections.draw(Canvas(bitmap))
+                    val output = reportDirectory().resolve("$name.png")
+                    Files.createDirectories(output.parent)
+                    Files.newOutputStream(output).use {
+                        assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                    }
+                } finally { bitmap.recycle() }
+            } finally { activity.finish() }
+        }
+    }
 
     @Before
     fun rememberConfiguration() {

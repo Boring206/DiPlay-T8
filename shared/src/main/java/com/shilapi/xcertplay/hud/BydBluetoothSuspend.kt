@@ -15,7 +15,17 @@ object BydBluetoothSuspend {
     private const val PREFS = "diplay_bt_suspend"
     private const val KEY_RESTORE_ENABLED = "restore_initially_enabled"
     private const val STATE_TIMEOUT_MILLIS = 8_000L
+    /**
+     * The dump's status block; only `enabled:` and `state:` are kept from it. It runs on the worker that
+     * serves [resumeAndWait], so `timeout` ends a dump that a wedged Bluetooth stack holds open.
+     */
+    internal const val MANAGER_STATE_COMMAND = "timeout 2 dumpsys bluetooth_manager | head -n 12"
     private val shell = BydAdbShell(TAG)
+    /** Every ADB command this pause runs; tests replace it. */
+    @Volatile internal var runShell: (Context, String) -> String? = { context, command -> shell.run(context, command) }
+    // What the current pause's disable command answered, for a failed pause's report lines (#1021).
+    @Volatile private var disableSent = false
+    @Volatile private var disableReply: String? = null
     private val worker = Executors.newSingleThreadScheduledExecutor { task ->
         Thread(task, "diplay-bt-suspend").apply { isDaemon = true }
     }
@@ -34,10 +44,7 @@ object BydBluetoothSuspend {
                         .putBoolean(KEY_RESTORE_ENABLED, pending).commit()
                 },
                 readEnabled = { radioEnabled(app) },
-                requestEnabled = { enabled ->
-                    // A non-null shell reply is not evidence that the radio changed state.
-                    shell.run(app, if (enabled) "svc bluetooth enable" else "svc bluetooth disable")
-                },
+                requestEnabled = { enabled -> requestRadio(app, enabled) },
                 awaitEnabled = { enabled -> awaitRadio(app, enabled) },
             ).also { lease = it }
         }
@@ -61,13 +68,27 @@ object BydBluetoothSuspend {
             pending?.cancel(false)
             val delay = delayMillis.coerceAtLeast(0)
             log("car Bluetooth pause in ${TimeUnit.MILLISECONDS.toSeconds(delay)} s")
+            val app = context.applicationContext
             pending = worker.schedule({
                 val radioBefore = state.radioEnabled()
+                disableSent = false
+                disableReply = null
                 val paused = state.suspend(ticket)
-                val outcome = BluetoothPauseOutcome.describe(paused, radioBefore, paused || state.isCurrent(ticket),
-                    shell.lastAccess?.name)
+                val stillCurrent = paused || state.isCurrent(ticket)
+                val outcome = BluetoothPauseOutcome.describe(paused, radioBefore, stillCurrent, shell.lastAccess?.name)
                 if (paused) Log.i(TAG, outcome) else Log.w(TAG, "$outcome; recovery retained if needed")
                 log(outcome)
+                if (BluetoothPauseOutcome.failed(paused, radioBefore, stillCurrent)) {
+                    // Why the radio stayed on: what the command printed, the radio when the wait ended,
+                    // and what Android's manager says after the lease's restore step.
+                    val manager = runCatching { runShell(app, MANAGER_STATE_COMMAND) }.getOrNull()
+                    val evidence = BluetoothPauseEvidence.lines(disableSent, disableReply,
+                        state.radioWhenDisableWaitEnded, manager)
+                    for (line in evidence) {
+                        Log.w(TAG, line)
+                        log(line)
+                    }
+                }
             }, delay, TimeUnit.MILLISECONDS)
         }
     }
@@ -111,6 +132,16 @@ object BydBluetoothSuspend {
         val app = context.applicationContext
         return app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_RESTORE_ENABLED, false) && radioEnabled(app) == false
+    }
+
+    /** The radio command; a non-null shell reply is not evidence that the radio changed state. */
+    internal fun requestRadio(app: Context, enabled: Boolean) {
+        if (enabled) {
+            runShell(app, "svc bluetooth enable")
+            return
+        }
+        disableSent = true
+        disableReply = runShell(app, "svc bluetooth disable")
     }
 
     private fun restore(state: BluetoothSuspendLease, ticket: Long, log: (String) -> Unit = {}) {

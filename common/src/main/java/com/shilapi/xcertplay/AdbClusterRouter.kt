@@ -8,6 +8,10 @@ import java.io.File
 /** Strict projection target, discovered afresh through the authorized shell. */
 internal object AdbClusterRouter {
     private const val REPORT = "adb-cluster-route.txt"
+    // launch() writes about 10 lines plus output.take(1500); 200 lines bounds a blown-up route file.
+    private const val MAX_REPORT_LINES = 200
+    // A line cap alone cannot bound memory: readLine() loads a file with no newlines in full (256 KiB cap).
+    private const val MAX_REPORT_BYTES = 262144L
     data class Result(val success: Boolean, val report: String)
 
     /** Known 5/5.1 displays win; the explicit legacy route may own the measured projection task. */
@@ -89,7 +93,8 @@ internal object AdbClusterRouter {
                     appendLine("launchAccepted=$success; awaiting actual display confirmation")
                 }
             } catch (error: Exception) {
-                appendLine("routeError=${error.javaClass.simpleName}: ${error.message}")
+                appendLine("routeError=${error.javaClass.simpleName}" +
+                    (error.message?.lineSequence()?.firstOrNull()?.take(120)?.let { ": $it" } ?: ""))
             }
         }
         // A failed diagnostic write must not leave launchPending stuck forever.
@@ -104,7 +109,12 @@ internal object AdbClusterRouter {
         }
     }.getOrNull()
 
-    fun report(context: Context): String = File(context.filesDir, REPORT).let {
-        if (it.isFile) it.readText() else "ADB cluster routing has not been run."
+    fun report(context: Context): String = File(context.filesDir, REPORT).let { file ->
+        if (!file.isFile) return@let "ADB cluster routing has not been run."
+        // take(MAX_REPORT_LINES) caps lines, not bytes: readLine() would still load a file
+        // with no newlines in full. Refuse oversized files before opening a reader.
+        val bytes = file.length()
+        if (bytes > MAX_REPORT_BYTES) return@let "too large ($bytes bytes)"
+        file.useLines { lines -> lines.take(MAX_REPORT_LINES).joinToString("\n") }
     }
 }

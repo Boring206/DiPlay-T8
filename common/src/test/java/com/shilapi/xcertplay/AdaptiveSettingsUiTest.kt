@@ -571,7 +571,7 @@ class AdaptiveSettingsUiTest {
         assertFalse(index.any { it.title == screen.getString(R.string.auto_car_hotspot_title) })
     }
 
-    @Test fun cardControlsShareOneHeightAndGap() {
+    @Test fun cardControlsShareOneMinimumHeightAndGap() {
         val screen = openSettings()
         descendants(screen.window.decorView)
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
@@ -588,7 +588,8 @@ class AdaptiveSettingsUiTest {
         assertTrue(buttons.size >= 4)
         buttons.forEach { button ->
             val lp = button.layoutParams as LinearLayout.LayoutParams
-            assertEquals(button.text.toString(), dp(60), lp.height)
+            assertEquals(button.text.toString(), ViewGroup.LayoutParams.WRAP_CONTENT, lp.height)
+            assertEquals(button.text.toString(), dp(60), button.minHeight)
             assertEquals(button.text.toString(), 0, lp.topMargin)
             assertTrue(button.text.toString(), lp.bottomMargin in setOf(0, dp(6), dp(12)))
         }
@@ -610,10 +611,18 @@ class AdaptiveSettingsUiTest {
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
                 screen.getString(R.string.settings_vehicle)) }
             .performClick()
-        val chooseImage = texts(screen).single { it.text == screen.getString(R.string.choose_image) }
-        val card = chooseImage.parent as LinearLayout
-        val preview = card.getChildAt(card.indexOfChild(chooseImage) - 1)
+        val iconTitle = texts(screen).single { it.text == screen.getString(R.string.car_button_icon) }
+        // The title sits inside the text column, which sits inside the icon preview row.
+        val preview = iconTitle.parent.parent as LinearLayout
+        val card = preview.parent as LinearLayout
+        // The first button after the preview is now the "Car brand badge · …" row.
+        val firstButton = (card.indexOfChild(preview) + 1 until card.childCount)
+            .map { card.getChildAt(it) }.first { it is android.widget.Button } as android.widget.Button
+        assertTrue(
+            firstButton.text.startsWith(screen.getString(R.string.settings_car_brand_title)),
+        )
 
+        // The gap between the preview row and its button is carried by the preview row.
         assertEquals(Math.round(12 * screen.resources.displayMetrics.density),
             (preview.layoutParams as LinearLayout.LayoutParams).bottomMargin)
     }
@@ -762,6 +771,8 @@ class AdaptiveSettingsUiTest {
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_usb_charging)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
+        assertTrue(audio.any { it.startsWith(text(R.string.settings_call_attenuation)) })
+        assertFalse(advanced.any { it.startsWith(text(R.string.settings_call_attenuation)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wireless)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wired)) })
         listOf(R.string.main_buffered_audio, R.string.settings_car_bluetooth_audio, R.string.efficient_video, R.string.smooth_video, R.string.settings_direct_video_output, R.string.settings_low_latency_decoder, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.settings_disable_media_key_audio_focus, R.string.contrib_audio_home_toggle_audio_focus).forEach {
@@ -802,7 +813,8 @@ class AdaptiveSettingsUiTest {
             PendingReconnect.clear()
             ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
             ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
-            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
             assertEquals(20, slider.max)
             assertEquals(20, slider.progress)
             val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
@@ -811,6 +823,40 @@ class AdaptiveSettingsUiTest {
             listener.onProgressChanged(slider, 7, true)
             assertEquals(-13, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
             verify(sink).setNavigationAttenuationDb(-13)
+            assertEquals(0, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            assertFalse(PendingReconnect.isPending(session))
+            assertEquals(0, disconnects)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test fun callVoiceLevelSliderDefaultsToZeroSavesAndUpdatesActiveCallsWithoutReconnect() {
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        val sink = mock(AndroidMediaSink::class.java)
+        var disconnects = 0
+        CarPlayBackgroundSession.store(session, sink, 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { disconnects++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            PendingReconnect.clear()
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_call_attenuation)) == true }
+            assertEquals(20, slider.max)
+            assertEquals(20, slider.progress)
+            val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+                .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+            slider.progress = 2
+            listener.onProgressChanged(slider, 2, true)
+            assertEquals(-18, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            verify(sink).setCallAttenuationDb(-18)
+            assertEquals(0, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
+            assertFalse(AirPlayPersistence.loadCallVoiceFilter(context))
             assertFalse(PendingReconnect.isPending(session))
             assertEquals(0, disconnects)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
@@ -835,7 +881,8 @@ class AdaptiveSettingsUiTest {
         ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
         ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
         layoutRoot(screen)
-        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+            .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
         slider.requestRectangleOnScreen(Rect(0, 0, slider.width, slider.height), true)
         layoutRoot(screen)
         val rectangle = Rect()
@@ -872,11 +919,22 @@ class AdaptiveSettingsUiTest {
             row.performClick()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertEquals(screen.getString(R.string.save), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
-            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.LOW))
+            // The labels are listed by hand, so each one must sit at its entry's index.
+            val labels = UsbChargingCurrent.entries.map {
+                screen.getString(when (it) {
+                    UsbChargingCurrent.NORMAL -> R.string.settings_usb_charging_normal
+                    UsbChargingCurrent.REDUCED -> R.string.settings_usb_charging_reduced
+                    UsbChargingCurrent.MEDIUM -> R.string.settings_usb_charging_medium
+                    UsbChargingCurrent.LOW -> R.string.settings_usb_charging_low
+                })
+            }
+            assertEquals(labels, (0 until dialog.listView.adapter.count).map { dialog.listView.adapter.getItem(it).toString() })
+            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.MEDIUM))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             shadowOf(Looper.getMainLooper()).idle()
 
-            assertEquals(UsbChargingCurrent.LOW, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals(UsbChargingCurrent.MEDIUM, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals("${screen.getString(R.string.settings_usb_charging)} · ${screen.getString(R.string.settings_usb_charging_medium)}", row.text.toString())
             assertTrue(PendingReconnect.isPending(session))
             assertEquals(0, stops)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)

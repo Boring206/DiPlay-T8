@@ -77,6 +77,33 @@ class BufferedMusicClockTrimTest {
         assertEquals("${phase.name}: seconds off 48000 ± 0.1 %", emptyList<String>(), phase.secondsOffTheIphonesRate)
     }
 
+    @Test fun closingARendererFlushesItsQueuedAudioAtOnce() {
+        // #1031: after a skip the old song was heard over the new one. The
+        // buffered stream drops its queue on FLUSHBUFFERED, but the old
+        // renderer only flushed its track in its worker thread's finally
+        // block, after a blocking write returned — long after the new track
+        // had started on a fresh renderer. close() must flush at once.
+        HeadUnitTrack.capacityFrames = MediaAudioBuffer.plan(true, 48_000, 2, MIN_BUFFER_BYTES, 300).trackBufferBytes / 4
+        val reports = mutableListOf<String>()
+        val renderer = RendererWithModelledDecoder(
+            format.copy(codec = AudioCodecKind.LPCM, payloadType = BufferedAudioStream.STREAM_TYPE), 300, 0.0, reports)
+        try {
+            repeat(10) { renderer.submit(ByteArray(12 + FRAME.toInt() * 4), it * FRAME.toInt()) }
+            ShadowSystemClock.advanceBy(Duration.ofMillis(200))
+            repeat(5) {
+                ShadowSystemClock.advanceBy(Duration.ofMillis(STEP_MS))
+                renderer.tick(SystemClock.uptimeMillis())
+            }
+            assertTrue("expected queued audio before close", renderer.output.queuedFrames > 0)
+            assertEquals(0, renderer.output.flushCalls)
+            renderer.closeRendererOnly()
+            assertTrue("close() should flush the track", renderer.output.flushCalls >= 1)
+            assertEquals(0L, renderer.output.queuedFrames)
+        } finally {
+            renderer.releaseTrack()
+        }
+    }
+
     private fun iphoneStalls(sentMs: Long, untilMs: Long) = { elapsedMs: Long ->
         if (elapsedMs < untilMs) sentMs else elapsedMs + IPHONE_LEAD_MS
     }
@@ -152,7 +179,16 @@ class BufferedMusicClockTrimTest {
         }
 
         fun close() {
+            closeRendererOnly()
+            releaseTrack()
+        }
+
+        /** Closes the renderer without releasing its track, so a test can see what close() itself flushed. */
+        fun closeRendererOnly() {
             method("close").invoke(renderer)
+        }
+
+        fun releaseTrack() {
             track.release()
         }
 
@@ -170,10 +206,16 @@ class BufferedMusicClockTrimTest {
             private set
         var underruns = 0
             private set
+        var flushCalls = 0
+            private set
         val queuedFrames: Long get() = writtenFrames - playedFrames.toLong()
 
         @Implementation fun play() { movesAtMs = SystemClock.uptimeMillis() + PLAY_LATENCY_MS }
         @Implementation fun pause() { movesAtMs = null }
+        @Implementation fun flush() {
+            flushCalls++
+            writtenFrames = playedFrames.toLong()
+        }
         @Implementation fun write(audioData: ByteArray, offsetInBytes: Int, sizeInBytes: Int, writeMode: Int): Int {
             writtenFrames += sizeInBytes / 4
             return sizeInBytes

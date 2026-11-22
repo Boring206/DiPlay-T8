@@ -9,7 +9,7 @@ import com.shilapi.xcertplay.media.CarPlayNowPlaying
 /** Main-thread snapshots reuse the bounded media artwork cache; they never own/recycle its bitmap. */
 internal object ClusterMusicState {
     data class Snapshot(val info: CarPlayNowPlaying = CarPlayNowPlaying(), val artwork: Bitmap? = null,
-        val changedAt: Long = 0L, val revision: Long = 0L)
+        val changedAt: Long = 0L, val revision: Long = 0L, val positionAt: Long = 0L)
     private val main = Handler(Looper.getMainLooper())
     private val listeners = mutableSetOf<(Snapshot) -> Unit>()
     private var state = Snapshot()
@@ -22,7 +22,9 @@ internal object ClusterMusicState {
             // An empty playback snapshot (disconnect) always clears the retained image.
             val hasTrack = !info.title.isNullOrBlank() || !info.artist.isNullOrBlank()
             val retained = if (hasTrack) artwork ?: state.artwork?.takeUnless { it.isRecycled } else null
-            state = Snapshot(info, retained, if (changed) SystemClock.elapsedRealtime() else state.changedAt, state.revision + if (changed) 1 else 0)
+            val positionChanged = changed || state.info.elapsedMillis != info.elapsedMillis || state.info.playing != info.playing
+            val positionAt = if (positionChanged) SystemClock.elapsedRealtime() else state.positionAt
+            state = Snapshot(info, retained, if (changed) SystemClock.elapsedRealtime() else state.changedAt, state.revision + (if (changed) 1 else 0), positionAt)
             listeners.toList().forEach { it(state) }
         }
     }

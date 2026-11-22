@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hotspot_join_title">Tự động kết nối điểm phát sóng (thử nghiệm)</string>
+    <string name="hotspot_join_description">Bản sửa tùy chọn cho firmware được hỗ trợ có Android 13+ và điểm phát sóng của xe chỉ dùng 5 GHz. Kiểm tra sẽ chuẩn bị một bản sao lưu riêng để hoàn tác mà không thay đổi điểm phát sóng. Cần ADB cục bộ đã được cấp quyền trên localhost:5555; không hỗ trợ ghép nối gỡ lỗi không dây TLS.</string>
+    <string name="hotspot_join_check">Kiểm tra sửa lỗi điểm phát sóng</string>
+    <string name="hotspot_join_apply">Thêm thông tin tự động kết nối</string>
+    <string name="hotspot_join_restore">Khôi phục điểm phát sóng đã lưu</string>
+    <string name="hotspot_join_working">Đang kiểm tra hoặc cập nhật… Nếu hủy, có thể cần kiểm tra lại để xác minh kết quả.</string>
+    <string name="hotspot_join_confirm">Khi đã đỗ xe, trước tiên hãy ngắt kết nối CarPlay và tắt điểm phát sóng trong cài đặt xe. Thao tác này chỉ thay đổi cấu hình điểm phát sóng đã lưu và xác minh bằng cách đọc lại. Sau đó hãy tự bật lại điểm phát sóng để cập nhật thông tin phát sóng. Các thiết bị đang kết nối sẽ bị ngắt khi bạn tắt nó. Hãy giữ bản sao lưu riêng để hoàn tác.</string>
+    <string name="hotspot_join_disconnect">Hãy ngắt kết nối CarPlay trước khi thay đổi điểm phát sóng.</string>
+    <string name="hotspot_join_ready">Cấu hình 5 GHz được hỗ trợ. Đã chuẩn bị bản sao lưu đầy đủ riêng; điểm phát sóng chưa bị thay đổi.</string>
+    <string name="hotspot_join_present">Thông tin đã thử nghiệm đã có sẵn. Không thêm bản trùng lặp; DiPlay không có quyền hoàn tác đối với phần tử đã có sẵn.</string>
+    <string name="hotspot_join_applied">Đã xác minh cấu hình đã lưu. Bật điểm phát sóng trong cài đặt xe để cập nhật thông tin phát sóng, sau đó thử tự động kết nối. Vẫn cần thử trên thiết bị để xác nhận việc phát sóng và CarPlay hoạt động.</string>
+    <string name="hotspot_join_restored">Đã khôi phục và xác minh toàn bộ cấu hình đã lưu. Hãy bật điểm phát sóng trong cài đặt xe.</string>
+    <string name="hotspot_join_unsupported">API, firmware, băng tần không được hỗ trợ hoặc có thông tin nhà sản xuất xung đột. Chưa áp dụng bản sửa nào. Hãy dùng cấu hình chỉ 5 GHz được hỗ trợ; các băng tần khác chưa được xác minh.</string>
+    <string name="hotspot_join_off_required">Cần xác nhận điểm phát sóng đã tắt. Ngắt kết nối các thiết bị và tắt nó trong cài đặt xe, rồi thử lại. DiPlay sẽ không tự động khởi động lại nó.</string>
+    <string name="hotspot_join_drift">Cấu hình đã thay đổi kể từ lần sao lưu. Không có gì bị ghi đè. Hãy kiểm tra lại; bản sao lưu để hoàn tác chưa dùng vẫn được giữ lại.</string>
+    <string name="hotspot_join_firmware_changed">Firmware đã thay đổi. Bản sao lưu riêng vẫn được giữ lại nhưng không thể khôi phục an toàn trên firmware này.</string>
+    <string name="hotspot_join_cancelled">Đã hủy trước khi ghi. Hãy kiểm tra lại để xem trạng thái hoàn tác còn được giữ lại.</string>
+    <string name="hotspot_join_failed_restored">Bản sửa thất bại hoặc bị hủy sau khi ghi. Đã khôi phục cấu hình gốc và xác minh bằng cách đọc lại.</string>
+    <string name="hotspot_join_busy">Một thao tác điểm phát sóng khác vẫn đang chạy. Hãy chờ, rồi kiểm tra lại.</string>
+    <string name="hotspot_join_adb_required">Cần ADB cục bộ thông thường đã được chấp thuận trên localhost:5555. Hãy bật và cấp quyền cho nó theo cách thiết lập xe được hỗ trợ của bạn. Chỉ ghép nối gỡ lỗi không dây TLS của Android sẽ không hoạt động.</string>
+    <string name="hotspot_join_recovery">Không chắc chắn về kết quả hoặc việc xác minh bản sao lưu. Hãy tắt điểm phát sóng và kiểm tra lại trước khi tiếp tục. Bản sao lưu riêng hiện có vẫn được giữ lại; chỉ được khôi phục khi cấu hình vẫn khớp.</string>
+</resources>

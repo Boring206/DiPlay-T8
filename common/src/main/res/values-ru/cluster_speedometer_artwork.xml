@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Градиент обложки для фона спидометра</string>
+    <string name="settings_cluster_speedometer_artwork_description">Отдельная опция. Заменяет однотонный фон, сохраняя размер и непрозрачность. Выключение возвращает цвет альбома или чёрный. Движение включается отдельно.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Движение фона спидометра</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">По умолчанию выключен. Включает медленное движение фона при воспроизведении. Плавная смена треков работает и без движения.</string>
+</resources>

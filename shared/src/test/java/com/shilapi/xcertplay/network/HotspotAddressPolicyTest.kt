@@ -1,8 +1,10 @@
 package com.shilapi.xcertplay.network
 
+import java.net.Inet6Address
 import java.net.InetAddress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class HotspotAddressPolicyTest {
@@ -122,5 +124,35 @@ class HotspotAddressPolicyTest {
         val linkLocal = address("fe80::e0dc:ffff:fe5b:c6d1")
 
         assertNull(HotspotAddressPolicy.alternateFamilyCandidate(listOf(linkLocal), linkLocal))
+    }
+
+    private fun scoped(text: String, scope: Int): InetAddress = Inet6Address.getByAddress(null, address(text).address, scope)
+
+    @Test
+    fun theSelectedHostStaysPublishedWhileItHasAListener() {
+        val linkLocal = scoped("fe80::e0dc:ffff:fe5b:c6d1", 7)
+        val ipv4 = address("192.168.1.20")
+
+        assertSame(linkLocal, HotspotAddressPolicy.publishedAfterBind(linkLocal, listOf(linkLocal, ipv4)))
+        // The scan and the network snapshot can carry the same address with another scope object.
+        assertSame(linkLocal, HotspotAddressPolicy.publishedAfterBind(linkLocal, listOf(scoped("fe80::e0dc:ffff:fe5b:c6d1", 7), ipv4)))
+    }
+
+    @Test
+    fun aRefusedIpv6HostIsReplacedByTheServedIpv4Address() {
+        val ipv4 = address("192.168.1.20")
+
+        assertSame(ipv4, HotspotAddressPolicy.publishedAfterBind(scoped("fe80::e0dc:ffff:fe5b:c6d1", 7), listOf(ipv4)))
+    }
+
+    @Test
+    fun aRefusedIpv4HostIsReplacedOnlyByAnAddressAnIphoneCanReach() {
+        val ipv4 = address("192.168.1.20")
+        val linkLocal = scoped("fe80::e0dc:ffff:fe5b:c6d1", 7)
+
+        assertSame(linkLocal, HotspotAddressPolicy.publishedAfterBind(ipv4, listOf(linkLocal)))
+        assertNull(HotspotAddressPolicy.publishedAfterBind(ipv4, listOf(address("fe80::e0dc:ffff:fe5b:c6d1"))))
+        assertNull(HotspotAddressPolicy.publishedAfterBind(ipv4, listOf(address("127.0.0.1"))))
+        assertNull(HotspotAddressPolicy.publishedAfterBind(ipv4, emptyList()))
     }
 }

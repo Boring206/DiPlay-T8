@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="contrib_audio_home_channel_preview_unavailable">Không thể nghe thử luồng âm thanh Android %1$d trên thiết bị này.</string>
+    <string name="contrib_audio_home_choice_summary">%1$s · %2$s</string>
+    <string name="contrib_audio_home_media_channel_label">Luồng âm thanh đa phương tiện</string>
+    <string name="contrib_audio_home_nav_channel_label">Luồng âm thanh dẫn đường</string>
+    <string name="contrib_audio_home_nav_channel_note">0 = định tuyến tự động. Giá trị 1–20 chọn ID luồng âm thanh kiểu cũ, bao gồm các đầu ra riêng của nhà sản xuất nếu hệ thống giải trí hỗ trợ. Nhấn vào một giá trị để nghe thử. Thay đổi áp dụng khi kết nối lại.</string>
+    <string name="contrib_audio_home_toggle_audio_focus">Tiêu điểm âm thanh</string>
+    <string name="contrib_audio_home_toggle_audio_focus_desc">Âm thanh đa phương tiện của CarPlay giành tiêu điểm âm thanh. Nếu mất tiếng khi bật (một số hệ thống giải trí xử lý tiêu điểm kém), hãy tắt tùy chọn này. Thay đổi áp dụng khi kết nối lại.</string>
+    <string name="audio_focus_auto_yield">Tắt tiếng đa phương tiện khi tạm mất tiêu điểm</string>
+    <string name="audio_focus_auto_yield_desc">Khi bật tiêu điểm âm thanh, tắt tiếng đa phương tiện khi âm thanh Android bị gián đoạn, kể cả cuộc gọi. Khôi phục âm thanh khi có lại tiêu điểm. Hãy tắt nếu hệ thống giải trí không trả lại tiêu điểm. Thay đổi áp dụng khi kết nối lại.</string>
+</resources>

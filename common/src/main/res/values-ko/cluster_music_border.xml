@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">앨범 표지 테두리 표시</string>
+    <string name="settings_cluster_music_border_description">계기판 지도에 표시되는 앨범 표지에 얇은 테두리를 그립니다.</string>
+</resources>
