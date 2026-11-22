@@ -162,6 +162,22 @@ class CarPlayHostClusterStartupTest {
         }
     }
 
+    @Test fun returningFromPlayerReattachesRetainedTextureSurfaceWithoutResumeOrSurfaceCallback() {
+        val surface = mock(Surface::class.java)
+        set("clusterSurface", surface)
+        `when`(session.hasRenderedMainFrame).thenReturn(true)
+        invoke("observeClusterPlayerSettings")
+        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(activity, true)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink).clearSurface(111, surface)
+        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(activity, false)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink).setSurface(111, surface)
+        @Suppress("UNCHECKED_CAST")
+        (get("stopPlayerSettings") as (() -> Unit)).invoke()
+        set("stopPlayerSettings", null)
+    }
+
     @Test fun aReplacementSessionDetachesTheOldClusterSurfaceUntilItsOwnMainFrame() {
         val surface = mock(Surface::class.java)
         set("clusterSurface", surface)

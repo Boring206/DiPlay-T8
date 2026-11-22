@@ -45,6 +45,7 @@ internal class ClusterMapPresentation(
     private val onSurface: (Surface?) -> Unit,
 ) : Presentation(context, display) {
     // The placeholder until the map arrives: a small spinner.
+    private var dashboard: ClusterDashboardView? = null
     private var waitingLabel: View? = null
     private var turnCardView: ClusterTurnCardView? = null
     private var videoView: View? = null
@@ -161,7 +162,10 @@ internal class ClusterMapPresentation(
             alpha = if (streamActive) 0f else 1f
             visibility = if (streamActive) View.GONE else View.VISIBLE
         }
-        setContentView(root)
+        setContentView(ClusterDashboardView(context, root, FrameLayout.LayoutParams(videoParams)).also {
+            dashboard = it
+            it.setOutputVisible(mapVisible)
+        })
     }
 
     override fun onStart() {
@@ -215,7 +219,9 @@ internal class ClusterMapPresentation(
 
     /** Window alpha hides the pixels without destroying the TextureView/decoder surface. */
     fun setMapVisible(visible: Boolean) {
+        ClusterOutputVisibility.update(window?.decorView, visible)
         mapVisible = visible
+        dashboard?.setOutputVisible(visible)
         window?.let { window ->
             val alpha = if (visible) 1f else 0f
             if (window.attributes.alpha != alpha) window.attributes = window.attributes.apply { this.alpha = alpha }
@@ -285,6 +291,9 @@ internal class ClusterMapPresentation(
 
         fun diagnosticReport(context: Context): String = buildString {
             appendLine("clusterEnabled=${AirPlayPersistence.loadClusterMapEnabled(context)}")
+            appendLine("projectionShapeRequested=${com.shilapi.xcertplay.hud.BydOutputSettings.clusterProjectionShape(context)} (request, not measured vehicle state)")
+            appendLine("playerSelected=${com.shilapi.xcertplay.airplay.ClusterPlayerSettings.selected(context)}")
+            appendLine("playerFitVisible=${com.shilapi.xcertplay.airplay.ClusterPlayerSettings.fitVisible(context)} (foreground only; native composition unchanged)")
             appendLine("navigationReceiverAvailable=${com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context)}")
             appendLine("allDisplays=${describeDisplays(context)}")
             val presentations = context.getSystemService(DisplayManager::class.java)

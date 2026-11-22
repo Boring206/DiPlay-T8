@@ -864,7 +864,8 @@ class CarPlayController(
     }
 
     // Each new cluster stream starts with the map drawn (its initialURL); send only real changes.
-    private fun applyClusterUi(shown: Boolean) = synchronized(clusterUiLock) {
+    private fun applyClusterUi(requestedShown: Boolean) = synchronized(clusterUiLock) {
+        val shown = requestedShown && !com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(appContext)
         val session = activeSession ?: return@synchronized
         val stream = session.clusterStream.takeIf { it > 0 } ?: return@synchronized
         if (clusterUiStream != session to stream) {

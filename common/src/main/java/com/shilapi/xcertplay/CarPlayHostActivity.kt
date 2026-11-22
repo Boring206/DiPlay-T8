@@ -477,7 +477,28 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
     }
     // Copies of stream 111 outside the dashboard (centre card, launcher maps) each get their own decoder.
-    private val mirrorSink: (String, Surface?) -> Unit = { key, surface -> sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, surface) }
+    private var stopPlayerSettings: (() -> Unit)? = null
+    private fun observeClusterPlayerSettings() {
+        stopPlayerSettings = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.observe(this) {
+            runOnUiThread {
+                if (playerMode()) {
+                    CenterMapOverlay.hide()
+                    clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
+                } else if (clusterOutputReady()) {
+                    // TextureView retains its surface while GONE; no new surface callback arrives.
+                    clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
+                }
+                MapMirrors.reapply()
+                MapMirrors.setStreamActive(!playerMode() && SCREEN_TYPE_ALT in activeScreenStreamTypes)
+                updateClusterMapShown()
+            }
+        }
+    }
+
+    private fun playerMode() = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(this)
+    private val mirrorSink: (String, Surface?) -> Unit = { key, surface ->
+        sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, if (playerMode()) null else surface)
+    }
     private val mirrorsChanged: () -> Unit = {
         updateClusterMapShown()
         if (MapMirrors.launcherShowsMap) CenterMapOverlay.hide()
@@ -492,7 +513,8 @@ open class CarPlayHostActivity : ComponentActivity() {
     // Set while the cluster is handed back to the car because CarPlay's cluster stream stopped (#883).
     private var clusterReleasedWhileIdle = false
     private val releaseIdleCluster = Runnable {
-        if (SCREEN_TYPE_ALT in activeScreenStreamTypes || isDestroyed || clusterReleasedWhileIdle) return@Runnable
+        if (SCREEN_TYPE_ALT in activeScreenStreamTypes || isDestroyed || clusterReleasedWhileIdle ||
+            (playerMode() && SCREEN_TYPE_MAIN in activeScreenStreamTypes)) return@Runnable
         // DiLink 5.1 keeps its own cluster layers; nothing there has shown this problem.
         if (DiLink51ClusterLayout.supported() || !AirPlayPersistence.loadClusterMapEnabled(this)) return@Runnable
         clusterReleasedWhileIdle = true
@@ -867,6 +889,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
+        observeClusterPlayerSettings()
         languagePreferenceAtCreate = AppLocale.preference(this)
         if (isIphoneUsbAttachment(intent)) {
             AirPlayPersistence.saveWirelessEnabled(this, false)
@@ -1369,7 +1392,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         // Handed back after CarPlay left; the next cluster stream takes the cluster again.
         if (clusterReleasedWhileIdle) return
-        clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
+        if (!playerMode()) clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
         if (AdbClusterRouter.enabled(this)) {
             ClusterActivityOutput.bind(this, taskId) { onClusterSurface(it) }
             ClusterActivityOutput.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
@@ -1545,7 +1568,7 @@ open class CarPlayHostActivity : ComponentActivity() {
                 !adbClusterConfigured && controller != null) {
                 ClusterActivityOutput.setStreamActive(false)
                 reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
-            } else if (clusterOutputReady()) sink?.setSurface(SCREEN_TYPE_ALT, surface)
+            } else if (clusterOutputReady() && !playerMode()) sink?.setSurface(SCREEN_TYPE_ALT, surface)
         }
         updateClusterMapShown()
     }
@@ -1879,7 +1902,7 @@ open class CarPlayHostActivity : ComponentActivity() {
     /** Shows the dashboard map as a card on the centre screen while DiPlay is in the background. */
     private fun showCenterMap() {
         if (isDestroyed || shuttingDown.get() || sink == null || isActivityStarted) return
-        if (!AirPlayPersistence.loadCenterMapOverlay(this) || !AirPlayPersistence.loadClusterMapEnabled(this)) return
+        if (playerMode() || !AirPlayPersistence.loadCenterMapOverlay(this) || !AirPlayPersistence.loadClusterMapEnabled(this)) return
         if (!AirPlayPersistence.loadCenterMapFollowsDashboard(this)) return
         if (MapMirrors.launcherShowsMap) return // the launcher has the map on its own screen
         // Without the stream the card would stay black; it follows once the stream starts.
@@ -1925,14 +1948,14 @@ open class CarPlayHostActivity : ComponentActivity() {
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
-            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && !MapMirrors.any)
+            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && (!MapMirrors.any || playerMode()))
         // Wheel zoom needs a physical map; centre-screen copies must not suppress that eligibility.
         val surface = clusterSurface?.takeIf { it.isValid }
         val presentation = clusterPresentation
         val presented = surface != null && presentation?.isShowing == true && presentation.mapVisible &&
             presentation.outputSurface === surface
         val direct = surface != null && adbClusterConfigured && ClusterActivityOutput.hasConfirmedRoute()
-        controller?.setDashboardMapOutputVisible(presented || direct)
+        controller?.setDashboardMapOutputVisible(!playerMode() && (presented || direct))
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -2002,6 +2025,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             MapMirrors.setStreamActive(false)
         }
         if (MapMirrors.onChanged === mirrorsChanged) MapMirrors.onChanged = null
+        stopPlayerSettings?.invoke(); stopPlayerSettings = null
         dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
         mainHandler.removeCallbacks(expireOldLogLines)
@@ -6557,7 +6581,7 @@ open class CarPlayHostActivity : ComponentActivity() {
     private fun attachSurface(surface: Surface) {
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
         if (AirPlayPersistence.loadClusterMapEnabled(this)) {
-            if (clusterOutputReady()) clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
+            if (clusterOutputReady() && !playerMode()) clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
         } else {
             sink?.setSurface(SCREEN_TYPE_ALT, surface)
         }
@@ -6727,13 +6751,19 @@ open class CarPlayHostActivity : ComponentActivity() {
                 noPictureShown = false
                 mainHandler.removeCallbacks(noPictureCheck)
                 if (active) mainHandler.postDelayed(noPictureCheck, NO_PICTURE_MILLIS)
+                // A deliberately stopped map may have no second teardown event when the phone leaves.
+                if (playerMode()) {
+                    mainHandler.removeCallbacks(releaseIdleCluster)
+                    if (!active && SCREEN_TYPE_ALT !in activeScreenStreamTypes)
+                        mainHandler.postDelayed(releaseIdleCluster, CLUSTER_IDLE_RELEASE_MILLIS)
+                }
             }
             if (type == SCREEN_TYPE_ALT) {
                 Log.i(ClusterMapPresentation.TAG, "cluster stream active=$active")
                 appendLog("Cluster map: stream active=$active")
                 clusterPresentation?.setStreamActive(active)
                 ClusterActivityOutput.setStreamActive(active)
-                MapMirrors.setStreamActive(active)
+                MapMirrors.setStreamActive(active && !playerMode())
                 if (active) {
                     mainHandler.removeCallbacks(hideIdleCenterMap)
                     mainHandler.removeCallbacks(releaseIdleCluster)
