@@ -109,7 +109,7 @@ internal object BluetoothPauseOutcome {
         !stillCurrent -> "car Bluetooth pause cancelled: CarPlay ended first"
         radioBefore == false -> "car Bluetooth pause skipped: Android Bluetooth was already off"
         radioBefore == null -> "car Bluetooth pause skipped: Android Bluetooth state unknown"
-        adbAccess != null && adbAccess != "READY" -> "car Bluetooth pause failed: ADB access $adbAccess"
+        adbAccess != null && adbAccess != "READY" -> "car Bluetooth pause failed: app API refused, ADB access $adbAccess"
         else -> "car Bluetooth pause failed: Android Bluetooth stayed on"
     }
 }

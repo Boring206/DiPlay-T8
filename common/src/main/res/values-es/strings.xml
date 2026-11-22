@@ -775,8 +775,8 @@
     <string name="settings_gesture_disabled_action">Menú rápido · deslizamiento desactivado (toca para cambiar)</string>
     <string name="bt_suspend_delay">Retraso al pausar Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d s tras conectar</string>
-    <string name="bt_suspend_during_carplay">Pausar el Bluetooth del coche con CarPlay · requiere ADB</string>
-    <string name="bt_suspend_during_carplay_description">El teléfono mantiene el manos libres del coche, por lo que una llamada suena en el teléfono Bluetooth del coche y en CarPlay a la vez. Al activarlo: se pausa el Bluetooth del coche por ADB durante la sesión de CarPlay y las llamadas suenan solo en CarPlay; con el Bluetooth apagado, las llamadas de CarPlay salen por el altavoz y el micrófono del coche. Se reactiva al terminar y antes del próximo enlace inalámbrico. El emparejamiento no se toca. Surte efecto en la próxima conexión.</string>
+    <string name="bt_suspend_during_carplay">Pausar el Bluetooth del coche con CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">El teléfono mantiene el manos libres del coche, por lo que una llamada suena en el teléfono Bluetooth del coche y en CarPlay a la vez. Al activarlo: se pausa el Bluetooth del coche durante la sesión de CarPlay y las llamadas suenan solo en CarPlay; con el Bluetooth apagado, las llamadas de CarPlay salen por el altavoz y el micrófono del coche. Se reactiva al terminar y antes del próximo enlace inalámbrico. El emparejamiento no se toca. Surte efecto en la próxima conexión. En Android 13 y versiones posteriores se necesita ADB.</string>
     <string name="cluster_small_window_card_theme">Tema de la tarjeta en ventana pequeña</string>
     <string name="cluster_small_window_card_theme_follow">Seguir el tema de la tarjeta</string>
     <string name="cluster_small_window_card_size">Tarjeta en ventana pequeña · tamaño</string>

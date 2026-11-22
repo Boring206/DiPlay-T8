@@ -7,32 +7,38 @@ import org.junit.Test
 
 class BluetoothRadioRequestTest {
     @Test
-    fun adapterRequestIssuedSkipsShell() {
-        val shellCalls = mutableListOf<Boolean>()
-        assertTrue(BluetoothRadioRequest.request(false, { true }, { shellCalls += it }))
-        assertTrue(shellCalls.isEmpty())
-        assertTrue(BluetoothRadioRequest.request(true, { true }, { shellCalls += it }))
-        assertTrue(shellCalls.isEmpty())
+    fun shellReplySkipsAdapter() {
+        val adapterCalls = mutableListOf<Boolean>()
+        assertFalse(BluetoothRadioRequest.request(false, { adapterCalls += it; true }, { "OK" }))
+        assertTrue(adapterCalls.isEmpty())
+        assertFalse(BluetoothRadioRequest.request(true, { adapterCalls += it; true }, { "OK" }))
+        assertTrue(adapterCalls.isEmpty())
     }
 
     @Test
-    fun adapterRefusalFallsBackToShell() {
+    fun noShellReplyFallsBackToAdapter() {
         val shellCalls = mutableListOf<Boolean>()
-        assertFalse(BluetoothRadioRequest.request(false, { false }, { shellCalls += it }))
+        assertTrue(BluetoothRadioRequest.request(false, { true }, { shellCalls += it; null }))
         assertEquals(listOf(false), shellCalls)
-        assertFalse(BluetoothRadioRequest.request(true, { false }, { shellCalls += it }))
+        assertTrue(BluetoothRadioRequest.request(true, { true }, { shellCalls += it; null }))
         assertEquals(listOf(false, true), shellCalls)
     }
 
     @Test
-    fun adapterFailureFallsBackToShell() {
+    fun adapterRefusalAfterNoShellReplyReturnsFalse() {
         val shellCalls = mutableListOf<Boolean>()
-        assertFalse(BluetoothRadioRequest.request(false, { throw SecurityException("denied") }, { shellCalls += it }))
+        assertFalse(BluetoothRadioRequest.request(false, { false }, { shellCalls += it; null }))
         assertEquals(listOf(false), shellCalls)
     }
 
     @Test
-    fun shellFailureDoesNotThrow() {
+    fun adapterFailureAfterNoShellReplyReturnsFalse() {
+        assertFalse(BluetoothRadioRequest.request(false, { throw SecurityException("denied") }, { null }))
+    }
+
+    @Test
+    fun shellFailureFallsBackToAdapter() {
+        assertTrue(BluetoothRadioRequest.request(false, { true }, { throw IllegalStateException("shell down") }))
         assertFalse(BluetoothRadioRequest.request(false, { false }, { throw IllegalStateException("shell down") }))
     }
 }

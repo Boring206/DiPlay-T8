@@ -898,8 +898,8 @@
     <string name="settings_gesture_disabled_action">Hızlı menü · kaydırma devre dışı (değiştirmek için dokunun)</string>
     <string name="bt_suspend_delay">Bluetooth duraklatma gecikmesi</string>
     <string name="bt_suspend_delay_option">Bağlandıktan sonra %1$d sn</string>
-    <string name="bt_suspend_during_carplay">CarPlay sırasında araç Bluetooth\'unu duraklat · ADB gerektirir</string>
-    <string name="bt_suspend_during_carplay_description">Telefon araçla olan eller serbest bağlantısını korur, bu nedenle bir arama hem araç Bluetooth telefonunda hem de CarPlay\'de çalar. CarPlay çalışırken, aramaların yalnızca CarPlay\'de çalması için ADB üzerinden araç Bluetooth\'unu duraklatın; Bluetooth kapalıyken CarPlay aramaları telefon SCO yerine kabin hoparlörü ve mikrofonunda çalar. Bluetooth, CarPlay bittiğinde ve bir sonraki kablosuz el sıkışmasından önce tekrar açılır. Eşleştirmeye asla dokunulmaz. Değişiklikler bir sonraki bağlantıda geçerli olur.</string>
+    <string name="bt_suspend_during_carplay">CarPlay sırasında araç Bluetooth\'unu duraklat</string>
+    <string name="bt_suspend_during_carplay_description">Telefon araçla olan eller serbest bağlantısını korur, bu nedenle bir arama hem araç Bluetooth telefonunda hem de CarPlay\'de çalar. CarPlay çalışırken, aramaların yalnızca CarPlay\'de çalması için araç Bluetooth\'unu duraklatın; Bluetooth kapalıyken CarPlay aramaları telefon SCO yerine kabin hoparlörü ve mikrofonunda çalar. Bluetooth, CarPlay bittiğinde ve bir sonraki kablosuz el sıkışmasından önce tekrar açılır. Eşleştirmeye asla dokunulmaz. Değişiklikler bir sonraki bağlantıda geçerli olur. Android 13 ve daha yenisinde ADB gerekir.</string>
     <string name="cluster_small_window_card_theme">Küçük pencere dönüş kartı teması</string>
     <string name="cluster_small_window_card_theme_follow">Dönüş kartı temasını takip et</string>
     <string name="cluster_small_window_card_size">Küçük pencere dönüş kartı · boyut</string>

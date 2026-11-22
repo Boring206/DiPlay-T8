@@ -9,7 +9,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-/** Optional radio pause using already-authorized local ADB; pairing is never changed. */
+/**
+ * Optional radio pause. The ADB shell runs first where it already works; the app
+ * BluetoothAdapter API is only the fallback on Android 12L and older without ADB.
+ * Pairing is never changed.
+ */
 object BydBluetoothSuspend {
     private const val TAG = "DiPlay-BT-Suspend"
     private const val PREFS = "diplay_bt_suspend"
@@ -23,9 +27,13 @@ object BydBluetoothSuspend {
     private var lease: BluetoothSuspendLease? = null
     private var pending: ScheduledFuture<*>? = null
 
-    /** The last radio request went through the app BluetoothAdapter API, not the ADB shell. */
+    /**
+     * Whether the latest disable request went through the app BluetoothAdapter API.
+     * Recorded by the disable call itself: a compensating re-enable in restoreOwned()
+     * or an earlier session's restore must not overwrite it.
+     */
     @Volatile
-    private var lastRequestViaAdapter = false
+    private var lastDisableViaAdapter = false
 
     private fun lease(context: Context): BluetoothSuspendLease = synchronized(gate) {
         lease ?: run {
@@ -39,7 +47,7 @@ object BydBluetoothSuspend {
                 },
                 readEnabled = { radioEnabled(app) },
                 requestEnabled = { enabled ->
-                    lastRequestViaAdapter = BluetoothRadioRequest.request(
+                    val viaAdapter = BluetoothRadioRequest.request(
                         enabled,
                         adapterRequest = { want -> requestRadioViaAdapter(app, want) },
                         shellRequest = { want ->
@@ -47,6 +55,7 @@ object BydBluetoothSuspend {
                             shell.run(app, if (want) "svc bluetooth enable" else "svc bluetooth disable")
                         },
                     )
+                    if (!enabled) lastDisableViaAdapter = viaAdapter
                 },
                 awaitEnabled = { enabled -> awaitRadio(app, enabled) },
             ).also { lease = it }
@@ -75,7 +84,7 @@ object BydBluetoothSuspend {
                 val radioBefore = state.radioEnabled()
                 val paused = state.suspend(ticket)
                 val outcome = BluetoothPauseOutcome.describe(paused, radioBefore, paused || state.isCurrent(ticket),
-                    if (lastRequestViaAdapter) null else shell.lastAccess?.name)
+                    if (lastDisableViaAdapter) null else shell.lastAccess?.name)
                 if (paused) Log.i(TAG, outcome) else Log.w(TAG, "$outcome; recovery retained if needed")
                 log(outcome)
             }, delay, TimeUnit.MILLISECONDS)
@@ -116,6 +125,9 @@ object BydBluetoothSuspend {
             task.get(timeoutMillis.coerceAtLeast(1), TimeUnit.MILLISECONDS) && adapter?.isEnabled == true
         }.getOrDefault(false)
     }
+
+    /** Whether turning the pause on still needs ADB: false where the app API can drive the radio. */
+    fun adbNeededForPause(): Boolean = !BluetoothRadioRequest.adapterAllowed()
 
     fun isSuspendedByUs(context: Context): Boolean {
         val app = context.applicationContext

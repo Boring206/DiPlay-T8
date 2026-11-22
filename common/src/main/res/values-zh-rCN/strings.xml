@@ -898,8 +898,8 @@
     <string name="settings_gesture_disabled_action">快捷菜单 · 关闭下滑（点按切换）</string>
     <string name="bt_suspend_delay">蓝牙暂停延时</string>
     <string name="bt_suspend_delay_option">连接 %1$d 秒后</string>
-    <string name="bt_suspend_during_carplay">CarPlay 期间暂停车机蓝牙 · 需要 ADB</string>
-    <string name="bt_suspend_during_carplay_description">手机与车机保持免提连接时，来电会同时弹出车机蓝牙电话和 CarPlay 电话。开启后：CarPlay 连接期间通过 ADB 暂停车机蓝牙，来电只在 CarPlay 响应；蓝牙关闭期间，CarPlay 通话改走中控喇叭和车机麦克风，不再走电话免提。CarPlay 结束或下次无线连接握手前会自动恢复蓝牙。配对不受影响。更改在下次连接时生效。</string>
+    <string name="bt_suspend_during_carplay">CarPlay 期间暂停车机蓝牙</string>
+    <string name="bt_suspend_during_carplay_description">手机与车机保持免提连接时，来电会同时弹出车机蓝牙电话和 CarPlay 电话。开启后：CarPlay 连接期间暂停车机蓝牙，来电只在 CarPlay 响应；蓝牙关闭期间，CarPlay 通话改走中控喇叭和车机麦克风，不再走电话免提。CarPlay 结束或下次无线连接握手前会自动恢复蓝牙。配对不受影响。更改在下次连接时生效。Android 13 及更高版本需要 ADB。</string>
     <string name="cluster_small_window_card_theme">小屏转向卡主题</string>
     <string name="cluster_small_window_card_theme_follow">跟随转向卡主题</string>
     <string name="cluster_small_window_card_size">小屏转向卡 · 大小</string>

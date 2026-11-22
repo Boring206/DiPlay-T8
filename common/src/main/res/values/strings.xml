@@ -942,7 +942,7 @@
     <string name="bt_suspend_delay">Bluetooth pause delay</string>
     <string name="bt_suspend_delay_option">%1$d s after connecting</string>
     <string name="bt_suspend_during_carplay">Pause car Bluetooth during CarPlay</string>
-    <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection.</string>
+    <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection. Android 13 and newer need ADB.</string>
     <string name="cluster_small_window_card_theme">Small-window turn card theme</string>
     <string name="cluster_small_window_card_theme_follow">Follow the turn card theme</string>
     <string name="cluster_small_window_card_size">Small-window turn card · size</string>

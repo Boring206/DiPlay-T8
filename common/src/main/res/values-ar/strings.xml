@@ -776,7 +776,7 @@
     <string name="bt_suspend_delay">تأخير إيقاف البلوتوث</string>
     <string name="bt_suspend_delay_option">%1$d ث بعد الاتصال</string>
     <string name="bt_suspend_during_carplay">إيقاف بلوتوث السيارة أثناء CarPlay</string>
-    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي.</string>
+    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي. أندرويد 13 والأحدث يحتاج ADB.</string>
     <string name="cluster_small_window_card_theme">ثيم بطاقة النافذة الصغيرة</string>
     <string name="cluster_small_window_card_theme_follow">يتبع ثيم بطاقة الانعطاف</string>
     <string name="cluster_small_window_card_size">بطاقة النافذة الصغيرة · الحجم</string>

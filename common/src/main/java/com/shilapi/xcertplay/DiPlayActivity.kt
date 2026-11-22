@@ -58,6 +58,7 @@ import com.shilapi.xcertplay.backup.SettingsBackupServer
 import com.shilapi.xcertplay.backup.SettingsQrCode
 import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -4771,7 +4772,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             AirPlayPersistence.loadBtSuspendDuringCarplay(this), enabled = !adbSwitchChangePending) {
             AirPlayPersistence.saveBtSuspendDuringCarplay(this, it)
             markReconnectNeeded()
-            if (it) checkAdbState(mayAsk = true)
+            if (it && BydBluetoothSuspend.adbNeededForPause()) checkAdbState(mayAsk = true)
         }
         if (AirPlayPersistence.loadBtSuspendDuringCarplay(this)) {
             val delays = listOf(5, 10, 15, 30)

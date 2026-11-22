@@ -930,8 +930,8 @@
     <string name="settings_gesture_disabled_action">빠른 메뉴 · 스와이프 꺼짐(탭하여 변경)</string>
     <string name="bt_suspend_delay">Bluetooth 일시중지 지연</string>
     <string name="bt_suspend_delay_option">연결 후 %1$d초</string>
-    <string name="bt_suspend_during_carplay">CarPlay 중 차량 Bluetooth 일시중지 · ADB 필요</string>
-    <string name="bt_suspend_during_carplay_description">휴대전화는 차량과 핸즈프리 연결을 유지하므로 차량 Bluetooth 전화와 CarPlay 양쪽에서 통화 벨이 울립니다. CarPlay 실행 중 ADB를 통해 차량 Bluetooth를 일시중지하면 CarPlay에서만 벨이 울립니다. Bluetooth가 꺼져 있으면 CarPlay 통화는 휴대전화 SCO 대신 차량 실내 스피커와 마이크로 재생됩니다. CarPlay가 종료될 때와 다음 무선 핸드셰이크 전에 Bluetooth가 다시 켜집니다. 페어링은 변경되지 않습니다. 다음 연결부터 적용됩니다.</string>
+    <string name="bt_suspend_during_carplay">CarPlay 중 차량 Bluetooth 일시중지</string>
+    <string name="bt_suspend_during_carplay_description">휴대전화는 차량과 핸즈프리 연결을 유지하므로 차량 Bluetooth 전화와 CarPlay 양쪽에서 통화 벨이 울립니다. CarPlay 실행 중 차량 Bluetooth를 일시중지하면 CarPlay에서만 벨이 울립니다. Bluetooth가 꺼져 있으면 CarPlay 통화는 휴대전화 SCO 대신 차량 실내 스피커와 마이크로 재생됩니다. CarPlay가 종료될 때와 다음 무선 핸드셰이크 전에 Bluetooth가 다시 켜집니다. 페어링은 변경되지 않습니다. 다음 연결부터 적용됩니다. Android 13 이상에서는 ADB가 필요합니다.</string>
     <string name="cluster_small_window_card_theme">소형 창 회전 안내 카드 테마</string>
     <string name="cluster_small_window_card_theme_follow">회전 안내 카드 테마 따르기</string>
     <string name="cluster_small_window_card_size">소형 창 회전 안내 카드 · 크기</string>
