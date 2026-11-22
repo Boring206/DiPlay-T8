@@ -1842,7 +1842,10 @@ private class AudioRenderer(
     private var firstPcmLogged = false
     private val packetsReceived = AtomicInteger()
     private val packetsDropped = AtomicInteger()
+    /** Packets dropped because the queue was full. */
     private val packetsDroppedTotal = AtomicInteger()
+    /** Stale packets the lag guard discarded. */
+    private val packetsDiscardedTotal = AtomicInteger()
     private val lastArrivalNs = AtomicLong()
     private val maxArrivalGapMs = AtomicLong()
     private val frameBytes = if (format.channels >= 2) 4 else 2
@@ -1866,6 +1869,7 @@ private class AudioRenderer(
     private var underrunsAtPlaybackStart = 0
     private var headAtPlaybackStart = 0
     private var droppedAtLastTrim = 0
+    private var discardedAtLastTrim = 0
     private var clockTrim: MediaClockTrim? = null
     /** Called when this call's track is routed to the earpiece; the sink moves the call to the loudspeaker. */
     @Volatile var onRoutedToEarpiece: (() -> Unit)? = null
@@ -1898,7 +1902,7 @@ private class AudioRenderer(
             val removed = mediaLagGuard?.recover(queue, sample, AudioPacket::sample, now) ?: 0
             if (removed > 0) {
                 packetsDropped.addAndGet(removed)
-                packetsDroppedTotal.addAndGet(removed)
+                packetsDiscardedTotal.addAndGet(removed)
                 if (lagRecoveryReports < MAX_REBUFFER_REPORTS) {
                     lagRecoveryReports++
                     report("Audio: stale media packet backlog recovered audioType=${format.audioType} " +
@@ -2613,13 +2617,24 @@ private class AudioRenderer(
             ?: 0L
         val compressedPcmFrames = compressedRtpFrames * format.sampleRate /
             format.rtpClockRate.coerceAtLeast(1)
-        val dropped = packetsDroppedTotal.get() + inputDropped
-        if (dropped != droppedAtLastTrim) {
-            droppedAtLastTrim = dropped
+        // The lag guard cuts a second or more of queued music at once, which lowers the level for good: measure it
+        // again. A full queue or a busy decoder drops one packet at a time. Measuring again on each of those kept the
+        // trim at the slow rate it learned in a stall, so the queue stayed full and kept dropping (#1177).
+        val discarded = packetsDiscardedTotal.get()
+        if (discarded != discardedAtLastTrim) {
+            discardedAtLastTrim = discarded
             trim.measureAgain()
         }
         val head = track.playbackHeadPosition
-        trim.sample(bufferProgress.queuedBytes(head) / frameBytes, now, compressedPcmFrames,
+        val queuedFrames = bufferProgress.queuedBytes(head) / frameBytes
+        val dropped = packetsDroppedTotal.get()
+        if (dropped != droppedAtLastTrim) {
+            droppedAtLastTrim = dropped
+            // Across an RTP timestamp restart the waiting packets read as no time at all, and the track alone is not
+            // what overflowed: a target lowered to it would play music 1.5 % fast for a minute.
+            if (compressedRtpFrames > 0L || queue.size <= 1) trim.overflowed(queuedFrames + compressedPcmFrames)
+        }
+        trim.sample(queuedFrames, now, compressedPcmFrames,
             headMoving = head != headAtPlaybackStart, arrivedFrameNs = queuedFrameNsSince(trim.lastSampleNs, now))
         val rate = trim.rateDue(now) ?: return
         val result = runCatching { track.setPlaybackRate(rate) }.getOrDefault(AudioTrack.ERROR)
@@ -2815,7 +2830,8 @@ private class AudioRenderer(
         const val AUDIO_INPUT_WAIT_NS = 100_000_000L
         const val AUDIO_POLL_MILLIS = 10L
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
-        // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
+        // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it. Wired LPCM packets hold about 7 ms,
+        // so the same count is only ~1.4 s of wired music (#1177).
         const val MAX_QUEUED_PACKETS = 192
         const val PREBUFFER_WRITE_CHUNK_BYTES = 2 * 1024
         const val STATS_TAG = "DiPlay-AudioStats"

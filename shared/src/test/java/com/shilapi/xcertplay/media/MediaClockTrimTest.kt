@@ -90,6 +90,138 @@ class MediaClockTrimTest {
         }
     }
 
+    /**
+     * Wired CarPlay on the QUAD-CORE T507 in #1177. The iPhone sends a 355-frame LPCM packet every 7.4 ms, the
+     * renderer queues at most 192 of them (1.4 s) and writes them into a track of [trackMs], and the head unit's
+     * clock is accurate. Playback has just restarted after a camera stall: the refill burst left 185 packets queued
+     * and the trim still plays at the slow rate it learned while the track ran dry. With [measureOnDrop] each drop
+     * measures the target again, as 0.2.22's renderer did; otherwise the trim hears that the queue overflowed.
+     * The head unit plays [halChunkFrames] at a time: a HAL that takes large chunks blocks writes for that long.
+     */
+    private class WiredDrive(trackMs: Int, startMs: Int, learned: Double, val measureOnDrop: Boolean = false,
+        private val halChunkFrames: Int = 256) {
+        val trim: MediaClockTrim
+        private val trackCapacity = 48.0 * trackMs
+        private var trackQueued = trackCapacity
+        private val queue = ArrayDeque<Pair<Int, Long>>() // RTP sample, arrival
+        private var newestSample = 0
+        val dropSeconds = mutableListOf<Int>()
+        val ratesAfterAMinute = mutableListOf<Int>()
+
+        init {
+            MediaClockTrim.learnedTrim = learned
+            trim = MediaClockTrim(48_000, 48L * startMs, measuresTarget = true)
+            repeat(185) { arrive(0L) }
+        }
+
+        private fun arrive(nowNs: Long) {
+            newestSample += PACKET_FRAMES
+            if (queue.size < 192) queue.addLast(newestSample to nowNs) else dropSeconds += (nowNs / 1_000_000_000L).toInt()
+        }
+
+        fun run(seconds: Int) {
+            var rate = trim.rate
+            var nextPacketMs = 0.0
+            var played = 0.0
+            var droppedAtLastWrite = dropSeconds.size
+            var lastWriteNs = 0L
+            for (ms in 0 until seconds * 1000) {
+                val nowNs = ms * 1_000_000L
+                while (nextPacketMs <= ms) { arrive(nowNs); nextPacketMs += PACKET_FRAMES / 48.0 }
+                while (queue.isNotEmpty() && trackQueued + PACKET_FRAMES <= trackCapacity) {
+                    queue.removeFirst()
+                    trackQueued += PACKET_FRAMES
+                    // What AudioRenderer.trimClock reads after each write.
+                    val waiting = queue.firstOrNull()?.let { (newestSample - it.first).toLong() } ?: 0L
+                    val arrivedFrameNs = queue.drop(1).filter { it.second > lastWriteNs }
+                        .sumOf { PACKET_FRAMES.toDouble() * (nowNs - it.second) }
+                    if (dropSeconds.size != droppedAtLastWrite) {
+                        droppedAtLastWrite = dropSeconds.size
+                        if (measureOnDrop) trim.measureAgain() else trim.overflowed(trackQueued.toLong() + waiting)
+                    }
+                    trim.sample(trackQueued.toLong(), nowNs, waiting, arrivedFrameNs = arrivedFrameNs)
+                    lastWriteNs = nowNs
+                    trim.rateDue(nowNs)?.let { rate = it }
+                }
+                if (ms >= 60_000 && ms % 1000 == 0) ratesAfterAMinute += rate
+                played += rate / 1000.0
+                while (played >= halChunkFrames) {
+                    played -= halChunkFrames
+                    trackQueued = (trackQueued - halChunkFrames).coerceAtLeast(0.0)
+                }
+            }
+        }
+
+        companion object { const val PACKET_FRAMES = 355 }
+    }
+
+    @Test fun measuringAgainAtEveryDropHeldTheSlowRateAndTheFullQueue() {
+        // The 47 597 Hz of the #1177 report, and a packet dropped about every second for as long as music plays.
+        val drive = WiredDrive(trackMs = 500, startMs = 300, learned = -0.0084, measureOnDrop = true)
+        drive.run(300)
+        assertEquals(47_597, drive.trim.rate)
+        assertTrue("dropped ${drive.dropSeconds.size}", drive.dropSeconds.size > 300)
+        assertTrue("last drop at ${drive.dropSeconds.last()} s", drive.dropSeconds.last() >= 295)
+    }
+
+    @Test fun aFullQueueSpeedsUpTheSlowTrimLearnedInAStall() {
+        // The 300 ms and 1000 ms wired music buffers.
+        for (trackMs in listOf(500, 1200)) {
+            val drive = WiredDrive(trackMs, startMs = trackMs - 200, learned = -0.0084)
+            drive.run(300)
+            assertTrue("$trackMs ms track dropped at ${drive.dropSeconds} s", drive.dropSeconds.all { it < 10 })
+            assertEquals("$trackMs ms track", 48_000.0, drive.trim.rate.toDouble(), 60.0)
+            assertEquals("$trackMs ms track", 0.0, MediaClockTrim.learnedTrim, 0.002)
+            assertTrue("$trackMs ms track max ${drive.ratesAfterAMinute.max()}", drive.ratesAfterAMinute.max() < 48_600)
+        }
+    }
+
+    @Test fun evenFromTheSlowestTrimAFullQueueStopsDroppingWithinHalfAMinute() {
+        for (trackMs in listOf(500, 1200)) {
+            val drive = WiredDrive(trackMs, startMs = trackMs - 200, learned = -MediaClockTrim.MAX_TRIM)
+            drive.run(300)
+            assertTrue("$trackMs ms track dropped at ${drive.dropSeconds} s", drive.dropSeconds.all { it < 30 })
+            assertTrue("$trackMs ms track dropped ${drive.dropSeconds.size}", drive.dropSeconds.size < 20)
+        }
+    }
+
+    @Test fun atTheTrackFillOfTheReportAFullQueueStillLetsTheSlowTrimRelearn() {
+        // In the #1177 report the T507's track held about 10 600 frames at the 300 ms setting and 14 700 at 500 ms,
+        // and writes blocked for up to 280 ms. The full queue alone is then above the lowered target; the trim must
+        // still learn from it, or it keeps the slow rate, parks the queue near full and teaches the next stream.
+        val cases = listOf(
+            Triple(220, 300, 256), Triple(220, 300, 8_000), Triple(310, 500, 256), Triple(310, 500, 13_440))
+        for ((trackMs, startMs, chunk) in cases) for (learned in listOf(-0.0084, -MediaClockTrim.MAX_TRIM)) {
+            val case = "$trackMs ms track, $chunk-frame chunks, learned $learned"
+            val drive = WiredDrive(trackMs, startMs, learned, halChunkFrames = chunk)
+            drive.run(300)
+            // From the slowest trim with 280 ms chunks the integral needs about 70 s to climb back.
+            val lastDropBy = if (learned < -0.01 && chunk > 10_000) 90 else 60
+            assertTrue("$case dropped at ${drive.dropSeconds} s", drive.dropSeconds.all { it < lastDropBy })
+            assertEquals(case, 0.0, MediaClockTrim.learnedTrim, 0.002)
+            assertEquals(case, 48_000.0, drive.trim.rate.toDouble(), 60.0)
+        }
+    }
+
+    @Test fun anOverflowWithRoomAboveTheTargetLeavesTheTrimAlone() {
+        val kept = MediaClockTrim(48_000, 14_400)
+        // A burst after a gap overflowed the queue with four times the target queued, and a queue whose
+        // timestamps restarted read almost nothing: neither lowers the target below where it is.
+        val overflowed = listOf(57_600L, 1_000L).map { MediaClockTrim(48_000, 14_400).apply { overflowed(it) } }
+        val rates = mutableSetOf<Int>()
+        for (step in 0..300) {
+            val nowNs = step * 100_000_000L
+            val level = if (step < 150) 21_600L else 9_600L
+            for (trim in overflowed + kept) {
+                trim.sample(level, nowNs)
+                trim.rateDue(nowNs)
+            }
+            for (trim in overflowed) assertEquals("at ${step * 100} ms", kept.rate, trim.rate)
+            rates += kept.rate
+        }
+        assertTrue("rates $rates", rates.size > 5)
+    }
+
     @Test fun overWiFiTheDefaultBufferIsNotPlayedFast() {
         for (seed in 1..3) {
             MediaClockTrim.learnedTrim = 0.0
