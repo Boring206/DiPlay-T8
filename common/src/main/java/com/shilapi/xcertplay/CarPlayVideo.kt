@@ -32,6 +32,8 @@ internal object CarPlayVideo : CarPlayVideoListener {
     private val sender = Executors.newSingleThreadExecutor { Thread(it, "diplay-video-reply").apply { isDaemon = true } }
     @Volatile private var appContext: Context? = null
     @Volatile private var controller: CarPlayController? = null
+    @Volatile private var diagnostic: (String) -> Unit = {}
+    private val iphoneLoads = VideoDiagnostics.IphoneLoads()
 
     // Main-thread state; CarPlayVideoActivity applies it. The stream and item are also read by loader threads.
     @Volatile private var streamId: Long? = null
@@ -48,10 +50,39 @@ internal object CarPlayVideo : CarPlayVideoListener {
     var pendingSeekMillis: Int? = null
     var activity: CarPlayVideoActivity? = null
 
-    fun attach(context: Context, next: CarPlayController) {
+    /** [log] takes report lines: hosts, schemes, sizes and codes only, never a URL (#1180). */
+    fun attach(context: Context, next: CarPlayController, log: (String) -> Unit = {}) {
         appContext = context.applicationContext
         controller = next
+        diagnostic = log
         next.videoListener = this
+    }
+
+    /** Logcat and the diagnostic report. Callers pass no URL: they carry tokens. */
+    fun note(message: String, warn: Boolean = false, logcat: Boolean = true) {
+        if (logcat) {
+            if (warn) Log.w(TAG, message) else Log.i(TAG, message)
+        }
+        runCatching { diagnostic("Video: $message") }
+    }
+
+    /** A per-load line of an item loaded through the iPhone: the first few reach the report, then a count. */
+    private fun noteIphoneLoad(kind: VideoDiagnostics.IphoneLoads.Kind, message: String, warn: Boolean = false) {
+        if (iphoneLoads.take(kind)) {
+            note(message, warn)
+        } else if (warn) {
+            Log.w(TAG, message)
+        } else {
+            Log.i(TAG, message)
+        }
+    }
+
+    /** What the iPhone sent for one load ([IphoneResolvingDataSource]). Loader thread. */
+    fun noteIphoneLoaded(scheme: String?, status: Int?, bytes: Int?, redirect: Boolean) {
+        // Status 0 is a resource loader's data-only answer, not a failure.
+        val failed = !redirect && status != null && status != 0 && status !in 200..299
+        noteIphoneLoad(if (failed) VideoDiagnostics.IphoneLoads.Kind.FAILED else VideoDiagnostics.IphoneLoads.Kind.LOADED,
+            VideoDiagnostics.iphoneLoaded(scheme, status, bytes, redirect), warn = failed)
     }
 
     override fun readParked(): Boolean? = appContext?.let(BydNavigationOutputs::parked)
@@ -102,7 +133,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
      * receiver does, say so on the car screen and go back to CarPlay instead of showing black. Main thread.
      */
     fun onPlayerFailed(code: Int) {
-        Log.w(TAG, "item cannot play here code=$code")
+        note("item cannot play here code=$code", warn = true)
         streamId?.let { reply(it, VideoInCar.errorNotification(itemUuid, code)) }
         appContext?.let { Toast.makeText(it, R.string.video_cannot_play, Toast.LENGTH_LONG).show() }
         stop()
@@ -121,16 +152,17 @@ internal object CarPlayVideo : CarPlayVideoListener {
             "insertPlayQueueItem" -> {
                 // An app's own scheme is loaded through the iPhone (IphoneResolvingDataSource).
                 val item = VideoInCar.parseItem(message, iphoneLoadsAppSchemes = true)
+                val queued = message["item"] as? Map<*, *>
                 if (item == null) {
-                    Log.w(TAG, "queue item this player cannot play")
+                    note("queue item this player cannot play mediaType=${VideoDiagnostics.word(queued?.get("mediaType"))}",
+                        warn = true)
                     return
                 }
-                Log.i(TAG, "queue item app=${(message["item"] as? Map<*, *>)?.get("clientBundleID")}")
+                finishIphoneLoads() // a new item replaces one the iPhone did not stop first
                 url = item.url
                 itemUuid = item.uuid
-                val queued = message["item"] as? Map<*, *>
                 streaming = queued?.get("mediaType") == "streaming"
-                Log.i(TAG, "queue item host=${android.net.Uri.parse(item.url).host} mediaType=${queued?.get("mediaType")}")
+                note(VideoDiagnostics.queueItem(queued?.get("clientBundleID"), item.url, queued?.get("mediaType")))
                 startMillis = item.startMillis
                 activity?.load()
             }
@@ -157,7 +189,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
             "unhandledURL" -> onUrlLoaded(message)
             "stop", "removePlayQueueItem" -> stop()
             "setProperty" -> Unit
-            else -> Log.i(TAG, "video message $type keys=${message.keys}")
+            else -> note("video message ${VideoDiagnostics.word(type)} keys=${VideoDiagnostics.keys(message.keys)}")
         }
     }
 
@@ -187,11 +219,13 @@ internal object CarPlayVideo : CarPlayVideoListener {
             ),
             "item" to linkedMapOf("uuid" to itemUuid),
         ))
-        Log.i(TAG, "asked the iPhone to load a ${android.net.Uri.parse(url).scheme} URL request=$id")
+        noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.ASKED,
+            "asked the iPhone to load a ${VideoDiagnostics.scheme(url)} URL request=$id")
         val response = try {
             answer.get(URL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (_: Exception) {
-            Log.w(TAG, "no iPhone answer for request=$id")
+            noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.NO_ANSWER,
+                "no iPhone answer for request=$id within ${URL_TIMEOUT_SECONDS}s", warn = true)
             null
         } finally {
             pendingUrls.remove(id)
@@ -208,7 +242,9 @@ internal object CarPlayVideo : CarPlayVideoListener {
     private fun onUrlLoaded(message: Map<String, Any?>) {
         val response = message["response"] as? Map<*, *>
         val id = (response?.get("FCUP_Response_RequestID") as? Number)?.toLong()
-        Log.i(TAG, "iPhone unhandledURL answer request=$id keys=${message.keys} responseKeys=${response?.keys}")
+        noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.ANSWER,
+            "iPhone unhandledURL answer request=$id keys=${VideoDiagnostics.keys(message.keys)} " +
+                "responseKeys=${response?.keys?.let(VideoDiagnostics::keys)}")
         if (id != null) pendingUrls[id]?.complete(response)
     }
 
@@ -221,17 +257,17 @@ internal object CarPlayVideo : CarPlayVideoListener {
         sender.execute {
             // A reply that cannot be sent must never take CarPlay down with it.
             val sent = runCatching { target.sendVideoMessage(streamId, message) }
-                .onFailure { Log.w(TAG, "reply ${message["type"]} failed: ${it.javaClass.simpleName}") }
+                .onFailure { note("reply ${VideoDiagnostics.word(message["type"])} failed: ${it.javaClass.simpleName}", warn = true) }
                 .getOrDefault(false)
-            if (!sent) Log.w(TAG, "reply ${message["type"]} not sent")
+            if (!sent) note("reply ${VideoDiagnostics.word(message["type"])} not sent", warn = true)
         }
     }
 
     private fun show() {
         val context = appContext ?: return
         when {
-            url == null -> Log.w(TAG, "video player requested without a playable item")
-            !VideoInCar.allowed -> Log.w(TAG, "video player requested while not parked")
+            url == null -> note("video player requested without a playable item", warn = true)
+            !VideoInCar.allowed -> note("video player requested while not parked", warn = true)
             activity != null -> Unit
             else -> context.startActivity(
                 Intent(context, CarPlayVideoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -241,11 +277,16 @@ internal object CarPlayVideo : CarPlayVideoListener {
 
     private fun closePlayer(reason: String) {
         val player = activity ?: return
-        Log.i(TAG, "closing the video player: $reason")
+        note("closing the video player: $reason")
         player.finish()
     }
 
+    private fun finishIphoneLoads() {
+        iphoneLoads.finish()?.let(::note)
+    }
+
     private fun stop() {
+        finishIphoneLoads()
         url = null
         itemUuid = null
         playing = false

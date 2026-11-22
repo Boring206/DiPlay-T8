@@ -196,6 +196,9 @@ object BydOutputSettings {
     fun standaloneHudAvailable(context: Context): Boolean = BydStandaloneHudOutput.available(context)
     fun standaloneHudDiagnosticReport(context: Context): String = BydStandaloneHudOutput.diagnostics(context)
 
+    /** The report's "Dashboard song:" line: these settings, the gate, ADB access and the last write (#1110). */
+    fun clusterSongDiagnosticReport(context: Context): String = BydClusterSong.report(context.applicationContext)
+
     /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
     fun navigationAvailable(context: Context): Boolean =
         BydStandaloneHudOutput.available(context) ||

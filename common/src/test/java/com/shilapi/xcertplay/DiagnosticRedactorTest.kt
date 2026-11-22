@@ -1,7 +1,9 @@
 package com.shilapi.xcertplay
 
+import android.bluetooth.BluetoothDevice
 import org.junit.Assert.*
 import org.junit.Test
+import com.shilapi.xcertplay.orchestration.ConnectionDiagnosticLines
 import com.shilapi.xcertplay.iap2.message.Iap2ControlMessages
 import com.shilapi.xcertplay.iap2.trace.Iap2FrameFormatter
 import com.shilapi.xcertplay.iap2.trace.Iap2TraceDirection
@@ -49,7 +51,10 @@ class DiagnosticRedactorTest {
     @Test fun connectionTimingAndCachedServiceMetadataSurviveWithoutPersonalIdentifiers() {
         val lines = listOf(
             "CONNECTION_DIAGNOSTIC attempt=2 phase=CONTROL wired io final readCalls=105 writeCalls=50 readTimeouts=3 ends=0 failures=1 maxReadMs=909 maxWriteMs=1937",
-            "CONNECTION_DIAGNOSTIC attempt=2 phase=WIRELESS Bluetooth snapshot point=after-failure enabled=true bondState=12 cachedServiceCount=5 cachedIap2Service=false",
+            // The line CarPlayController writes, not a hand-made sample: one without "bondName=" hid #1151.
+            "CONNECTION_DIAGNOSTIC attempt=2 run=1 phase=WIRELESS " + ConnectionDiagnosticLines.bluetoothSnapshot(
+                point = "after-failure", adapterEnabled = true, bondState = BluetoothDevice.BOND_BONDED,
+                cachedServicesReadable = true, cachedServiceCount = 5, cachedIap2Service = false),
             "CONNECTION_DIAGNOSTIC generation=2 restart teardownWaitCompleted=false elapsedMs=4000",
             "CONNECTION_DIAGNOSTIC attempt=2 phase=USB_DISCOVERY USB configuration ready=true configurationId=6 reenumerationAttempts=0 action=reuse-descriptors",
         )
@@ -57,6 +62,32 @@ class DiagnosticRedactorTest {
         assertNull(DiagnosticRedactor.redact("CONNECTION_DIAGNOSTIC attempt=2 payload=private-data"))
         assertFalse(DiagnosticRedactor.redact("CONNECTION_DIAGNOSTIC attempt=2 peer=192.168.49.1 id=0123456789abcdef0123456789abcdef")!!.contains("192.168.49.1"))
     }
+
+    // #1151: "bondName=BONDED" matched the device-name rule, so the saved log dropped every snapshot.
+    @Test fun bluetoothSnapshotsAndIphoneCountsReachTheSavedLog() {
+        val prefix = "12:00:00.000  CONNECTION_DIAGNOSTIC attempt=1 run=1 phase=WIRELESS "
+        val lines = listOf(
+            ConnectionDiagnosticLines.bluetoothSnapshot("before-connect", true, BluetoothDevice.BOND_BONDED, true, 7, true),
+            ConnectionDiagnosticLines.bluetoothSnapshot("after-failure", null, BluetoothDevice.BOND_NONE, false, null, null),
+            ConnectionDiagnosticLines.automaticBluetoothIphone(bonded = 3, bondedIphones = 2, directlyConnected = 0, connected = 1),
+            ConnectionDiagnosticLines.savedBluetoothIphone(bonded = 3, stillPaired = false),
+        ).map { prefix + it }
+        assertTrue(lines[0], lines[0].contains(" bond=BONDED "))
+        assertTrue(lines[1], lines[1].endsWith("cachedServiceCount=unknown cachedIap2Service=unknown"))
+        assertNull("the old field name must stay dropped, or the rule changed",
+            DiagnosticRedactor.redact(lines[0].replace(" bond=", " bondName=")))
+        val folder = Files.createTempDirectory("diplay-bluetooth-snapshot").toFile()
+        try {
+            val file = folder.resolve("diplay.log")
+            SessionLogFile(file).use { log ->
+                log.reset("header")
+                lines.forEach(log::append)
+                assertTrue(log.awaitIdle(10_000))
+            }
+            assertEquals(listOf("header") + lines, file.readLines())
+        } finally { folder.deleteRecursively() }
+    }
+
     @Test fun savedDriveReportKeepsMediaPerformanceCounters() {
         val folder = Files.createTempDirectory("diplay-media-report").toFile()
         try {

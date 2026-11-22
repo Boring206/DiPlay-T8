@@ -173,7 +173,7 @@ internal class MicrophoneUplink(
                 echoCanceller = createEchoCanceller()
                 if (!speakerphoneCall) effects = voiceEffects(nextRecorder.audioSessionId)
                 if (echoReference != null) {
-                    Log.i(TAG, "microphone echo canceller enabled=${echoCanceller != null} tail=${ECHO_TAIL_MILLIS}ms")
+                    effectDecision("echo canceller enabled=${echoCanceller != null} tail=${ECHO_TAIL_MILLIS}ms")
                 }
             }
             nextRecorder.startRecording()
@@ -221,7 +221,7 @@ internal class MicrophoneUplink(
     private fun createEchoCanceller(): CallEchoCanceller? {
         val reference = echoReference ?: return null
         if (config.channels != 1 || config.sampleRate != reference.sampleRate) {
-            Log.i(TAG, "microphone echo canceller skipped rate=${config.sampleRate} channels=${config.channels}")
+            effectDecision("echo canceller skipped rate=${config.sampleRate} channels=${config.channels}")
             return null
         }
         return echoCancellerFactory(config.frameBytes / 2, config.sampleRate, ECHO_TAIL_MILLIS)
@@ -231,7 +231,7 @@ internal class MicrophoneUplink(
         if (carPhoneState()) {
             // In the car's phone audio state its own processing handles echo and noise, and was only measured
             // with the platform effects off.
-            Log.i(TAG, "microphone effects left to the car's phone audio state")
+            effectDecision("effects left to the car's phone audio state")
             return emptyList()
         }
         var aec: AudioEffect? = null
@@ -244,7 +244,7 @@ internal class MicrophoneUplink(
                 if (aec == null) {
                     echoCanceller?.close()
                     echoCanceller = null
-                    Log.w(TAG, "microphone native echo canceller skipped: platform AEC could not be disabled")
+                    effectDecision("echo canceller skipped: platform AEC could not be disabled", warn = true)
                 }
             }
         }
@@ -278,18 +278,30 @@ internal class MicrophoneUplink(
             if (effect != null) {
                 val status = effect.setEnabled(enabled)
                 if (status == AudioEffect.SUCCESS && effect.enabled == enabled) {
-                    Log.i(TAG, "microphone effect=$name enabled=$enabled")
+                    effectDecision("platform effect=$name enabled=$enabled")
                     return effect
                 }
-                Log.w(TAG, "microphone effect=$name could not be ${if (enabled) "enabled" else "disabled"} status=$status")
+                effectDecision("platform effect=$name could not be ${if (enabled) "enabled" else "disabled"} status=$status",
+                    warn = true)
             } else {
-                Log.i(TAG, "microphone effect=$name unavailable")
+                effectDecision("platform effect=$name unavailable")
             }
         } catch (error: RuntimeException) {
             Log.w(TAG, "microphone effect=$name unavailable; continuing without it", error)
+            effectDecision("platform effect=$name unavailable error=${error.javaClass.simpleName}")
         }
         effect?.let(::releaseEffect)
         return null
+    }
+
+    /**
+     * Echo and noise handling choices for the call: DiPlay's own canceller and the platform AEC/NS.
+     * They go to the report as well as logcat, so a report shows which one ran during an echo (#1237).
+     */
+    private fun effectDecision(decision: String, warn: Boolean = false) {
+        val message = "Microphone: type=${config.audioType} $decision"
+        if (warn) Log.w(TAG, message) else Log.i(TAG, message)
+        runCatching { onDiagnostic(message) }
     }
 
     private fun releaseEffect(effect: AudioEffect) {
@@ -624,7 +636,7 @@ internal class MicrophoneUplink(
         if (aec != null) {
             val enabled = runCatching { aec.setEnabled(true) == AudioEffect.SUCCESS && aec.enabled }.getOrDefault(false)
             if (enabled) {
-                Log.i(TAG, "microphone native echo processing stopped; platform AEC restored")
+                effectDecision("echo canceller stopped; platform AEC restored")
                 return
             }
             effects = effects - aec
@@ -634,7 +646,7 @@ internal class MicrophoneUplink(
             val session = recorder?.audioSessionId
             if (session != null && AcousticEchoCanceler.isAvailable()) AcousticEchoCanceler.create(session) else null
         }?.let { effects = effects + it }
-        Log.i(TAG, "microphone native echo processing stopped; using platform effects")
+        effectDecision("echo canceller stopped; using platform effects")
     }
 
     override fun close() {
