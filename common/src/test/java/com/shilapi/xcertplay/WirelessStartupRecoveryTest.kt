@@ -300,6 +300,30 @@ class WirelessStartupRecoveryTest {
         assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
     }
 
+    // A display change while a retry waits rebuilds the stack. The old retry kept reconnectScheduled set until it
+    // fired, so a fast failure of the new attempt was dropped: its text stayed, with no retry and no Retry button.
+    @Test fun aRebuildWhileARetryWaitsShowsTheNewAttemptsFailure() {
+        report()
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+
+        rebuild("Display changed 1080x2249 -> 2249x1080")
+        report(ReflectionHelpers.getField(activity, "restartGeneration"), CarPlayStatus.Failed(
+            "The car hotspot is off. Turn it on in the car settings and connect again.",
+            startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION))
+
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun aRebuildWhileARetryWaitsLetsTheNewAttemptRetry() {
+        report()
+        rebuild("Display changed 1080x2249 -> 2249x1080")
+        report(ReflectionHelpers.getField(activity, "restartGeneration"))
+
+        assertEquals(2, ReflectionHelpers.getField<Int>(activity, "reconnectAttempts"))
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+    }
+
     private fun rebuild(reason: String) {
         val size = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
             .getDeclaredConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)

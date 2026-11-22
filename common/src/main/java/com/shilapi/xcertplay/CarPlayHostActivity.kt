@@ -6193,6 +6193,12 @@ open class CarPlayHostActivity : ComponentActivity() {
         // Every caller starts a new attempt, a display change or a switch to USB included, so the stop of the
         // last one no longer holds: its failure must be shown and a lost session reconnected.
         startupRetryStopped = false
+        // A retry the last attempt left waiting would only return on the generation check, and until it fires
+        // reconnectScheduled would drop the new attempt's failures, leaving no retry and no Retry button.
+        pendingReconnect?.let(mainHandler::removeCallbacks)
+        pendingReconnect = null
+        reconnectScheduled = false
+        reconnectWaitsForBluetooth = false
         startupRetryButton?.visibility = View.GONE
         appendLog(reason)
         activeScreenStreamTypes.clear()
