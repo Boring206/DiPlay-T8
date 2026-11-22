@@ -27,12 +27,9 @@ internal enum class WiredConfigurationAction(val diagnostic: String) {
             transitionsTried: Int,
             maximumTransitions: Int,
             sessionAlreadyStarted: Boolean = false,
-            transitionUnansweredOnThisEnumeration: Boolean = false,
         ) = when {
             // The mode a session DiPlay ended itself left behind takes no new session (#335; WiredSessionMemory).
-            // An iPhone that left that request unanswered on this enumeration is not asked again (#1338).
-            found && carPlayMode && sessionAlreadyStarted && transitionsTried == 0 &&
-                !transitionUnansweredOnThisEnumeration -> REQUEST_TRANSITION
+            found && carPlayMode && sessionAlreadyStarted && transitionsTried == 0 -> REQUEST_TRANSITION
             found && carPlayMode -> USE
             found && transitionsTried > 0 -> USE_WITHOUT_APPLE_ETHERNET
             transitionsTried < maximumTransitions -> REQUEST_TRANSITION

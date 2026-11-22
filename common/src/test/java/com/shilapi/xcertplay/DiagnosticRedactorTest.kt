@@ -52,7 +52,6 @@ class DiagnosticRedactorTest {
             "CONNECTION_DIAGNOSTIC attempt=2 phase=WIRELESS Bluetooth snapshot point=after-failure enabled=true bondState=12 cachedServiceCount=5 cachedIap2Service=false",
             "CONNECTION_DIAGNOSTIC generation=2 restart teardownWaitCompleted=false elapsedMs=4000",
             "CONNECTION_DIAGNOSTIC attempt=2 phase=USB_DISCOVERY USB configuration ready=true configurationId=6 reenumerationAttempts=0 action=reuse-descriptors",
-            "CONNECTION_DIAGNOSTIC attempt=8 run=1 phase=USB_DISCOVERY USB configuration ready=true configurationId=6 reenumerationAttempts=0 previousSessionOnThisEnumeration=true transitionUnansweredOnThisEnumeration=true action=reuse-descriptors",
             "wired start: NCM connection attempts to=advertised port=7000 syn=12 connections=3 synAck=12 rst=0 unsent=0; to=otherLinkLocal port=7000 syn=1 connections=1 synAck=0 rst=1 unsent=0",
         )
         for (line in lines) assertEquals(line, DiagnosticRedactor.redact(line))
