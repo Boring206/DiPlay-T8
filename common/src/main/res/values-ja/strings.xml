@@ -1047,6 +1047,7 @@
     <string name="settings_write_settings_allow">アクセスを許可</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay中は車のWi-Fi検索を一時停止 · ADBが必要</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi Directでは車が数秒ごとにWi-Fiネットワークを検索し、そのたびに音楽と映像が途切れます。オンにすると、CarPlayの実行中はDiPlayがこの検索を止めます。その間、車はスマートフォンのテザリングなど既知のネットワークにも自動では接続しません（車のWi-Fi設定から手動では接続できます）。自動で接続させたい場合はオフにしてください。次の接続から適用されます。</string>
+    <string name="settings_car_hotspot_scan_pause_description">一部のヘッドユニットは車のホットスポットと並行して自身のWi-Fiクライアントをオンのままにし、定期的にネットワークを検索します。検索のたびに音楽が短く途切れます。オンにすると、そのようなユニットでのみ、CarPlayの動作中はDiPlayがこの検索を一時停止します。その間、車はスマートフォンのテザリングなどの既知のネットワークにも自動で接続しません。自動接続させるにはオフにしてください。次回の接続から有効になります。</string>
     <string name="temporary_system_bars">システムバーを5秒間だけ表示</string>
     <string name="temporary_system_bars_description">有効にすると、設定メニューで指定した本数の指で上にスワイプすると、隠した車載端末のステータスバー・ナビゲーションバーを5秒間表示します。下スワイプは従来どおりDiPlay設定を開きます。端末側のジェスチャーと競合する場合はオフにしてください。機種によっては表示できません。</string>
     <string name="wheel_media_play_pause">ステアリングキーで再生・一時停止</string>

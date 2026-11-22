@@ -154,9 +154,20 @@ class WifiDirectChannelSettingsTest {
         assertFalse(prefs.getBoolean(AirPlayPersistence.KEY_WIFI_DIRECT_SCAN_PAUSE, true))
     }
 
-    @Test fun theScanPauseSwitchIsOnlyForWifiDirect() {
+    @Test fun theScanPauseSwitchIsForWifiDirectAndTheCarHotspotOnly() {
+        val title = activity.getString(R.string.settings_wifi_direct_scan_pause)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
-        assertNull(findSwitch(controls(), activity.getString(R.string.settings_wifi_direct_scan_pause)))
+        val hotspot = controls()
+        val switch = findSwitch(hotspot, title)!!
+        // The car hotspot's own description: the pause only runs where the car keeps its client on beside it.
+        val shown = texts(hotspot)
+        assertTrue(activity.getString(R.string.settings_car_hotspot_scan_pause_description) in shown)
+        assertFalse(activity.getString(R.string.settings_wifi_direct_scan_pause_description) in shown)
+        switch.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(AirPlayPersistence.loadWifiDirectScanPause(activity))
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.EXISTING_WIFI)
+        assertNull(findSwitch(controls(), title))
     }
 
     private fun findButton(view: View, text: String): Button? {
@@ -177,6 +188,12 @@ class WifiDirectChannelSettingsTest {
             findSwitch(view.getChildAt(index), title)?.let { return it }
         }
         return null
+    }
+
+    private fun texts(view: View): List<String> = when (view) {
+        is android.widget.TextView -> listOf(view.text.toString())
+        is ViewGroup -> (0 until view.childCount).flatMap { texts(view.getChildAt(it)) }
+        else -> emptyList()
     }
 
     private val choices get() = listOf(WifiP2pChannels.AUTO) + WifiP2pChannels.bandChoices + WifiP2pChannels.channels

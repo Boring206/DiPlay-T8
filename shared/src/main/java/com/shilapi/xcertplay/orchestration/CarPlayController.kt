@@ -2877,15 +2877,42 @@ class CarPlayController(
     // Kept across reconnects within this controller: resuming between attempts would start a scan.
     // close() sets [closed] under this lock, so a lease is either taken first and released by
     // close, or never taken.
-    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(wirelessResourceLock) {
-        if (closed || !WifiScanPause.eligible(backend)) return@synchronized
-        // Settings → Connection lets a driver keep the car's automatic joining, e.g. for the phone's hotspot (#755).
-        if (!appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
-                .getBoolean("wifi_direct_scan_pause", true)) {
-            if (wifiScanPause == null) debugLog("Wi-Fi scan pause off in Settings; the car keeps searching and joining networks")
-            return@synchronized
+    private fun pauseWifiScans(backend: WirelessHotspotBackend) {
+        // Read outside the lock: these are binder calls to the Wi-Fi service, and close() waits on the lock.
+        val client = if (backend == WirelessHotspotBackend.MANUAL_HOTSPOT) wifiClientState() else null
+        pauseWifiScans(backend, client)
+    }
+
+    private fun pauseWifiScans(backend: WirelessHotspotBackend, client: Pair<Boolean, android.net.wifi.SupplicantState?>?) =
+        synchronized(wirelessResourceLock) {
+            val clientSearching = client != null && WifiScanPause.clientSearching(client.first, client.second)
+            if (client != null && wifiScanPause == null) {
+                debugLog("Wi-Fi client beside the car hotspot: enabled=${client.first} state=${client.second} " +
+                    "searching=$clientSearching")
+            }
+            if (closed || !WifiScanPause.eligible(backend, clientSearchingBesideHotspot = clientSearching)) return@synchronized
+            // Settings → Connection lets a driver keep the car's automatic joining, e.g. for the phone's hotspot (#755).
+            if (!appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
+                    .getBoolean("wifi_direct_scan_pause", true)) {
+                if (wifiScanPause == null) debugLog("Wi-Fi scan pause off in Settings; the car keeps searching and joining networks")
+                return@synchronized
+            }
+            if (clientSearching && wifiScanPause == null) debugLog("Wi-Fi client is on and searching beside the car hotspot; pausing its search")
+            (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
         }
-        (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
+
+    /**
+     * The car's Wi-Fi client (station): whether it is on, and its supplicant state. Most units turn it off
+     * while their hotspot runs; [WifiScanPause.clientSearching] decides from these whether it searches.
+     */
+    @Suppress("DEPRECATION") // connectionInfo: the supplicant state is not hidden without location access.
+    private fun wifiClientState(): Pair<Boolean, android.net.wifi.SupplicantState?>? = try {
+        val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        wifi?.let { it.isWifiEnabled to it.connectionInfo?.supplicantState }
+    } catch (error: Exception) {
+        // A vendor Wi-Fi service that throws must not fail the CarPlay start: the pause is optional.
+        debugLog("Wi-Fi client state unreadable beside the car hotspot: ${error.javaClass.simpleName}")
+        null
     }
 
     private fun selectWirelessBluetoothDevice(adapter: BluetoothAdapter): BluetoothDevice {
