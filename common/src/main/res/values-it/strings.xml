@@ -695,8 +695,9 @@
     <string name="settings_usb_charging">Ricarica dell’iPhone</string>
     <string name="settings_usb_charging_normal">Normale (2,4 A)</string>
     <string name="settings_usb_charging_reduced">Ridotta (1,5 A)</string>
+    <string name="settings_usb_charging_medium">Media (1 A)</string>
     <string name="settings_usb_charging_low">Bassa (0,5 A)</string>
-    <string name="settings_usb_charging_description">Quanta corrente di ricarica DiPlay offre all’iPhone via USB. Se CarPlay cablato si interrompe ogni pochi secondi e l’iPhone si riconnette da solo, la porta USB dell’auto potrebbe non fornire abbastanza potenza: prova Ridotta, poi Bassa. L’iPhone si caricherà più lentamente. Si applica alla prossima connessione USB.</string>
+    <string name="settings_usb_charging_description">Quanta corrente di ricarica DiPlay offre all’iPhone via USB. Se CarPlay cablato si interrompe ogni pochi secondi e l’iPhone si riconnette da solo, la porta USB dell’auto potrebbe non fornire abbastanza potenza: prova Ridotta, poi Media, poi Bassa. L’iPhone si caricherà più lentamente. Si applica alla prossima connessione USB.</string>
     <string name="wheel_joystick_auto_off">Il joystick si spegne da solo</string>
     <string name="wheel_joystick_auto_off_description">Dopo 15 secondi senza pressioni, e quando parte un percorso, i tasti tornano a musica e volume.</string>
     <string name="wheel_joystick_on">Joystick attivo</string>

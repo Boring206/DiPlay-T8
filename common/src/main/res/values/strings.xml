@@ -719,8 +719,9 @@
     <string name="settings_usb_charging">iPhone charging</string>
     <string name="settings_usb_charging_normal">Normal (2.4 A)</string>
     <string name="settings_usb_charging_reduced">Reduced (1.5 A)</string>
+    <string name="settings_usb_charging_medium">Medium (1 A)</string>
     <string name="settings_usb_charging_low">Low (0.5 A)</string>
-    <string name="settings_usb_charging_description">How much charging current DiPlay offers the iPhone over USB. If wired CarPlay drops every few seconds and the iPhone reconnects by itself, the car\'s USB port may not supply enough power: try Reduced, then Low. The iPhone then charges more slowly. Applies at the next USB connection.</string>
+    <string name="settings_usb_charging_description">How much charging current DiPlay offers the iPhone over USB. If wired CarPlay drops every few seconds and the iPhone reconnects by itself, the car\'s USB port may not supply enough power: try Reduced, then Medium, then Low. The iPhone then charges more slowly. Applies at the next USB connection.</string>
     <string name="wheel_joystick_auto_off">Joystick turns off by itself</string>
     <string name="wheel_joystick_auto_off_description">After 15 seconds without a press, and when a route starts, the keys go back to music and volume.</string>
     <string name="wheel_joystick_on">Joystick on</string>

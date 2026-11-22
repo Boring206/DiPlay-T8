@@ -919,11 +919,22 @@ class AdaptiveSettingsUiTest {
             row.performClick()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertEquals(screen.getString(R.string.save), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
-            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.LOW))
+            // The labels are listed by hand, so each one must sit at its entry's index.
+            val labels = UsbChargingCurrent.entries.map {
+                screen.getString(when (it) {
+                    UsbChargingCurrent.NORMAL -> R.string.settings_usb_charging_normal
+                    UsbChargingCurrent.REDUCED -> R.string.settings_usb_charging_reduced
+                    UsbChargingCurrent.MEDIUM -> R.string.settings_usb_charging_medium
+                    UsbChargingCurrent.LOW -> R.string.settings_usb_charging_low
+                })
+            }
+            assertEquals(labels, (0 until dialog.listView.adapter.count).map { dialog.listView.adapter.getItem(it).toString() })
+            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.MEDIUM))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             shadowOf(Looper.getMainLooper()).idle()
 
-            assertEquals(UsbChargingCurrent.LOW, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals(UsbChargingCurrent.MEDIUM, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals("${screen.getString(R.string.settings_usb_charging)} · ${screen.getString(R.string.settings_usb_charging_medium)}", row.text.toString())
             assertTrue(PendingReconnect.isPending(session))
             assertEquals(0, stops)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)

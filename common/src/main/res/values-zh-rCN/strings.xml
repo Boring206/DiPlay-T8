@@ -680,8 +680,9 @@
     <string name="settings_usb_charging">iPhone 充电</string>
     <string name="settings_usb_charging_normal">标准（2.4 A）</string>
     <string name="settings_usb_charging_reduced">降低（1.5 A）</string>
+    <string name="settings_usb_charging_medium">中等（1 A）</string>
     <string name="settings_usb_charging_low">低（0.5 A）</string>
-    <string name="settings_usb_charging_description">DiPlay 通过 USB 允许 iPhone 使用的充电电流。如果有线 CarPlay 每隔几秒断开、iPhone 自行重新连接，可能是车机 USB 口供电不足：请先试「降低」，再试「低」。iPhone 充电会变慢。下次 USB 连接时生效。</string>
+    <string name="settings_usb_charging_description">DiPlay 通过 USB 允许 iPhone 使用的充电电流。如果有线 CarPlay 每隔几秒断开、iPhone 自行重新连接，可能是车机 USB 口供电不足：请先试「降低」，再试「中等」，最后试「低」。iPhone 充电会变慢。下次 USB 连接时生效。</string>
     <string name="wheel_joystick_auto_off">摇杆自动关闭</string>
     <string name="wheel_joystick_auto_off_description">15 秒内无按键操作或开始导航时，按键恢复控制音乐和音量。</string>
     <string name="wheel_joystick_on">摇杆已开启</string>

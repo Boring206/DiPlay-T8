@@ -683,8 +683,9 @@
     <string name="settings_usb_charging">iPhone şarjı</string>
     <string name="settings_usb_charging_normal">Normal (2,4 A)</string>
     <string name="settings_usb_charging_reduced">Azaltılmış (1,5 A)</string>
+    <string name="settings_usb_charging_medium">Orta (1 A)</string>
     <string name="settings_usb_charging_low">Düşük (0,5 A)</string>
-    <string name="settings_usb_charging_description">DiPlay\'in USB üzerinden iPhone\'a ne kadar şarj akımı sunduğu. Kablolu CarPlay birkaç saniyede bir kesiliyor ve iPhone kendi kendine yeniden bağlanıyorsa, aracın USB bağlantı noktası yeterli güç sağlamıyor olabilir: Azaltılmış\'ı, ardından Düşük\'ü deneyin. iPhone daha yavaş şarj olur. Sonraki USB bağlantısında geçerli olur.</string>
+    <string name="settings_usb_charging_description">DiPlay\'in USB üzerinden iPhone\'a ne kadar şarj akımı sunduğu. Kablolu CarPlay birkaç saniyede bir kesiliyor ve iPhone kendi kendine yeniden bağlanıyorsa, aracın USB bağlantı noktası yeterli güç sağlamıyor olabilir: Azaltılmış\'ı, ardından Orta\'yı, sonra Düşük\'ü deneyin. iPhone daha yavaş şarj olur. Sonraki USB bağlantısında geçerli olur.</string>
     <string name="wheel_joystick_auto_off">Kumanda kolu kendiliğinden kapanır</string>
     <string name="wheel_joystick_auto_off_description">Bir tuşa basılmadan 15 saniye geçtikten sonra ve bir rota başladığında, tuşlar tekrar müziğe ve ses düzeyine döner.</string>
     <string name="wheel_joystick_on">Kumanda kolu açık</string>

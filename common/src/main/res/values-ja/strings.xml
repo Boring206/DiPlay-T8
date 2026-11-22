@@ -717,8 +717,9 @@
     <string name="settings_usb_charging">iPhoneの充電</string>
     <string name="settings_usb_charging_normal">通常（2.4 A）</string>
     <string name="settings_usb_charging_reduced">低め（1.5 A）</string>
+    <string name="settings_usb_charging_medium">中（1 A）</string>
     <string name="settings_usb_charging_low">低（0.5 A）</string>
-    <string name="settings_usb_charging_description">DiPlayがUSB接続でiPhoneに提供する充電電流を設定します。有線CarPlayが数秒ごとに切断・再接続される場合は、車のUSBポートの電力不足が考えられます。「低減」、次に「低」を試してください。充電速度は遅くなります。次回のUSB接続から反映されます。</string>
+    <string name="settings_usb_charging_description">DiPlayがUSB接続でiPhoneに提供する充電電流を設定します。有線CarPlayが数秒ごとに切断・再接続される場合は、車のUSBポートの電力不足が考えられます。「低め」、「中」、「低」の順に試してください。充電速度は遅くなります。次回のUSB接続から反映されます。</string>
     <string name="wheel_joystick_auto_off">ジョイスティックを自動でオフ</string>
     <string name="wheel_joystick_auto_off_description">15秒間操作しない場合と、経路案内の開始時に、キーを通常の音楽・音量操作へ戻します。</string>
     <string name="wheel_joystick_on">ジョイスティック：オン</string>

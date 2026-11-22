@@ -636,8 +636,9 @@
     <string name="settings_usb_charging">Зарядка iPhone</string>
     <string name="settings_usb_charging_normal">Обычная (2,4 А)</string>
     <string name="settings_usb_charging_reduced">Пониженная (1,5 А)</string>
+    <string name="settings_usb_charging_medium">Средняя (1 А)</string>
     <string name="settings_usb_charging_low">Низкая (0,5 А)</string>
-    <string name="settings_usb_charging_description">Ток зарядки, который DiPlay разрешает iPhone по USB. Если проводной CarPlay обрывается каждые несколько секунд и iPhone сам переподключается, USB-порт автомобиля может не выдавать достаточно питания: попробуйте «Пониженная», затем «Низкая». iPhone будет заряжаться медленнее. Применяется при следующем USB-подключении.</string>
+    <string name="settings_usb_charging_description">Ток зарядки, который DiPlay разрешает iPhone по USB. Если проводной CarPlay обрывается каждые несколько секунд и iPhone сам переподключается, USB-порт автомобиля может не выдавать достаточно питания: попробуйте «Пониженная», затем «Средняя», затем «Низкая». iPhone будет заряжаться медленнее. Применяется при следующем USB-подключении.</string>
     <string name="wheel_joystick_auto_off">Джойстик выключается сам</string>
     <string name="wheel_joystick_auto_off_description">Через 15 секунд без нажатий и когда начинается маршрут кнопки снова управляют музыкой и громкостью.</string>
     <string name="wheel_joystick_on">Джойстик включён</string>

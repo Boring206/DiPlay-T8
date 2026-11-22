@@ -636,8 +636,9 @@
     <string name="settings_usb_charging">شحن iPhone</string>
     <string name="settings_usb_charging_normal">عادي (2.4 A)</string>
     <string name="settings_usb_charging_reduced">مخفّض (1.5 A)</string>
+    <string name="settings_usb_charging_medium">متوسط (1 A)</string>
     <string name="settings_usb_charging_low">منخفض (0.5 A)</string>
-    <string name="settings_usb_charging_description">تيار الشحن الذي يسمح DiPlay لجهاز iPhone بسحبه عبر USB. إذا انقطع CarPlay السلكي كل بضع ثوانٍ وأعاد iPhone الاتصال من تلقاء نفسه، فقد لا يوفّر منفذ USB في السيارة طاقة كافية: جرّب «مخفّض» ثم «منخفض». يصبح شحن iPhone أبطأ. يُطبَّق عند اتصال USB التالي.</string>
+    <string name="settings_usb_charging_description">تيار الشحن الذي يسمح DiPlay لجهاز iPhone بسحبه عبر USB. إذا انقطع CarPlay السلكي كل بضع ثوانٍ وأعاد iPhone الاتصال من تلقاء نفسه، فقد لا يوفّر منفذ USB في السيارة طاقة كافية: جرّب «مخفّض» ثم «متوسط» ثم «منخفض». يصبح شحن iPhone أبطأ. يُطبَّق عند اتصال USB التالي.</string>
     <string name="wheel_joystick_auto_off">عصا التحكم تتوقف تلقائيًا</string>
     <string name="wheel_joystick_auto_off_description">بعد 15 ثانية دون ضغط، وعند بدء مسار، تعود الأزرار إلى التحكم في الموسيقى والصوت.</string>
     <string name="wheel_joystick_on">عصا التحكم مفعّلة</string>
