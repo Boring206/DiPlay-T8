@@ -8,6 +8,10 @@ internal data class BydHudGuidance(
     val gaode: Int = 0,
     val road: String = "",
     val arrivalEpochSeconds: Long? = null,
+    /** Route time left, for an arrival time when the iPhone sends no arrival epoch. */
+    val remainingSeconds: Long? = null,
+    /** Wall-clock time [remainingSeconds] was received, so an arrival time from it does not creep later. */
+    val remainingAtMillis: Long? = null,
 )
 
 internal data class BydAppleManeuver(
@@ -40,6 +44,7 @@ internal class BydHudRouteState(
      */
     private val keepAcrossNoRoute: Boolean = false,
     private val noRouteHideNs: Long = NO_ROUTE_HIDE_NS,
+    private val wallMillis: () -> Long = System::currentTimeMillis,
 ) {
     private data class Maneuver(val type: Int, val drivingSide: Int, val afterRoad: String)
 
@@ -50,6 +55,7 @@ internal class BydHudRouteState(
     private var currentRoad = ""
     private var arrivalEpochSeconds: Long? = null
     private var remainingSeconds: Long? = null
+    private var remainingAtMillis: Long? = null
     private var remainingMeters: Long? = null
     private var emptyListSinceNs: Long? = null
     private var lastRouteUpdateNs: Long? = null
@@ -74,6 +80,8 @@ internal class BydHudRouteState(
             gaode = gaode,
             road = roadFor(maneuver),
             arrivalEpochSeconds = arrivalEpochSeconds,
+            remainingSeconds = remainingSeconds,
+            remainingAtMillis = remainingAtMillis,
         )
     }
 
@@ -94,6 +102,7 @@ internal class BydHudRouteState(
         currentRoad = ""
         arrivalEpochSeconds = null
         remainingSeconds = null
+        remainingAtMillis = null
         remainingMeters = null
         emptyListSinceNs = null
         lastRouteUpdateNs = null
@@ -153,7 +162,10 @@ internal class BydHudRouteState(
                 type == 0x01 && valueLength >= 1 -> state = data[value].toInt() and 0xff
                 type == 0x03 -> currentRoad = utf8(data, value, valueLength)
                 type == 0x05 && valueLength >= 8 -> arrivalEpochSeconds = u64(data, value).takeIf { it > 0 }
-                type == 0x06 && valueLength >= 8 -> remainingSeconds = u64(data, value).takeIf { it >= 0 }
+                type == 0x06 && valueLength >= 8 -> {
+                    remainingSeconds = u64(data, value).takeIf { it >= 0 }
+                    remainingAtMillis = wallMillis()
+                }
                 type == 0x07 && valueLength >= 4 -> remainingMeters = u32(data, value)
                 type == 0x0a && valueLength >= 4 -> {
                     distance = u32(data, value).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()

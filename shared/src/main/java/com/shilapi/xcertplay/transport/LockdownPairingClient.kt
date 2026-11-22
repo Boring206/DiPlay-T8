@@ -85,6 +85,40 @@ class LockdownPairingClient(
         }
     }
 
+    /**
+     * Reads the iPhone's DevicePublicKey over one plaintext connection, closed before returning.
+     * It needs no pairing or session, so the caller can look up the record saved for this iPhone
+     * before deciding whether to [pair].
+     */
+    @Throws(IphoneUsbException::class, LockdownPairingException::class)
+    fun devicePublicKey(
+        label: String,
+        timeoutMillis: Long,
+        isCancelled: () -> Boolean = { false },
+    ): ByteArray {
+        require(label.isNotBlank()) { "label must not be blank" }
+        require(timeoutMillis in 1..MAXIMUM_TOTAL_TIMEOUT_MILLIS) {
+            "timeoutMillis must be between 1 and $MAXIMUM_TOTAL_TIMEOUT_MILLIS"
+        }
+        val deadline = Deadline(timeoutMillis)
+        val connection = host.connect(
+            destinationPort = Iap2UsbMuxHost.LOCKDOWN_PORT,
+            timeoutMillis = stepTimeoutMillis(deadline),
+        )
+        return LockdownPlistChannel(connection).use { channel ->
+            devicePublicKey(channel, label, deadline, isCancelled)
+        }
+    }
+
+    private fun devicePublicKey(
+        channel: LockdownPlistChannel,
+        label: String,
+        deadline: Deadline,
+        isCancelled: () -> Boolean,
+    ): ByteArray =
+        (getValue(channel, label, "DevicePublicKey", deadline, isCancelled) as? LockdownPlistValue.Data)?.bytes
+            ?: throw LockdownPairingException.InvalidResponse("DevicePublicKey was not data")
+
     private fun generatePairRecord(
         channel: LockdownPlistChannel,
         label: String,
@@ -93,14 +127,12 @@ class LockdownPairingClient(
         deadline: Deadline,
         isCancelled: () -> Boolean,
     ): LockdownPairRecord {
-        val devicePublicKey = getValue(channel, label, "DevicePublicKey", deadline, isCancelled)
-            as? LockdownPlistValue.Data
-            ?: throw LockdownPairingException.InvalidResponse("DevicePublicKey was not data")
+        val devicePublicKey = devicePublicKey(channel, label, deadline, isCancelled)
         val wifiAddress = getValue(channel, label, "WiFiAddress", deadline, isCancelled)
             as? LockdownPlistValue.Text
             ?: throw LockdownPairingException.InvalidResponse("WiFiAddress was not text")
         return LockdownPairRecordGenerator.generate(
-            devicePublicKeyPkcs1Pem = devicePublicKey.bytes,
+            devicePublicKeyPkcs1Pem = devicePublicKey,
             wifiAddress = wifiAddress.value,
             hostId = hostId,
             systemBuid = systemBuid,

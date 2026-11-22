@@ -12,6 +12,10 @@ Normal route end, disconnect, disabling navigation output and stale guidance tri
 
 Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in DiPlay it is enabled by default when available. Debug-only receivers/demos require Android's DUMP permission and are absent from release manifests. Development starter and vendor-access experiments are not part of the production navigation path.
 
+## Arrival time on the Denza N9 HUD (untested)
+
+On other firmware DiPlay sends the windshield HUD's SOME/IP guidance message with the turn arrow, distance and road name, and leaves its arrival-time field (field 26) empty. On the Denza N9 that empty field shows as "到" ("arrive") with no time ([#301](https://github.com/shihabal3amri/DiPlay/issues/301)). On the N9 firmware only (OTA V1.8 `…/eng.build20260705.011226` and V1.9 `…/eng.build20260902.221210`), DiPlay fills field 26 with the arrival time: the iPhone's estimated arrival, otherwise the route time left added to the time the iPhone sent it, as `HH:mm`, or `h:mm` when the head unit uses a 12-hour clock. A stock N9 HUD shows "13:18到", so DiPlay sends only the time and expects the HUD to add "到"; that form is not confirmed on the car (`BydHudArrival.TEMPLATE` changes it). Every other car keeps the empty field: no car has been sent a non-empty field 26 before, so nothing shows how other HUDs draw it. On the N9 a saved report's `HUD gateway accepted guidance` line ends with `arrival field26=<time>`, or `none` when the iPhone has sent neither value yet.
+
 ## Cluster guidance on FCE head units (needs no ADB)
 
 Some head units built on the FCE/Coagent T7 platform have an instrument cluster with a CAN navigation view. The stock head-unit service sends that view only navigation start and stop and drops each guidance update, so it stays empty. When the head unit has the stock `fce_misc_service_hal_property` service, DiPlay writes the guidance there as its normal Android UID through `ICarProperty.setProperty` (transaction 5): navigation status 2 (`0x214000a5`), the next-turn glyph (`0x21400099`), and the distance in metres (`0x21400098`). The cluster formats kilometres itself. The second icon set (`0x2140009a`) is held at 0, because a leftover value blanks the U-turn and roundabout glyphs.
@@ -61,11 +65,14 @@ The optional centre-screen map card mirrors that same dashboard stream. **Keep t
 
 ### DiLink 5.1 theme profile
 
-The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. The Leopard 5 Ultra firmware `…/eng.build20260705.021352` uses it unchanged, and the Denza N9 firmware `…/eng.build20260705.011226` uses it on a 2560×720 cluster with every position below scaled by 4/3 across and a 2560×720 stream (inferred from photos, not measured; see [compatibility](COMPATIBILITY.md)). Other firmware retains the original PR display selection, renderer and settings.
+The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. The Leopard 5 Ultra firmware `…/eng.build20260705.021352` uses it unchanged, and the Denza N9 firmware (OTA V1.8 `…/eng.build20260705.011226` and V1.9 `…/eng.build20260902.221210`) uses it on a 2560×720 cluster with a 2560×720 stream (see [compatibility](COMPATIBILITY.md)). Other firmware retains the original PR display selection, renderer and settings.
 
-- Map uses shared display `_0`, with a 1920×480 viewport at y=144 and contrast bands behind the instrument readouts.
+The profile matches these exact builds. An OTA changes the build, and until DiPlay lists the new one the car gets the original path: the plain layer, a stream sized for it and no Instrument theme settings. The N9 did with V1.9 (its report requested 2136×600 on the 2560×720 plain layer), and the Leopard 5 entry can do the same.
+
+- Map uses shared display `_0`, with a 1920×480 viewport at y=144 and contrast bands behind the instrument readouts. On the N9 it is scaled by 4/3 across, 2560×480 at y=144 (inferred from photos, not measured).
 - Scenario and Simple use shared display `_1`, with a 600×720 side viewport at x=1320. Everything outside the side map is transparent. No white mini-map shading is added.
-- The iPhone sends one continuous 1920×720 map. DiPlay crops it at native scale into each viewport, centered horizontally and aligned to the bottom to retain the vehicle marker. Theme changes do not restart CarPlay. The side crop shows less surrounding map area than a separately negotiated portrait stream.
+- On the Denza N9 the side viewport is also 600×720, at x=1960 against the right edge. That is the stock mini map's `MapSurfaceView` in BYD's `launchermap` dumps on OTA V1.8 and V1.9 ([#301](https://github.com/shihabal3amri/DiPlay/issues/301)), inside a `MeterSmallScreenActivity` window that fills the 2560×720 cluster. 0.2.22 scaled the 1920 box by 4/3 across, so its side map started 200 px too far left. BYD also lays a 720 px `mask_layout` over the card from x=1900, most likely the map's faded edge. DiPlay draws no fade, as on the 1920 cluster.
+- The iPhone sends one continuous map, 1920×720 (2560×720 on the N9). DiPlay crops it at native scale into each viewport, centered horizontally and aligned to the bottom to retain the vehicle marker. Theme changes do not restart CarPlay. The side crop shows less surrounding map area than a separately negotiated portrait stream.
 - The two rendering surfaces remain alive when cards close. Window opacity controls visibility, and direct decoder surface handoffs preserve its video reference frames.
 
 Enable **Follow instrument theme and map card** to follow the stock cluster activities. Android Usage Access is required because BYD's theme API is signature-protected. This firmware has no working Usage Access settings page, so the owner must approve one-time ADB setup. For the HUD Test package:
@@ -171,10 +178,17 @@ that every vehicle feature id/value or partial-write outcome is correct on a par
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
 
-BYD plays a third-party call as media, so the car's own echo canceller never sees it and the amplifier's bass applies to the voice. Two experimental call settings, off by default and applied at the next connection, can compensate inside DiPlay:
+How the car plays a third-party call depends on the route:
+
+- **On the voice-call output.** DiPlay's default call track uses `USAGE_VOICE_COMMUNICATION`. On a BYD Han (DiLink 3) that lands on a `DIRECT|VOIP_RX` output with the "Volume listener for voice call" effect (measured with `dumpsys media.audio_flinger`). There the mixer applies 0 dB, and the call is louder than music at the same volume step on that car.
+- **As media.** With the car Bluetooth paused DiPlay plays the call on the media output (`AudioChannelMapper.playCallOnSpeaker`), and some firmware reclassifies DiPlay's voice stream as music (`BydCarPlayCall.kt`). The car's own echo canceller never sees such a call and the amplifier's bass applies to the voice.
+
+Two experimental call settings, off by default and applied at the next connection, can compensate inside DiPlay:
 
 - **Call echo cancellation** runs SpeexDSP's echo canceller (250 ms tail, BSD licensed, `shared/src/main/jni/speexdsp`) on the call microphone, using what DiPlay itself just played as the reference. It needs mono capture at the downlink sample rate; otherwise the call continues with the platform effects only (`microphone echo canceller enabled=false` in the log).
-- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback.
+- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback. It targets the calls that play as media.
+
+**Call voice level** (Settings → Audio → Audio routing) is a separate slider from 0 to -20 dB, default 0 dB, next to **Navigation guidance volume**. It lowers the caller's voice in the PCM itself (`NavigationAudioGain.scalePcm16`), whichever output the call uses, and applies to a running call without a reconnect. Evidence from one Han, measured without a DiPlay build: the voice-call output needed about 13 dB less than music for the same speech file, and a real caller read a median of -17.9 dBFS (90th percentile -10.4, peak -6.5) in the 50 ms `Signal power history` that `dumpsys media.audio_flinger` prints for that output, against -22.4 / -17.0 / -13.9 for a -20 dBFS reference speech file. A listening comparison, played from a separate test app (not DiPlay) at the same volume step with the same speech file, found the call at 0 and -6 dB the least clear and -12 to -16 dB clean, which is the range the setting text quotes. Choose the level by ear; owners of cars that play calls as media usually want 0 dB.
 
 With **CarPlay calls on the dashboard** on, DiPlay arms the call watcher when a CarPlay session starts, so the first call's caller name reaches the cluster and HUD without waiting for the watcher to launch. An armed watcher makes no vehicle writes; it is cancelled when the session ends or the setting is turned off.
 

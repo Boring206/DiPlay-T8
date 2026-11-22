@@ -61,4 +61,11 @@ class VoiceFilterTest {
         VoiceFilter(rate, 1).process(pcm, 100, pcm.size - 100)
         assertArrayEquals(untouched, pcm.copyOfRange(0, 100))
     }
+
+@Test fun aFilterWithoutChannelsLeavesThePcmUntouched() {
+        val pcm = tone(1_000.0, 1)
+        val original = pcm.copyOf()
+        VoiceFilter(rate, 0).process(pcm, 0, pcm.size)
+        assertArrayEquals(original, pcm)
+    }
 }

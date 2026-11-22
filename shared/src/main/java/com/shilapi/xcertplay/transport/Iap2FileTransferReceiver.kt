@@ -22,10 +22,16 @@ class Iap2FileTransferReceiver(
 
     private data class Pending(
         val expectedBytes: Int,
-        val output: ByteArrayOutputStream = ByteArrayOutputStream(expectedBytes),
+        // Grow with real DATA only. Pre-sizing to expectedBytes would let a 12-byte Setup
+        // datagram allocate up to maximumArtworkBytes before a single payload byte arrives.
+        val output: ByteArrayOutputStream = ByteArrayOutputStream(),
     )
 
     private val pending = LinkedHashMap<Int, Pending>()
+
+    // Aggregate cap across all pending ids so several half-open transfers cannot each grow to
+    // maximumArtworkBytes. Equals a single full-size transfer, so that normal path still fits.
+    private val maximumTotalBufferedBytes = maximumArtworkBytes.toLong()
 
     init {
         require(maximumArtworkBytes > 0)
@@ -72,6 +78,12 @@ class Iap2FileTransferReceiver(
         val transfer = pending[id] ?: return Outcome()
         val count = datagram.size - HEADER_BYTES
         if (count > transfer.expectedBytes - transfer.output.size()) {
+            pending.remove(id)
+            return rejected(id)
+        }
+        // Bound the aggregate buffer across every pending id so many half-open transfers cannot
+        // each accumulate up to maximumArtworkBytes. A single full-size transfer still fits.
+        if (pending.values.sumOf { it.output.size().toLong() } + count > maximumTotalBufferedBytes) {
             pending.remove(id)
             return rejected(id)
         }

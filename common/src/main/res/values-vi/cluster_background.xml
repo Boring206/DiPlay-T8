@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_background_motion">Nền chuyển động</string>
+    <string name="settings_cluster_background_motion_description">Tắt theo mặc định. Bật chuyển động nền chậm khi đang phát nhạc. Khi tắt, chuyển bài vẫn có hiệu ứng mờ dần.</string>
+</resources>
