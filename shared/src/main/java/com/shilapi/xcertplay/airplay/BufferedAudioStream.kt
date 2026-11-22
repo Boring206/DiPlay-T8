@@ -126,6 +126,13 @@ internal class BufferedAudioStream(
                     if (isStaleLocked(frame)) return@synchronized
                     queue.addLast(frame)
                     queuedBytes += frame.rtp.size
+                    // The frontier has served its purpose: frames arrive in order over
+                    // one TCP connection, so once a frame at or after it is queued,
+                    // nothing older can follow. Clear it here, or the 16-bit compare
+                    // flips after 32 768 frames (~11.7 min) and receive() silently
+                    // drops the next ~11.7 min of audio.
+                    val frontier = flushUntilSeq
+                    if (frontier != null && !seqBefore(frame.sequence, frontier)) flushUntilSeq = null
                     lock.notifyAll()
                     // Past the floor, hold the intake near FILL_RATE_MULTIPLE times real time.
                     // Reading the remaining two minutes as fast as TCP allows is a multi-megabit
@@ -246,14 +253,20 @@ internal class BufferedAudioStream(
      * 32-bit range past the old frames, [before] reads the old frames as *after* the flush
      * point and keeps them — the old song then plays from the socket backlog while the phone
      * shows the new one. Sequences run through the whole session, so they cannot invert.
-     * Without a sequence the timestamp drop is kept as the fallback.
+     * Without a sequence the timestamp drop is kept as the fallback. The frontier
+     * clears itself in receive() once a frame at or after it is queued, so it cannot
+     * outlive the skip that set it.
      */
     fun flush(untilTimestamp: Long?, untilSeq: Long? = null) = synchronized(lock) {
         if (closed.get()) return@synchronized
         restoreFedLocked()
         if (untilSeq != null) {
             dropBeforeSeqLocked(untilSeq)
-            if (untilTimestamp != null) flushUntil = untilTimestamp
+            // The timestamp is in the old track's timeline: once the sequence
+            // frontier clears, `before(newFrame, flushUntil)` would drop new-track
+            // frames that arrive before SETRATE. SETRATE already sets flushUntil
+            // from its own rtpTime, so nothing is kept here.
+            flushUntil = null
         } else {
             flushUntilSeq = null
             if (untilTimestamp != null) dropBeforeLocked(untilTimestamp)

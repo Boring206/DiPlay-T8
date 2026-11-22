@@ -450,6 +450,91 @@ class BufferedAudioStreamTest {
     }
 
     @Test
+    fun framesFarPastTheSequenceFrontierStillReachTheSink() {
+        // The frontier is a 16-bit compare: while it stays set, a frame 32 769
+        // past it reads as stale and receive() silently drops the next ~11.7 min
+        // of audio. Once a frame at or after the frontier is queued, nothing
+        // older can follow over the single TCP connection, so the frontier clears
+        // and later frames — however far past it — reach the sink.
+        val sink = RecordingSink()
+        val stream = BufferedAudioStream(key, format, sink)
+        try {
+            stream.start()
+            Socket(InetAddress.getLoopbackAddress(), stream.port).use { socket ->
+                val out = DataOutputStream(socket.getOutputStream())
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 1000 + i, timestamp = 1_390_997_214L + i * 1_024L, payload = byteArrayOf(0x21, i.toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { queuedFrames(stream) == 10 }
+
+                stream.flush(untilTimestamp = 1_396_005_598L, untilSeq = 1_500L)
+                assertEquals(0, queuedFrames(stream))
+
+                val now = BigInteger.valueOf(2_208_988_800L + 100L).shiftLeft(32)
+                stream.setRate(rtpTime = 4_140_849_176L, newRate = 1, nowNtp = now)
+                // The first new-track frame sits exactly on the frontier and clears it.
+                val first = seal(sequence = 1500, timestamp = 4_140_849_176L, payload = byteArrayOf(0x21, 0x20))
+                out.writeShort(first.size + 2); out.write(first)
+                // Frames 32 769 and more past the frontier: the 16-bit compare would
+                // read them as stale while the frontier was still set.
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 1500 + 32_769 + i, timestamp = 4_140_849_176L + (i + 1) * 1_024L, payload = byteArrayOf(0x21, (0x30 + i).toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { sink.rtp.size >= 11 }
+                Thread.sleep(150)
+                assertEquals(11, sink.rtp.size)
+                assertEquals(listOf(4_140_849_176L) + (1..10).map { 4_140_849_176L + it * 1_024L },
+                    sink.rtp.map { it.toLong() and 0xffff_ffffL })
+            }
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun newTrackFramesBetweenFlushAndSetRateAreKept() {
+        // Frames that arrive between FLUSHBUFFERED and SETRATE: their timestamps
+        // are on the new track's timeline, which reads as "before" the old
+        // flushUntilTS on the 32-bit circle, so keeping that timestamp after a
+        // sequence flush would drop them once the frontier clears. The sequence
+        // branch stores no timestamp, so all of them are kept.
+        val sink = RecordingSink()
+        val stream = BufferedAudioStream(key, format, sink)
+        try {
+            stream.start()
+            Socket(InetAddress.getLoopbackAddress(), stream.port).use { socket ->
+                val out = DataOutputStream(socket.getOutputStream())
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 1000 + i, timestamp = 1_390_997_214L + i * 1_024L, payload = byteArrayOf(0x21, i.toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { queuedFrames(stream) == 10 }
+
+                stream.flush(untilTimestamp = 1_396_005_598L, untilSeq = 1_500L)
+                assertEquals(0, queuedFrames(stream))
+
+                // No SETRATE yet: the new track's frames arrive first, with
+                // timestamps that read as "before" the old flushUntilTS.
+                assertTrue(BufferedAudioStream.before(4_140_849_176L, 1_396_005_598L))
+                for (i in 0 until 10) {
+                    val body = seal(sequence = 2000 + i, timestamp = 4_140_849_176L + i * 1_024L, payload = byteArrayOf(0x21, (0x20 + i).toByte()))
+                    out.writeShort(body.size + 2); out.write(body)
+                }
+                out.flush()
+                waitFor { queuedFrames(stream) == 10 }
+                assertEquals(10, queuedFrames(stream))
+            }
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
     fun setRateStartsPlaybackFromItsTimeAndPausesAndFlushesStopTheOutput() {
         val sink = RecordingSink()
         val stream = BufferedAudioStream(key, format, sink)

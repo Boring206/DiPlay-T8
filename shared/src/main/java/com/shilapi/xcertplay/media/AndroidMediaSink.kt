@@ -1893,8 +1893,9 @@ private class AudioRenderer(
         AmbientMusicController.closeRenderer(ambientRendererToken)
         running = false
         // Drop packets queued for this track. They belong to the song playing
-        // before a skip or pause, and the next renderer starts from its own
-        // queue; replaying them would mix the old song into the new one.
+        // before a skip or pause. Nothing replays them: the worker stops
+        // reading once `running` is false, and the next renderer starts from
+        // its own queue — clearing here only frees them early.
         queue.clear()
         // Silence the track now, on the calling thread. The worker thread only
         // flushes it in its finally block, after a blocking write returns —
