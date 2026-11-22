@@ -51,6 +51,23 @@ internal object BydAmbientLightWorkerProtocol {
         return snapshot
     }
 
+    /**
+     * One apply. Reads the lamp first and calls [write] only when [BydAmbientLampHold] allows it; [write] sets the
+     * lamp and returns its readback. Replies `applied=` after a write, or `held=` with the lamp as read.
+     */
+    fun applyOrHold(
+        hold: BydAmbientLampHold.State,
+        nowMillis: Long,
+        read: () -> BydAmbientLightPolicy.Snapshot,
+        write: () -> BydAmbientLightPolicy.Snapshot,
+    ): Pair<BydAmbientLampHold.State, String> {
+        val current = read()
+        val decision = BydAmbientLampHold.beforeApply(hold, current, nowMillis)
+        if (!decision.write) return decision.state to "held=${current.encode()}"
+        val readback = write()
+        return BydAmbientLampHold.written(readback) to "applied=${readback.encode()}"
+    }
+
     fun readLine(input: InputStream): String? {
         val b = java.io.ByteArrayOutputStream()
         repeat(MAX_LINE_BYTES + 1) {
@@ -105,6 +122,8 @@ object BydAmbientLightTool {
         try {
             if (device == null) { println("error init"); println("done"); System.out.flush(); return }
             var lastSetNanos = 0L
+            // The lamp as this session last left it; set at begin, before any write (#1332).
+            var hold: BydAmbientLampHold.State? = null
             var stop = false
             while (!stop) {
                 val line = BydAmbientLightWorkerProtocol.readLine(System.`in`) ?: break
@@ -119,7 +138,13 @@ object BydAmbientLightTool {
                             else {
                                 val s = BydAmbientLightWorkerProtocol.snapshotForBegin(req, device::read)
                                 if (!BydAmbientLightPolicy.validSnapshot(s)) "error unsupported-state"
-                                else { snapshotRef.compareAndSet(null, s); "begun=${s.encode()}" }
+                                else {
+                                    // A retry's seed is the original from an earlier session; compare with the lamp now.
+                                    val lamp = device.read()
+                                    snapshotRef.compareAndSet(null, s)
+                                    hold = BydAmbientLampHold.State(lamp)
+                                    "begun=${s.encode()}"
+                                }
                             }
                         }
                         "apply" -> {
@@ -128,15 +153,22 @@ object BydAmbientLightTool {
                             if (!BydAmbientLightPolicy.validSnapshot(s)) throw IllegalStateException("unsupported-state")
                             val wait = TimeUnit.NANOSECONDS.toMillis(200_000_000L - (System.nanoTime() - lastSetNanos)).coerceAtLeast(0)
                             if (wait > 0) Thread.sleep(wait)
-                            val result = device.set(color, bright, area)
-                            lastSetNanos = System.nanoTime()
-                            if (result != 0) throw IllegalStateException("set-result-$result")
-                            awaitReadback(device) { r -> when (area) {
-                                1 -> r.frontColor == color && r.frontBrightness == bright && r.area == area
-                                2 -> r.backColor == color && r.backBrightness == bright && r.area == area
-                                else -> r.frontColor == color && r.backColor == color && r.frontBrightness == bright && r.backBrightness == bright && r.area == area
-                            } }
-                            "applied=${device.read().encode()}"
+                            val begun = hold ?: throw IllegalStateException("begin-required")
+                            val now = TimeUnit.NANOSECONDS.toMillis(System.nanoTime())
+                            // Unchecked: a warning may show values outside DiPlay's range, and those hold too.
+                            val (next, reply) = BydAmbientLightWorkerProtocol.applyOrHold(begun, now, device::readRaw) {
+                                val result = device.set(color, bright, area)
+                                lastSetNanos = System.nanoTime()
+                                if (result != 0) throw IllegalStateException("set-result-$result")
+                                awaitReadback(device) { r -> when (area) {
+                                    1 -> r.frontColor == color && r.frontBrightness == bright && r.area == area
+                                    2 -> r.backColor == color && r.backBrightness == bright && r.area == area
+                                    else -> r.frontColor == color && r.backColor == color && r.frontBrightness == bright && r.backBrightness == bright && r.area == area
+                                } }
+                                device.read()
+                            }
+                            hold = next
+                            reply
                         }
                         "minimum-stop" -> {
                             check(snapshotRef.get() != null) { "begin-required" }
@@ -263,10 +295,14 @@ private class AmbientDevice {
         return cls.getField(name).getInt(null)
     }
     private fun get(name: String): Int = (getInt.invoke(manager, BydAmbientLightPolicy.TYPE, ids.getValue(name)) as Number).toInt()
-    fun read(): BydAmbientLightPolicy.Snapshot {
+    /** The lamp as the car reports it, unchecked. */
+    fun readRaw(): BydAmbientLightPolicy.Snapshot {
         check(get("SET_HAS_INTERIOR_ATMOSPHERE_LAMP") == 1) { "lamp-not-supported" }
-        val s = BydAmbientLightPolicy.Snapshot(get("SET_IAL_FRONT_COLOR"), get("SET_IAL_BACK_COLOR"),
+        return BydAmbientLightPolicy.Snapshot(get("SET_IAL_FRONT_COLOR"), get("SET_IAL_BACK_COLOR"),
             get("SET_IAL_FRONT_BRIGHTNESS"), get("SET_IAL_BACK_BRIGHTNESS"), get("SET_INTERIOR_ATMOSPHERE_LAMP_AREA"))
+    }
+    fun read(): BydAmbientLightPolicy.Snapshot {
+        val s = readRaw()
         check(BydAmbientLightPolicy.validSnapshot(s)) { "invalid-lamp-state" }
         return s
     }

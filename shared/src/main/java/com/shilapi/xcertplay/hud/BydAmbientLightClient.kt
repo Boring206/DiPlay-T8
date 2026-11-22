@@ -16,6 +16,8 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
     data class State(val frontColor: Int, val backColor: Int, val frontBrightness: Int, val backBrightness: Int, val area: Int)
     enum class Phase { IDLE, STARTING, ACTIVE, RESTORING, FAILED, CLOSED }
     data class Status(val phase: Phase, val generation: Long, val lastError: String? = null)
+    /** The lamp after one apply; [held] when the worker wrote nothing because the lamp changed outside DiPlay. */
+    data class Applied(val state: State, val held: Boolean)
 
     private val app = context.applicationContext
     private val executor = ScheduledThreadPoolExecutor(1) { r -> Thread(r, "diplay-ambient-light").apply { isDaemon = true } }
@@ -29,7 +31,7 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
     private var lastApplyAtNanos = 0L
     @Volatile private var closed = false
 
-    private data class Pending(val generation: Long, val area: Int, val color: Int, val brightness: Int, val future: CompletableFuture<State>)
+    private data class Pending(val generation: Long, val area: Int, val color: Int, val brightness: Int, val future: CompletableFuture<Applied>)
 
     fun status(): Status = status
 
@@ -69,9 +71,9 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
     }
 
     /** Latest-value queue, capped at 5 Hz. A replaced apply completes with CancellationException. */
-    fun apply(area: Int, color: Int, rawBrightness: Int): CompletableFuture<State> {
+    fun apply(area: Int, color: Int, rawBrightness: Int): CompletableFuture<Applied> {
         require(BydAmbientLightPolicy.validApply(area, color, rawBrightness))
-        val result = CompletableFuture<State>()
+        val result = CompletableFuture<Applied>()
         val ticket = generation.get()
         executor.execute {
             if (closed || status.phase != Phase.ACTIVE || ticket != generation.get()) {
@@ -168,10 +170,13 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
         }
         pending = null
         try {
-            val result = exchange("apply ${command.area} ${command.color} ${command.brightness}")
-                ?.takeIf { it.startsWith("applied=") }?.removePrefix("applied=") ?: error("worker-apply-failed")
+            val reply = exchange("apply ${command.area} ${command.color} ${command.brightness}")
+            val held = reply?.startsWith("held=") == true
+            val result = reply?.takeIf { held || it.startsWith("applied=") }?.substringAfter('=') ?: error("worker-apply-failed")
             lastApplyAtNanos = System.nanoTime()
-            if (ticket == generation.get()) command.future.complete(parseState(result))
+            // A held lamp may show values outside DiPlay's range; they are only reported, never written.
+            val state = if (held) parseFields(result) else parseState(result)
+            if (ticket == generation.get()) command.future.complete(Applied(state, held))
             else command.future.completeExceptionally(java.util.concurrent.CancellationException("stale-generation"))
         } catch (t: Throwable) {
             command.future.completeExceptionally(t)
@@ -217,10 +222,14 @@ internal class BydAmbientLightClient(context: Context) : AutoCloseable {
         try { oldStream?.close() } finally { oldAdb?.close() }
     }
 
-    private fun parseState(value: String): State {
+    private fun parseFields(value: String): State {
         val fields = value.trim().split(',').map { it.toInt() }
         require(fields.size == 5)
-        val s = State(fields[0], fields[1], fields[2], fields[3], fields[4])
+        return State(fields[0], fields[1], fields[2], fields[3], fields[4])
+    }
+
+    private fun parseState(value: String): State {
+        val s = parseFields(value)
         check(BydAmbientLightPolicy.validSnapshot(BydAmbientLightPolicy.Snapshot(s.frontColor, s.backColor, s.frontBrightness, s.backBrightness, s.area)))
         return s
     }

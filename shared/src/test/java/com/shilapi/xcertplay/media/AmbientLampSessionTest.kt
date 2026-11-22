@@ -8,17 +8,20 @@ import org.junit.Test
 class AmbientLampSessionTest {
     private val original = BydAmbientLightPolicy.Snapshot(7, 23, 2, 5, 2)
     private val desired = Triple(3, 15, 6)
+    private val WRITTEN = AmbientLampSession.Outcome.WRITTEN
+    // What the car might show during its blind-spot warning (#1332); any value DiPlay did not set.
+    private val warning = AmbientLampSession.Outcome(held = true, lamp = BydAmbientLightPolicy.Snapshot(1, 15, 6, 6, 3))
     private class Fake : AmbientLampSession.Client {
         var failed = false
         var seed: BydAmbientLightPolicy.Snapshot? = null
         val begin = CompletableFuture<BydAmbientLightPolicy.Snapshot>()
         val stopped = CompletableFuture<Unit>()
-        val applies = mutableListOf<Pair<Triple<Int, Int, Int>, CompletableFuture<Unit>>>()
+        val applies = mutableListOf<Pair<Triple<Int, Int, Int>, CompletableFuture<AmbientLampSession.Outcome>>>()
         var stops = 0
         var closed = false
         override fun unhealthy() = failed
         override fun begin(seed: BydAmbientLightPolicy.Snapshot?): CompletableFuture<BydAmbientLightPolicy.Snapshot> { this.seed = seed; return begin }
-        override fun apply(desired: Triple<Int, Int, Int>) = CompletableFuture<Unit>().also { applies.add(desired to it) }
+        override fun apply(desired: Triple<Int, Int, Int>) = CompletableFuture<AmbientLampSession.Outcome>().also { applies.add(desired to it) }
         override fun stop(): CompletableFuture<Unit> { stops++; return stopped }
         override fun close() { closed = true }
     }
@@ -27,9 +30,11 @@ class AmbientLampSessionTest {
         val callbacks = ArrayDeque<() -> Unit>()
         val clients = mutableListOf<Fake>()
         var applies = 0
+        val lines = mutableListOf<String>()
         val engine = AmbientLampSession(
             factory = { Fake().also { clients.add(it) } },
             dispatch = { callbacks.addLast(it) }, now = { time }, applied = { applies++ },
+            diagnostic = { lines.add(it) },
         )
         fun drain() { while (callbacks.isNotEmpty()) callbacks.removeFirst()() }
     }
@@ -50,12 +55,12 @@ class AmbientLampSessionTest {
         val second = h.clients.last()
         assertEquals(original, second.seed)
         second.begin.complete(original); h.drain(); h.engine.update(desired)
-        second.applies.last().second.complete(Unit); h.drain()
+        second.applies.last().second.complete(WRITTEN); h.drain()
         assertEquals(1, h.applies)
     }
     @Test fun unchangedDesiredStillChecksFailedClientBeforeDeduplication() {
         val h = Harness(); val first = start(h)
-        first.applies.last().second.complete(Unit); h.drain()
+        first.applies.last().second.complete(WRITTEN); h.drain()
         first.failed = true
         h.time = 500; h.engine.update(desired)
         assertEquals(1, first.stops)
@@ -75,7 +80,7 @@ class AmbientLampSessionTest {
         }
         h.engine.update(desired)
         val good = h.clients.last(); good.begin.complete(original); h.drain(); h.engine.update(desired)
-        good.applies.last().second.complete(Unit); h.drain()
+        good.applies.last().second.complete(WRITTEN); h.drain()
         good.failed = true; h.engine.update(desired); good.stopped.complete(Unit); h.drain()
         val count = h.clients.size
         h.time += 4_999; h.engine.update(desired); assertEquals(count, h.clients.size)
@@ -109,7 +114,7 @@ class AmbientLampSessionTest {
         val second = h.clients.last(); second.begin.complete(original); h.drain(); h.engine.update(desired)
         staleApply.completeExceptionally(IllegalStateException("stale callback")); h.drain()
         assertEquals(0, second.stops)
-        second.applies.last().second.complete(Unit); h.drain()
+        second.applies.last().second.complete(WRITTEN); h.drain()
         assertEquals(1, h.applies)
     }
     @Test fun changedDesiredAndPauseMinimumStayPendingUntilSuccessfulApply() {
@@ -117,7 +122,7 @@ class AmbientLampSessionTest {
         val minimum = Triple(3, 7, 1)
         h.time = 250; h.engine.update(minimum)
         assertEquals(1, client.applies.size) // Never overlap a device apply.
-        client.applies.first().second.complete(Unit); h.drain()
+        client.applies.first().second.complete(WRITTEN); h.drain()
         h.engine.update(minimum)
         assertEquals(minimum, client.applies.last().first)
     }
@@ -149,5 +154,38 @@ class AmbientLampSessionTest {
         h.time += 5_000; h.engine.update(desired)
         assertEquals(freshOem, h.clients.last().seed)
     }
-
+    @Test fun heldApplyIsAskedAgainAndLogsOnePauseAndOneResume() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(warning); h.drain()
+        assertEquals(0, h.applies)
+        assertEquals(1, h.lines.size)
+        assertTrue(h.lines[0], h.lines[0].startsWith("Ambient: lamp writes paused"))
+        assertTrue(h.lines[0], "lamp=front 1/6 back 15/6 area 3" in h.lines[0])
+        // The same value is sent again: the worker reads the lamp before each one.
+        h.time = 200; h.engine.update(desired)
+        assertEquals(2, client.applies.size)
+        client.applies.last().second.complete(warning); h.drain()
+        assertEquals(1, h.lines.size)
+        h.time = 2_900; h.engine.update(desired)
+        assertEquals(3, client.applies.size)
+        client.applies.last().second.complete(WRITTEN); h.drain()
+        assertEquals(listOf("Ambient: lamp writes resumed after 2900 ms"), h.lines.drop(1))
+        assertEquals(1, h.applies)
+        h.time = 3_100; h.engine.update(desired)
+        assertEquals(3, client.applies.size) // Written now, so deduplicated again.
+    }
+    @Test fun writtenApplyLogsNothing() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(WRITTEN); h.drain()
+        assertEquals(emptyList<String>(), h.lines)
+    }
+    @Test fun stoppingWhileHeldEndsThePauseInTheLog() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(warning); h.drain()
+        h.time = 1_000; h.engine.setEnabled(false)
+        assertEquals(1, client.stops)
+        assertEquals("Ambient: lamp hold ended after 1000 ms, lamp session stopping", h.lines.last())
+        client.stopped.complete(Unit); h.drain()
+        assertEquals(2, h.lines.size)
+    }
 }

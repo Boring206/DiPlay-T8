@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay.media
 
+import com.shilapi.xcertplay.hud.BydAmbientLampHold
 import com.shilapi.xcertplay.hud.BydAmbientLightPolicy
 import java.util.concurrent.CompletableFuture
 
@@ -10,11 +11,18 @@ internal class AmbientLampSession(
     private val now: () -> Long,
     private val log: (String) -> Unit = {},
     private val applied: (Triple<Int, Int, Int>) -> Unit = {},
+    /** One line for the diagnostic report when lamp writes pause or resume. */
+    private val diagnostic: (String) -> Unit = {},
 ) {
+    /** What the worker did with one apply; [held] when it wrote nothing because the lamp read [lamp] (#1332). */
+    data class Outcome(val held: Boolean, val lamp: BydAmbientLightPolicy.Snapshot? = null) {
+        companion object { val WRITTEN = Outcome(held = false) }
+    }
+
     interface Client {
         fun unhealthy(): Boolean
         fun begin(seed: BydAmbientLightPolicy.Snapshot?): CompletableFuture<BydAmbientLightPolicy.Snapshot>
-        fun apply(desired: Triple<Int, Int, Int>): CompletableFuture<Unit>
+        fun apply(desired: Triple<Int, Int, Int>): CompletableFuture<Outcome>
         fun stop(): CompletableFuture<Unit>
         /** Called after stop completes; must close stdin/transport before returning control to future retries. */
         fun close()
@@ -29,6 +37,7 @@ internal class AmbientLampSession(
     private var original: BydAmbientLightPolicy.Snapshot? = null
     private var restoreUnconfirmed = false
     private var lastApplied: Triple<Int, Int, Int>? = null
+    private var heldSince: Long? = null
     private val cadence = AmbientMusicApplyCadence()
 
     /** Called on the owning controller executor; an active worker need not be probed again. */
@@ -78,12 +87,21 @@ internal class AmbientLampSession(
         if (!ready || applying || lastApplied == desired || !cadence.trySubmit(now())) return
         applying = true
         val future = try { owned.apply(desired) } catch (error: Throwable) {
-            CompletableFuture<Unit>().also { it.completeExceptionally(error) }
+            CompletableFuture<Outcome>().also { it.completeExceptionally(error) }
         }
-        future.whenComplete { _, error -> dispatch {
+        future.whenComplete { outcome, error -> dispatch {
             if (client !== owned || stopping) return@dispatch
             applying = false
-            if (error == null) {
+            if (error == null && outcome?.held == true) {
+                // lastApplied stays, so the next tick asks again and the worker reads the lamp again first.
+                if (heldSince == null) {
+                    heldSince = now()
+                    diagnostic("Ambient: lamp writes paused, lamp changed outside DiPlay" +
+                        " lamp=${outcome.lamp?.let(::describe) ?: "unknown"} holdOffMs=${BydAmbientLampHold.HOLD_MILLIS}")
+                }
+            } else if (error == null) {
+                heldSince?.let { diagnostic("Ambient: lamp writes resumed after ${now() - it} ms") }
+                heldSince = null
                 lastApplied = desired
                 failures = 0
                 applied(desired)
@@ -106,12 +124,18 @@ internal class AmbientLampSession(
         log("lamp retry in ${delay}ms enabled=$enabled restorePending=$uncertainStop")
     }
 
+    private fun describe(s: BydAmbientLightPolicy.Snapshot) =
+        "front ${s.frontColor}/${s.frontBrightness} back ${s.backColor}/${s.backBrightness} area ${s.area}"
+
     private fun stopOwned(recover: Boolean) {
         if (stopping) return
         val old = client ?: return
         stopping = true
         client = null // All old begin/apply callbacks immediately lose ownership.
         ready = false; applying = false; lastApplied = null; cadence.reset()
+        // The stop restores the car's original lamp values, which ends the hold.
+        heldSince?.let { diagnostic("Ambient: lamp hold ended after ${now() - it} ms, lamp session stopping") }
+        heldSince = null
         val stopped = try { old.stop() } catch (error: Throwable) {
             CompletableFuture<Unit>().also { it.completeExceptionally(error) }
         }

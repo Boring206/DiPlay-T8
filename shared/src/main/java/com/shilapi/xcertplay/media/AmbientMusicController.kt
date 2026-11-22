@@ -31,6 +31,8 @@ object AmbientMusicController {
     private var appliedCount = 0L
     private var lastLogMillis = 0L
     private var idleSinceMillis: Long? = null
+    /** The open sink's diagnostic report; lamp pause and resume lines go there as well as to logcat. */
+    @Volatile private var diagnosticSink: ((String) -> Unit)? = null
 
     private val lampSession = AmbientLampSession(
         factory = {
@@ -43,7 +45,11 @@ object AmbientMusicController {
                 override fun begin(seed: BydAmbientLightPolicy.Snapshot?) = real.begin(seed?.let {
                     BydAmbientLightClient.State(it.frontColor, it.backColor, it.frontBrightness, it.backBrightness, it.area)
                 }).thenApply { BydAmbientLightPolicy.Snapshot(it.frontColor, it.backColor, it.frontBrightness, it.backBrightness, it.area) }
-                override fun apply(desired: Triple<Int, Int, Int>) = real.apply(desired.first, desired.second, desired.third).thenApply { Unit }
+                override fun apply(desired: Triple<Int, Int, Int>) = real.apply(desired.first, desired.second, desired.third).thenApply {
+                    if (!it.held) AmbientLampSession.Outcome.WRITTEN else AmbientLampSession.Outcome(held = true, lamp = it.state.let { s ->
+                        BydAmbientLightPolicy.Snapshot(s.frontColor, s.backColor, s.frontBrightness, s.backBrightness, s.area)
+                    })
+                }
                 override fun stop() = real.stop().thenApply { Unit }
                 // stop's future completes only after closeTransport, including its failure path.
                 override fun close() = real.close()
@@ -59,6 +65,10 @@ object AmbientMusicController {
                 lastLogMillis = now
                 Log.i("DiPlay-Ambient", "applied=$appliedCount area=${desired.first} color=${desired.second} brightness=${desired.third} colorMode=${settings.colorMode} estimatedBpm=${colors.estimatedBpm?.toInt() ?: 0}")
             }
+        },
+        diagnostic = { line ->
+            Log.i("DiPlay-Ambient", line)
+            runCatching { diagnosticSink?.invoke(line) }
         },
     )
 
@@ -81,10 +91,11 @@ object AmbientMusicController {
         }
     }
 
-    @Synchronized fun openSink(context: Context?): Long {
+    @Synchronized fun openSink(context: Context?, diagnostic: (String) -> Unit = {}): Long {
         if (context == null) return 0L
         val token = sequence.incrementAndGet()
         activeSink.set(token)
+        diagnosticSink = diagnostic
         activeRenderer.set(0L)
         executor.execute {
             if (activeSink.get() != token) return@execute
@@ -214,6 +225,7 @@ object AmbientMusicController {
     @Synchronized fun closeSink(token: Long) {
         if (token == 0L || !activeSink.compareAndSet(token, 0L)) return
         activeRenderer.set(0L)
+        diagnosticSink = null
         executor.execute {
             if (activeSink.get() != 0L) return@execute
             allowed = settings.enabled
