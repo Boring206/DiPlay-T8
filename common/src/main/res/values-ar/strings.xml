@@ -967,6 +967,8 @@
     <string name="settings_navigation_attenuation">مستوى صوت إرشادات الملاحة</string>
     <string name="settings_navigation_attenuation_value">%1$d ديسيبل</string>
     <string name="settings_navigation_attenuation_description">يخفض صوت إرشادات ملاحة CarPlay فقط دون تغيير صوت الموسيقى أو المكالمات. يُطبَّق التغيير فورًا وتظل وحدة السيارة تتحكم بمستوى صوت الملاحة.</string>
+    <string name="settings_call_attenuation">مستوى صوت المتصل</string>
+    <string name="settings_call_attenuation_description">يخفض صوت المتصل في مكالمات CarPlay دون تغيير مستوى صوت المكالمات في السيارة. يُطبَّق فورًا على أي مخرج تُشغَّل عليه المكالمة. اتركه عند 0 ديسيبل ما لم يكن صوت مكالماتك مشوشًا أو غير واضح. في سيارة BYD Han واحدة (DiLink 3) بدا صوت المكالمة واضحًا عند نحو -12 إلى -16 ديسيبل في اختبار استماع.</string>
     <string name="settings_car_hotspot_control">نقطة اتصال السيارة</string>
     <string name="settings_auto_car_hotspot_system_description">يشغّل نقطة اتصال السيارة المحفوظة عند فتح DiPlay وقبل الاتصال اللاسلكي. يحتاج DiPlay إلى إذن Android «تعديل إعدادات النظام»؛ لا يلزم ADB. لتتوفر نقطة الاتصال بعد إعادة التشغيل الكاملة، فعّل أيضًا فتح DiPlay بعد تشغيل السيارة. لا يتم إيقاف نقطة الاتصال تلقائيًا.</string>
     <string name="settings_write_settings_granted">إذن «تعديل إعدادات النظام»: مسموح</string>

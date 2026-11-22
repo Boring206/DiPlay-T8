@@ -27,7 +27,7 @@ object SettingsBackupCodec {
         "advanced_audio_channel_mapping", "audio_focus_enabled", "audio_focus_auto_yield",
         "navigation_prompt_audio_focus", "disable_media_key_audio_focus", "media_audio_channel", "navigation_audio_channel",
         "navigation_stream_type", "wireless_enabled", "wireless_hotspot_mode", "wifi_p2p_preferred_channel", "wifi_direct_scan_pause",
-        "navigation_audio_attenuation_db",
+        "navigation_audio_attenuation_db", "call_audio_attenuation_db",
         "manual_hotspot_band", "manual_hotspot_channel", "manual_hotspot_security", "app_appearance",
         "ambient_lux_threshold", "display_fps", "media_buffer_ms", "wired_media_buffer_ms", "main_buffered_audio",
         "ambient_delay_seconds",

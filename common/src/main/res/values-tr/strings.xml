@@ -955,6 +955,8 @@
     <string name="settings_navigation_attenuation">Navigasyon yönlendirme ses düzeyi</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Müzik veya arama sesini değiştirmeden CarPlay navigasyon yönlendirmesini azaltın. Hemen geçerli olur; ana ünitenizin navigasyon ses düzeyi çalışmaya devam eder.</string>
+    <string name="settings_call_attenuation">Arama sesi düzeyi</string>
+    <string name="settings_call_attenuation_description">Aracın arama ses düzeyini değiştirmeden CarPlay aramalarında arayanın sesini azaltır. Arama hangi çıkışı kullanırsa kullansın hemen geçerli olur. Aramalarınız cızırtılı veya anlaşılmaz değilse 0 dB\'de bırakın. Bir BYD Han\'da (DiLink 3) dinleme testinde yaklaşık -12 ile -16 dB arasında arama net duyuldu.</string>
     <string name="settings_car_hotspot_control">Araç erişim noktası</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay açıldığında ve kablosuz bağlantıdan önce kayıtlı araç erişim noktasını açar. DiPlay\'in Android\'in “Sistem ayarlarını değiştir” erişimine ihtiyacı vardır; ADB gerekmez. Tam yeniden başlatmanın ardından erişim noktasına sahip olmak için araç çalıştıktan sonra DiPlay\'i açmayı da etkinleştirin. Erişim noktası otomatik olarak kapatılmaz.</string>
     <string name="settings_car_hotspot_config_title">Araç erişim noktası ayrıntılarını içe aktar (deneysel)</string>

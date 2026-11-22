@@ -1020,6 +1020,8 @@
     <string name="settings_navigation_attenuation">ナビ案内の音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">CarPlayのナビ案内だけ音量を下げます。音楽や通話の音量は変わりません。変更はすぐに反映され、車載端末側のナビ音量も引き続き使用できます。</string>
+    <string name="settings_call_attenuation">通話相手の声のレベル</string>
+    <string name="settings_call_attenuation_description">CarPlay通話の相手の声を、車の通話音量を変えずに下げます。通話がどの出力を使っていても、すぐに反映されます。通話の音がざらついたり聞き取りにくい場合を除き、0 dBのままにしてください。BYD Han（DiLink 3）の1台では、聴感テストで約-12〜-16 dBのとき通話がクリアに聞こえました。</string>
     <string name="settings_car_hotspot_control">車のホットスポット</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay を開いたときとワイヤレス接続の前に、保存済みの車のホットスポットをオンにします。Android の「システム設定の変更」へのアクセスが必要です。ADB は不要です。完全に再起動した後もホットスポットを使うには、車の起動後に DiPlay を開く設定もオンにしてください。ホットスポットは自動ではオフになりません。</string>
     <string name="settings_write_settings_granted">「システム設定の変更」へのアクセス: 許可済み</string>

@@ -978,6 +978,8 @@
     <string name="settings_navigation_attenuation">导航播报音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">仅降低 CarPlay 导航播报音量，不影响音乐和通话。调整立即生效，车机自身的导航音量仍可使用。</string>
+    <string name="settings_call_attenuation">通话对方人声音量</string>
+    <string name="settings_call_attenuation_description">在不改变车辆通话音量的情况下，降低 CarPlay 通话中对方的人声。无论通话使用哪个输出，调整都会立即生效。除非通话声音有杂音或不清晰，否则请保持 0 dB。在一辆 BYD Han（DiLink 3）上，听音测试中约 -12 至 -16 dB 时通话清晰。</string>
     <string name="settings_car_hotspot_control">车辆热点</string>
     <string name="settings_auto_car_hotspot_system_description">打开 DiPlay 时及无线连接前开启已保存的车辆热点。DiPlay 需要 Android 的“修改系统设置”权限；无需 ADB。若要在完全重启后也有热点，请同时开启“车辆启动后打开 DiPlay”。热点不会自动关闭。</string>
     <string name="settings_write_settings_granted">“修改系统设置”权限：已允许</string>

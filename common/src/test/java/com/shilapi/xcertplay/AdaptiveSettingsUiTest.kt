@@ -763,6 +763,8 @@ class AdaptiveSettingsUiTest {
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_usb_charging)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
+        assertTrue(audio.any { it.startsWith(text(R.string.settings_call_attenuation)) })
+        assertFalse(advanced.any { it.startsWith(text(R.string.settings_call_attenuation)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wireless)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wired)) })
         listOf(R.string.main_buffered_audio, R.string.settings_car_bluetooth_audio, R.string.efficient_video, R.string.smooth_video, R.string.settings_direct_video_output, R.string.settings_low_latency_decoder, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.settings_disable_media_key_audio_focus, R.string.contrib_audio_home_toggle_audio_focus).forEach {
@@ -803,7 +805,8 @@ class AdaptiveSettingsUiTest {
             PendingReconnect.clear()
             ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
             ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
-            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
             assertEquals(20, slider.max)
             assertEquals(20, slider.progress)
             val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
@@ -812,6 +815,40 @@ class AdaptiveSettingsUiTest {
             listener.onProgressChanged(slider, 7, true)
             assertEquals(-13, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
             verify(sink).setNavigationAttenuationDb(-13)
+            assertEquals(0, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            assertFalse(PendingReconnect.isPending(session))
+            assertEquals(0, disconnects)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test fun callVoiceLevelSliderDefaultsToZeroSavesAndUpdatesActiveCallsWithoutReconnect() {
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        val sink = mock(AndroidMediaSink::class.java)
+        var disconnects = 0
+        CarPlayBackgroundSession.store(session, sink, 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { disconnects++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            PendingReconnect.clear()
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_call_attenuation)) == true }
+            assertEquals(20, slider.max)
+            assertEquals(20, slider.progress)
+            val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+                .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+            slider.progress = 2
+            listener.onProgressChanged(slider, 2, true)
+            assertEquals(-18, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            verify(sink).setCallAttenuationDb(-18)
+            assertEquals(0, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
+            assertFalse(AirPlayPersistence.loadCallVoiceFilter(context))
             assertFalse(PendingReconnect.isPending(session))
             assertEquals(0, disconnects)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
@@ -836,7 +873,8 @@ class AdaptiveSettingsUiTest {
         ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
         ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
         layoutRoot(screen)
-        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+            .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
         slider.requestRectangleOnScreen(Rect(0, 0, slider.width, slider.height), true)
         layoutRoot(screen)
         val rectangle = Rect()

@@ -930,6 +930,8 @@
     <string name="settings_navigation_attenuation">Гучність навігаційних підказок</string>
     <string name="settings_navigation_attenuation_value">%1$d дБ</string>
     <string name="settings_navigation_attenuation_description">Зменшує лише гучність навігаційних підказок CarPlay, не змінюючи музику та виклики. Застосовується одразу; регулювання навігації на пристрої лишається доступним.</string>
+    <string name="settings_call_attenuation">Рівень голосу в дзвінках</string>
+    <string name="settings_call_attenuation_description">Зменшує гучність голосу співрозмовника в дзвінках CarPlay, не змінюючи гучність дзвінків в автомобілі. Застосовується одразу, який би вихід не використовував дзвінок. Залиште 0 дБ, якщо дзвінки не звучать із шумом чи нечітко. На одному BYD Han (DiLink 3) під час прослуховування дзвінок звучав чисто приблизно на -12…-16 дБ.</string>
     <string name="settings_car_hotspot_control">Точка доступу автомобіля</string>
     <string name="settings_auto_car_hotspot_system_description">Вмикає збережену точку доступу під час відкриття DiPlay і перед бездротовим підключенням. Потрібен доступ Android «Зміна системних налаштувань»; ADB не потрібен. Щоб точка доступу з’являлася й після повного перезапуску, увімкніть відкриття DiPlay після запуску автомобіля. Точка доступу автоматично не вимикається.</string>
     <string name="settings_write_settings_granted">Доступ «Зміна системних налаштувань»: дозволено</string>

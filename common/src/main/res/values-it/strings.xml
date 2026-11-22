@@ -978,6 +978,8 @@
     <string name="settings_navigation_attenuation">Volume delle indicazioni di navigazione</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Riduce le indicazioni di navigazione di CarPlay senza cambiare il volume di musica o chiamate. Si applica subito; il volume di navigazione della head unit continua a funzionare.</string>
+    <string name="settings_call_attenuation">Livello della voce nelle chiamate</string>
+    <string name="settings_call_attenuation_description">Abbassa la voce di chi chiama nelle chiamate CarPlay senza cambiare il volume delle chiamate dell’auto. Si applica subito, qualunque sia l’uscita usata dalla chiamata. Lascialo a 0 dB a meno che le tue chiamate suonino disturbate o poco chiare. Su una BYD Han (DiLink 3), la chiamata suonava chiara con circa -12/-16 dB in un test d’ascolto.</string>
     <string name="settings_car_hotspot_control">Hotspot dell’auto</string>
     <string name="settings_auto_car_hotspot_system_description">Accende l’hotspot dell’auto salvato quando DiPlay si apre e prima di una connessione wireless. DiPlay richiede l’accesso “Modifica impostazioni di sistema” di Android; ADB non è necessario. Per avere l’hotspot dopo un riavvio completo, attiva anche l’apertura di DiPlay dopo l’avvio dell’auto. L’hotspot non viene spento automaticamente.</string>
     <string name="settings_car_hotspot_config_title">Importa i dati dell’hotspot dell’auto (sperimentale)</string>

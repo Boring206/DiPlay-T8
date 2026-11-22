@@ -51,6 +51,7 @@ object AirPlayPersistence {
     private const val KEY_MEDIA_AUDIO_CHANNEL = "media_audio_channel"
     private const val KEY_NAVIGATION_AUDIO_CHANNEL = "navigation_audio_channel"
     private const val KEY_NAVIGATION_AUDIO_ATTENUATION = "navigation_audio_attenuation_db"
+    private const val KEY_CALL_AUDIO_ATTENUATION = "call_audio_attenuation_db"
     private const val KEY_NAVIGATION_STREAM_TYPE = "navigation_stream_type"
     private const val KEY_WIRELESS_ENABLED = "wireless_enabled"
     private const val KEY_WIRELESS_HOTSPOT_MODE = "wireless_hotspot_mode"
@@ -330,6 +331,19 @@ object AirPlayPersistence {
     fun saveNavigationAudioAttenuationDb(context: Context, db: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_NAVIGATION_AUDIO_ATTENUATION,
+                com.shilapi.xcertplay.media.NavigationAudioGain.clamp(db))
+            .apply()
+    }
+
+    fun loadCallAudioAttenuationDb(context: Context): Int =
+        com.shilapi.xcertplay.media.NavigationAudioGain.clamp(
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getInt(KEY_CALL_AUDIO_ATTENUATION, 0),
+        )
+
+    fun saveCallAudioAttenuationDb(context: Context, db: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CALL_AUDIO_ATTENUATION,
                 com.shilapi.xcertplay.media.NavigationAudioGain.clamp(db))
             .apply()
     }

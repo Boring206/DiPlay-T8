@@ -989,6 +989,8 @@
     <string name="settings_navigation_attenuation">내비게이션 안내 음량</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">음악이나 통화 음량은 변경하지 않고 CarPlay 내비게이션 안내 음량을 낮춥니다. 즉시 적용되며 헤드 유닛의 내비게이션 음량 조절 기능은 계속 사용할 수 있습니다.</string>
+    <string name="settings_call_attenuation">통화 상대 음성 크기</string>
+    <string name="settings_call_attenuation_description">차량의 통화 음량은 바꾸지 않고 CarPlay 통화에서 상대방 음성을 낮춥니다. 통화가 어떤 출력을 사용하든 즉시 적용됩니다. 통화 음성이 거칠거나 또렷하지 않을 때가 아니면 0 dB로 두세요. BYD Han(DiLink 3) 한 대에서는 청취 테스트에서 약 -12~-16 dB일 때 통화가 또렷하게 들렸습니다.</string>
     <string name="settings_car_hotspot_control">차량 핫스팟</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay를 열 때와 무선 연결 전에 저장된 차량 핫스팟을 켭니다. DiPlay에는 Android의 “시스템 설정 수정” 액세스 권한이 필요하며 ADB는 필요하지 않습니다. 차량을 완전히 재시작한 뒤에도 핫스팟을 사용하려면 차량 시동 후 DiPlay 열기도 켜세요. 핫스팟은 자동으로 꺼지지 않습니다.</string>
     <string name="settings_write_settings_granted">“시스템 설정 수정” 액세스 권한: 허용됨</string>
