@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Wi-Fi có sẵn / Cùng mạng LAN</string>
     <string name="existing_wifi_description">Dùng bộ định tuyến hoặc Wi-Fi di động có sẵn. Giữ iPhone và xe trên cùng một mạng có truy cập Internet.</string>
     <string name="existing_wifi_hint">Wi-Fi có sẵn · Giữ cả hai thiết bị trên cùng mạng Wi-Fi và bật Bluetooth. Không cần điểm phát sóng của xe.</string>
-    <string name="existing_wifi_instructions">Kết nối xe và iPhone vào cùng một mạng Wi-Fi bên ngoài trong cài đặt hệ thống. Nhập chính xác tên và mật khẩu WPA2 của mạng đó bên dưới; chỉ để trống mật khẩu nếu là mạng mở. Dùng WPA2 hoặc chế độ hỗn hợp WPA2/WPA3 và tắt cách ly máy khách trên bộ định tuyến. DiPlay giữ kết nối Wi-Fi này và không tạo điểm phát sóng.</string>
+    <string name="existing_wifi_instructions">Kết nối xe và iPhone vào cùng một mạng Wi-Fi bên ngoài trong cài đặt hệ thống. Nhập chính xác tên và mật khẩu WPA2 của mạng đó bên dưới; mạng mở không có mật khẩu sẽ không hoạt động, vì iPhone chỉ khởi động CarPlay không dây trên mạng có mật khẩu. Dùng WPA2 hoặc chế độ hỗn hợp WPA2/WPA3 và tắt cách ly máy khách trên bộ định tuyến. DiPlay giữ kết nối Wi-Fi này và không tạo điểm phát sóng.</string>
     <string name="existing_wifi_details">Thông tin Wi-Fi bên ngoài</string>
     <string name="existing_wifi_ssid">Tên Wi-Fi bên ngoài (SSID)</string>
     <string name="existing_wifi_password">Mật khẩu Wi-Fi bên ngoài</string>
@@ -193,7 +193,6 @@
     <string name="could_not_save_image">Không thể lưu ảnh</string>
     <string name="could_not_save_the_report">Không thể lưu báo cáo</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Không thể khởi động CarPlay. Hãy quay lại DiPlay và kiểm tra quyền ứng dụng.</string>
-    <string name="custom_1_1_icon">Biểu tượng tùy chỉnh 1:1</string>
     <string name="debug_logs">Nhật ký gỡ lỗi</string>
     <string name="default_icon">Biểu tượng mặc định</string>
     <string name="default_placeholder_icon">Biểu tượng giữ chỗ mặc định</string>
@@ -966,7 +965,7 @@
     <string name="settings_speech_without_low_rates">Giọng dẫn đường rõ hơn qua USB (thử nghiệm)</string>
     <string name="settings_speech_without_low_rates_description">Qua USB, iPhone có thể gửi lời nhắc dẫn đường và câu trả lời bằng giọng nói của Siri dưới dạng âm thanh 8 kHz chất lượng điện thoại. Tùy chọn này ngừng cung cấp 8 và 16 kHz cho loại âm thanh đó để iPhone chọn tần số cao hơn. Nếu lời nhắc bị im lặng, hãy tắt tùy chọn này. Kết nối lại CarPlay.</string>
     <string name="settings_call_at_call_rate">Cuộc gọi ở tần số riêng của cuộc gọi (thử nghiệm)</string>
-    <string name="settings_call_at_call_rate_description">Cung cấp cuộc gọi dưới dạng PCM ở tần số riêng của cuộc gọi (8, 16, 24 hoặc 32 kHz) thay vì Opus 48 kHz, như bộ thu CarPlay gốc. Có hiệu lực ở lần kết nối tiếp theo. Nếu cuộc gọi không có âm thanh, hãy tắt tùy chọn này.</string>
+    <string name="settings_call_at_call_rate_description">Cung cấp cuộc gọi dưới dạng PCM ở tần số riêng của cuộc gọi (8, 16, 24 hoặc 32 kHz) thay vì Opus 48 kHz, như bộ thu CarPlay gốc. Chỉ dùng với cáp USB: qua Wi-Fi, iPhone khi đó giữ toàn bộ âm thanh CarPlay trên chính nó, nên phiên không dây dùng các định dạng thông thường. Có hiệu lực ở lần kết nối tiếp theo. Nếu cuộc gọi không có âm thanh, hãy tắt tùy chọn này.</string>
     <string name="bluetooth_connections_not_real">Bluetooth Android của hệ thống giải trí này báo đã kết nối, nhưng không có gì đến được iPhone: ngay cả kết nối tới một dịch vụ không tồn tại cũng thành công. Bluetooth ở đây do mô-đun riêng của nhà sản xuất xử lý, ứng dụng không dùng được, nên CarPlay không dây không thể hoạt động trên hệ thống giải trí này. Hãy thử kết nối USB.</string>
     <string name="bluetooth_cannot_open_connections">Bluetooth Android của hệ thống giải trí này không thể mở kết nối cho ứng dụng: firmware của nó thiếu phần mà ứng dụng dùng để kết nối. Cuộc gọi và nhạc qua Bluetooth riêng của xe không bị ảnh hưởng, nhưng CarPlay không dây không thể hoạt động trên hệ thống giải trí này. Hãy thử kết nối USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">Nếu Bluetooth không giữ được trạng thái bật ở đó, hệ thống giải trí này đang giữ Bluetooth cho cuộc gọi và nhạc của riêng nó, và ứng dụng không dùng được. Khi đó CarPlay không dây không thể hoạt động: hãy dùng cáp USB.</string>
@@ -1008,6 +1007,8 @@
     <string name="connection_help_general">Thử kết nối lại. Nếu vẫn thất bại, hãy quay lại DiPlay và lưu báo cáo trong Cài đặt → Chẩn đoán.</string>
     <string name="connection_help_wifi_direct">Giữ Wi-Fi và Bluetooth của hệ thống giải trí luôn bật và để iPhone ở gần trong trạng thái mở khóa, rồi thử lại. Nếu vẫn thất bại, hãy quên xe trên iPhone trong Cài đặt → Cài đặt chung → CarPlay và kết nối lại.</string>
     <string name="connection_help_existing_wifi">Đảm bảo hệ thống giải trí và iPhone ở cùng một mạng Wi-Fi và tên cùng mật khẩu của mạng khớp với cài đặt DiPlay, rồi thử lại.</string>
+    <string name="existing_wifi_needs_password">Wi-Fi dùng chung cần có mật khẩu</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhone chỉ khởi động CarPlay không dây trên mạng Wi-Fi có mật khẩu. Nhập mật khẩu WPA2 của bộ định tuyến trong Thiết lập kết nối. Nếu bộ định tuyến chưa có mật khẩu, hãy đặt một mật khẩu rồi kết nối lại cả xe và iPhone vào mạng đó. Sau đó thử lại.</string>
     <string name="settings_report_on_phone">Lấy báo cáo trên điện thoại</string>
     <string name="settings_report_on_phone_hint">Quét mã bằng camera điện thoại để mở trang này trong trình duyệt, rồi chọn Tải xuống báo cáo. Giữ màn hình này mở cho đến khi tải xuống xong.</string>
     <string name="settings_mfi_target_description">Chỉ chọn USB/CH341 khi bộ chuyển đổi xác thực CH341 đang được kết nối với hệ thống giải trí. Nếu không có, hãy chọn Cục bộ ngoại tuyến. Áp dụng ở lần kết nối tiếp theo.</string>
@@ -1051,6 +1052,12 @@
     <string name="cluster_projection_shape_description">Nửa màn hình giữ lại các chỉ số tốc độ và trạng thái mà cụm đồng hồ thường hiện bên cạnh bản đồ; toàn màn hình để bản đồ lấp đầy cụm đồng hồ. DiPlay đặt hình dạng mỗi khi bản đồ CarPlay xuất hiện, nếu không bản đồ sẽ ghi đè hình dạng được chọn trên xe. Cần ADB qua mạng trên hệ thống giải trí.</string>
     <string name="settings_cluster_speedometer_album_color">Dùng màu album làm nền đồng hồ tốc độ</string>
     <string name="settings_cluster_speedometer_album_color_description">Khớp với màu khung album, chuyển đổi mượt mà. Giữ độ mờ đục đã chọn.</string>
+    <string name="settings_cluster_speedometer_artwork">Nền chuyển màu từ ảnh bìa album cho đồng hồ tốc độ</string>
+    <string name="settings_cluster_speedometer_artwork_description">Tùy chọn bật riêng. Khi bật, nền này thay cho nền màu đơn, giữ nguyên kích thước và độ mờ đục. Tắt sẽ trả lại màu album đơn sắc hoặc nền đen bạn đã chọn. Chuyển động là tùy chọn.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Chuyển động nền đồng hồ tốc độ</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Tắt theo mặc định. Bật để nền chuyển động chậm khi đang phát nhạc. Khi tắt, đổi bài vẫn có hiệu ứng chuyển mờ.</string>
+    <string name="settings_cluster_music_border">Hiện viền ảnh bìa album</string>
+    <string name="settings_cluster_music_border_description">Vẽ một viền mỏng quanh ảnh bìa album trên bản đồ cụm đồng hồ.</string>
     <string name="settings_fit_screen_shape">Tránh tai thỏ và góc bo tròn</string>
     <string name="settings_fit_screen_shape_description">Dành cho điện thoại hoặc máy tính bảng dùng làm hệ thống giải trí. Giữ các nút và thanh dock của CarPlay tránh khỏi tai thỏ camera và các góc bo tròn; bản đồ vẫn lấp đầy màn hình. Vùng an toàn đặt trong menu của phiên được ưu tiên. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="settings_safe_area_fitted_summary">Vùng an toàn: tránh tai thỏ và góc bo, %1$d x %2$d tại (%3$d, %4$d) trong %5$d x %6$d</string>

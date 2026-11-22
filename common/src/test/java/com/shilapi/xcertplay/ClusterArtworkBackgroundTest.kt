@@ -35,6 +35,19 @@ class ClusterArtworkBackgroundTest {
         black.recycle()
     }
 
+    @Test fun saturationBoostIsOptInForTheCompactSpeedometerRenderer() {
+        val cover = art(Color.rgb(105, 135, 160))
+        val player = ClusterArtworkBackground.palette(cover)
+        val speedometer = ClusterArtworkBackground.palette(cover, saturationMultiplier = 1.25f)
+        val playerHsv = FloatArray(3)
+        val speedometerHsv = FloatArray(3)
+        Color.colorToHSV(player.first(), playerHsv)
+        Color.colorToHSV(speedometer.first(), speedometerHsv)
+        assertTrue(speedometerHsv[1] > playerHsv[1])
+        assertEquals(playerHsv[2], speedometerHsv[2], .001f)
+        cover.recycle()
+    }
+
     @Test fun whiteAndYellowBackgroundsKeepEvenDimMetadataAboveMinimumContrast() {
         for (color in listOf(Color.WHITE,Color.YELLOW)) {
             val cover=art(color)
@@ -88,5 +101,23 @@ class ClusterArtworkBackgroundTest {
         for (y in 0 until 240 step 8) for (x in 0 until 240 step 8)
             assertEquals(wide.getPixel(x+200,y),square.getPixel(x,y))
         cover.recycle(); wide.recycle(); square.recycle()
+    }
+
+    @Test fun explicitMotionTimeKeepsTheArtworkPhaseStillWhileTheWallClockAdvances() {
+        val cover = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888)
+        Canvas(cover).apply {
+            drawColor(Color.rgb(220, 90, 40))
+            drawRect(40f, 0f, 80f, 120f, Paint().apply { color = Color.rgb(45, 120, 210) })
+        }
+        val background = ClusterArtworkBackground().apply { setArtwork(cover, 0) }
+        fun frame(now: Long, phase: Long) = Bitmap.createBitmap(240, 240, Bitmap.Config.ARGB_8888).also {
+            background.drawWideCrop(Canvas(it), 240f, 240f, now, motion = true, motionTimeMillis = phase)
+        }
+        val paused = frame(1_000, 1_000)
+        val stillPaused = frame(31_000, 1_000)
+        val resumed = frame(31_100, 1_100)
+        assertTrue(paused.sameAs(stillPaused))
+        assertFalse(paused.sameAs(resumed))
+        paused.recycle(); stillPaused.recycle(); resumed.recycle(); cover.recycle()
     }
 }

@@ -4,8 +4,11 @@ import android.graphics.*
 import kotlin.math.sin
 
 /** Shared artwork rendering; coordinates and opacity are owned by each host view. */
-internal class ClusterArtworkBackground {
-    private var colors = palette(null)
+internal class ClusterArtworkBackground(
+    /** A host-specific adjustment; the player keeps the source palette at 1.0. */
+    private val saturationMultiplier: Float = 1f,
+) {
+    private var colors = palette(null, saturationMultiplier)
     private var fromColors = colors.copyOf()
     private var targetColors = colors.copyOf()
     private var changedAt = 0L
@@ -19,7 +22,7 @@ internal class ClusterArtworkBackground {
 
     fun setArtwork(art: Bitmap?, now: Long = android.os.SystemClock.elapsedRealtime()) {
         updateColors(now)
-        val next = palette(art)
+        val next = palette(art, saturationMultiplier)
         val valid = art != null && !art.isRecycled
         if (!hasArtwork || !valid) {
             colors = next; fromColors = next.copyOf(); targetColors = next.copyOf()
@@ -46,12 +49,19 @@ internal class ClusterArtworkBackground {
     }
 
     /** Sample a central window of the player's wide composition, rather than shrink it to a square. */
-    fun drawWideCrop(canvas: Canvas, w: Float, h: Float, now: Long, motion: Boolean = false) {
+    fun drawWideCrop(
+        canvas: Canvas,
+        w: Float,
+        h: Float,
+        now: Long,
+        motion: Boolean = false,
+        motionTimeMillis: Long = now,
+    ) {
         val wide = maxOf(w, h * (1280f / 480f))
         val save = canvas.save()
         canvas.clipRect(0f, 0f, w, h)
         canvas.translate((w - wide) / 2f, 0f)
-        draw(canvas, wide, h, now, motion)
+        draw(canvas, wide, h, now, motion, motionTimeMillis)
         canvas.restoreToCount(save)
     }
 
@@ -60,12 +70,19 @@ internal class ClusterArtworkBackground {
         shaders = colors.map { RadialGradient(0f, 0f, radius, it, Color.TRANSPARENT, Shader.TileMode.CLAMP) }
     }
 
-    fun draw(canvas: Canvas, w: Float, h: Float, now: Long, motion: Boolean = false) {
+    fun draw(
+        canvas: Canvas,
+        w: Float,
+        h: Float,
+        now: Long,
+        motion: Boolean = false,
+        motionTimeMillis: Long = now,
+    ) {
         if (w != width || h != height || shaders.isEmpty()) {
             width = w; height = h; rebuild()
         }
         updateColors(now)
-        val phase = if (motion) now / 5_000.0 else 0.0
+        val phase = if (motion) motionTimeMillis / 5_000.0 else 0.0
         canvas.drawColor(Color.rgb(16, 19, 27))
         shaders.forEachIndexed { index, shader ->
             matrix.setTranslate(w * (.5f + .48f * sin(phase + index * 2.1).toFloat()),
@@ -80,7 +97,7 @@ internal class ClusterArtworkBackground {
     }
 
     companion object {
-        fun palette(art: Bitmap?): IntArray {
+        fun palette(art: Bitmap?, saturationMultiplier: Float = 1f): IntArray {
             if (art == null || art.isRecycled) return IntArray(3) { Color.rgb(36, 36, 36) }
             // Count visible area, not saturation: a small vivid detail must not replace the sleeve.
             val hsv = FloatArray(3)
@@ -126,8 +143,12 @@ internal class ClusterArtworkBackground {
                 val color = Color.rgb((bucket[0]/bucket[3]).toInt(),
                     (bucket[1]/bucket[3]).toInt(), (bucket[2]/bucket[3]).toInt())
                 Color.colorToHSV(color, hsv)
-                // Keep source hue and saturation; do not lift tiny dark colored details
-                // to the same brightness as large light regions of the artwork.
+                // Do not lift tiny dark colored details to the same brightness as large light
+                // regions of the artwork. The compact speedometer may opt into slightly more
+                // saturation so its moving glows remain legible at dashboard distance.
+                if (hsv[1] >= .08f && saturationMultiplier > 1f) {
+                    hsv[1] = (hsv[1] * saturationMultiplier).coerceAtMost(1f)
+                }
                 hsv[2] = minOf(hsv[2] * 1.08f + .04f, floatArrayOf(.46f, .43f, .45f)[index])
                 Color.HSVToColor(hsv)
             }.toIntArray()

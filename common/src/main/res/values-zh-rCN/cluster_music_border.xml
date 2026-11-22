@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">显示专辑封面边框</string>
+    <string name="settings_cluster_music_border_description">在仪表盘地图上的专辑封面周围显示细边框。</string>
+</resources>

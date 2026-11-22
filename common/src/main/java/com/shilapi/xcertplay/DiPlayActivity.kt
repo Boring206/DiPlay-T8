@@ -3984,6 +3984,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             if (ClusterMusicSettings.permanent(this)) 1 else 0, reconnects = false) {
             ClusterMusicSettings.savePermanent(this, it == 1)
         }
+        toggle(card, getString(R.string.settings_cluster_music_border),
+            getString(R.string.settings_cluster_music_border_description), ClusterMusicSettings.showBorder(this)) {
+            ClusterMusicSettings.saveShowBorder(this, it)
+        }
         listOf(
             Triple("x", R.string.settings_cluster_music_horizontal, ClusterMusicSettings.x(this)),
             Triple("y", R.string.settings_cluster_music_vertical, ClusterMusicSettings.y(this)),
@@ -4008,10 +4012,25 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             render()
         }
         if (AirPlayPersistence.loadClusterSpeedometerEnabled(this)) {
-            toggle(card, getString(R.string.settings_cluster_speedometer_album_color),
-                getString(R.string.settings_cluster_speedometer_album_color_description),
-                AirPlayPersistence.loadClusterSpeedometerAlbumColor(this)) {
-                AirPlayPersistence.saveClusterSpeedometerAlbumColor(this, it)
+            val gradient = com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.enabled(this)
+            if (!gradient) {
+                toggle(card, getString(R.string.settings_cluster_speedometer_album_color),
+                    getString(R.string.settings_cluster_speedometer_album_color_description),
+                    AirPlayPersistence.loadClusterSpeedometerAlbumColor(this)) {
+                    AirPlayPersistence.saveClusterSpeedometerAlbumColor(this, it)
+                }
+            }
+            toggle(card, getString(R.string.settings_cluster_speedometer_artwork),
+                getString(R.string.settings_cluster_speedometer_artwork_description), gradient) {
+                com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.save(this, it)
+                render()
+            }
+            if (gradient) {
+                toggle(card, getString(R.string.settings_cluster_speedometer_artwork_motion),
+                    getString(R.string.settings_cluster_speedometer_artwork_motion_description),
+                    com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.motion(this)) {
+                    com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.saveMotion(this, it)
+                }
             }
             card.addView(overlaySliderRow(
                 getString(R.string.settings_cluster_speedometer_horizontal), ClusterSpeedometerOverlay.xPercents,
