@@ -2518,7 +2518,9 @@ private class AudioRenderer(
         val dropped = packetsDroppedTotal.get()
         if (dropped != droppedAtLastTrim) {
             droppedAtLastTrim = dropped
-            trim.overflowed(queuedFrames + compressedPcmFrames)
+            // Across an RTP timestamp restart the waiting packets read as no time at all, and the track alone is not
+            // what overflowed: a target lowered to it would play music 1.5 % fast for a minute.
+            if (compressedRtpFrames > 0L || queue.size <= 1) trim.overflowed(queuedFrames + compressedPcmFrames)
         }
         trim.sample(queuedFrames, now, compressedPcmFrames,
             headMoving = head != headAtPlaybackStart, arrivedFrameNs = queuedFrameNsSince(trim.lastSampleNs, now))

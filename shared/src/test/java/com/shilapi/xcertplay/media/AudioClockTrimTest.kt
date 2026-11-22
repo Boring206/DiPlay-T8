@@ -123,6 +123,18 @@ class AudioClockTrimTest {
         assertTrue("rate ${RateTrack.rates}", RateTrack.rates.single() > 48_000)
     }
 
+    @Test fun aFullQueueAcrossATimestampRestartLeavesTheTargetAlone() {
+        slowTrimMeasuredAtTheRefillBurst()
+        // The iPhone restarted its RTP timestamps while the queue filled, so the waiting packets read as no time.
+        for (packet in 0..99) submit(packet * PACKET_FRAMES)
+        for (packet in 0..92) submit(1_000_000_000 + packet * PACKET_FRAMES)
+        assertTrue(reports.toString(), reports.contains("Audio: queue full audioType=media count=1"))
+        // Taken as the ceiling, the 500 ms track alone would lower the target to 18 000 frames and play fast.
+        write(96_000)
+        assertEquals(1, RateTrack.rates.size)
+        assertTrue("rate ${RateTrack.rates}", RateTrack.rates.single() < 48_000)
+    }
+
     @Test fun aLagGuardDiscardMeasuresTheLevelAgain() {
         val trim = slowTrimMeasuredAtTheRefillBurst()
         // Twice the target, more than a second after the last write: the trim plays fast.
