@@ -59,6 +59,8 @@ class Iap2WiredControlClient(
         var forwardedFrames = 0
         val rxLog = Iap2RxLog()
         var carPlayStartSessions = 0
+        // Only availability (0x4300) replies consume the cap; carPlayStartSessions stays the reported total.
+        var availabilityReplies = 0
         var startAgainDecided = false
         val location = Iap2LocationReporter(locationProvider, onProgress)
         val vehicleStatus = Iap2VehicleStatusReporter(vehicleStatusProvider, onProgress)
@@ -78,6 +80,7 @@ class Iap2WiredControlClient(
                         StartAgain.SEND -> {
                             startAgainDecided = true
                             send(carPlayStartSession(endpoint), deadlineNanos)
+                            // A retry is still sent without a cap check and does not use an availability slot.
                             carPlayStartSessions++
                             onProgress(START_SESSION_AGAIN_PROGRESS)
                         }
@@ -111,12 +114,17 @@ class Iap2WiredControlClient(
                     CARPLAY_AVAILABILITY -> {
                         onProgress("iap2 rx=0x4300 carplay-availability")
                         onProgress(carPlayAvailabilitySummary(incoming.payload))
-                        // LIVI sends its wired answer on every availability notification; do not gate it on
-                        // the phone's advertised availability boolean.
-                        send(carPlayStartSession(endpoint), deadlineNanos)
-                        stage = Iap2WiredControlStage.CARPLAY_START_SENT
-                        carPlayStartSessions++
-                        onProgress("iap2 tx=0x4301 carplay-start-session")
+                        // DiPlay answers at most MAX_CARPLAY_START_SESSION_SENDS availability
+                        // notifications; it still does not gate the reply on the advertised boolean.
+                        if (!carPlayAvailabilityReplyAllowed(availabilityReplies, MAX_CARPLAY_START_SESSION_SENDS)) {
+                            onProgress("iap2 0x4301 ignored: maximum CarPlay StartSession sends reached")
+                        } else {
+                            send(carPlayStartSession(endpoint), deadlineNanos)
+                            stage = Iap2WiredControlStage.CARPLAY_START_SENT
+                            availabilityReplies++
+                            carPlayStartSessions++
+                            onProgress("iap2 tx=0x4301 carplay-start-session")
+                        }
                     }
 
                     Iap2LocationMessages.START_LOCATION_INFORMATION, Iap2LocationMessages.STOP_LOCATION_INFORMATION -> {
@@ -157,6 +165,7 @@ class Iap2WiredControlClient(
         private const val MAX_TIMEOUT_MILLIS = 24 * 60 * 60 * 1_000L
         private const val MAX_RECV_TIMEOUT_MILLIS = 5 * 60 * 1_000L
         private const val NANOS_PER_MILLISECOND = 1_000_000L
+        internal const val MAX_CARPLAY_START_SESSION_SENDS = 3
 
         /** Exact LIVI wired PowerSourceUpdate encoding: current and the charge-if-powered flag. */
         fun powerSourceUpdate(availableCurrentMilliAmps: Int): Iap2Frame =
@@ -248,3 +257,6 @@ data class Iap2WiredControlResult(
     val forwardedFrames: Int,
     val carPlayStartSessionsSent: Int,
 )
+
+/** Pure cap decision for 0x4300 replies, kept out of the loop so it can be tested directly. */
+internal fun carPlayAvailabilityReplyAllowed(replies: Int, cap: Int): Boolean = replies < cap

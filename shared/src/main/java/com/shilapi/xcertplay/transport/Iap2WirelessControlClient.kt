@@ -164,11 +164,15 @@ class Iap2WirelessControlClient(
                     CARPLAY_AVAILABILITY -> {
                         onProgress("iap2 rx=0x4300 carplay-availability")
                         onProgress(carPlayAvailabilityDiagnostic(incoming))
-                        beforeStartSession()
-                        sendStartSession(endpoint, ::sendControl, onStartSessionSent)
-                        stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
-                        carPlayStartSessionsSent++
-                        onProgress("iap2 tx=0x4301 carplay-start-session")
+                        if (carPlayStartSessionsSent >= MAX_CARPLAY_START_SESSION_SENDS) {
+                            onProgress("iap2 0x4301 ignored: maximum CarPlay StartSession sends reached")
+                        } else {
+                            beforeStartSession()
+                            sendStartSession(endpoint, ::sendControl, onStartSessionSent)
+                            stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
+                            carPlayStartSessionsSent++
+                            onProgress("iap2 tx=0x4301 carplay-start-session")
+                        }
                     }
 
                     WIRELESS_CARPLAY_UPDATE -> {
@@ -242,6 +246,7 @@ class Iap2WirelessControlClient(
         private const val MAX_TIMEOUT_MILLIS = 24 * 60 * 60 * 1_000L
         private const val MAX_PRE_TRANSPORT_WIFI_CONFIGURATION_SENDS = 5
         private const val MAX_POST_TRANSPORT_WIFI_CONFIGURATION_SENDS = 2
+        internal const val MAX_CARPLAY_START_SESSION_SENDS = 3
 
         /** Malformed optional availability metadata must not change existing control behavior. */
         internal fun carPlayAvailabilityDiagnostic(frame: Iap2Frame): String = try {
