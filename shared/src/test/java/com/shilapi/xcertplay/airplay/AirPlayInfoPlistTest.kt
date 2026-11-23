@@ -487,4 +487,25 @@ class AirPlayInfoPlistTest {
             assertEquals(format(base, audioType), format(on, audioType))
         }
     }
+
+    @Test
+    fun callAtCallRateIsOfferedOverUsbOnly() {
+        val on = AirPlayConfig(
+            deviceName = "test",
+            deviceId = "02:00:00:00:00:02",
+            btMac = "02:00:00:00:00:02",
+            sourceVersion = "366.0",
+            main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+            microphone = true,
+            callAtCallRate = true,
+        )
+        fun telephony(config: AirPlayConfig) =
+            (AirPlayInfoPlist.build(config)["audioFormats"] as List<*>).map { it as Map<*, *> }
+                .single { it["type"] == 100 && it["audioType"] == "telephony" }
+        assertEquals(0x154, telephony(on.forTransport(wireless = false))["audioOutputFormats"])
+        // Over Wi-Fi the usual offer, Opus included.
+        assertEquals(0x70004154, telephony(on.forTransport(wireless = true))["audioOutputFormats"])
+        assertEquals(0x70004154, telephony(on.forTransport(wireless = true))["audioInputFormats"])
+        assertEquals(on.copy(callAtCallRate = false), on.forTransport(wireless = true))
+    }
 }

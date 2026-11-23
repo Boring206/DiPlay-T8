@@ -43,6 +43,25 @@ class BydClusterMapPauseTest {
         assertTrue(streaming)
     }
 
+    @Test fun playerStopsMapWithoutAdbEvenWithAMirrorOrUnknownNaviMode() {
+        val prefs = context.getSharedPreferences("xcertplay_airplay", 0)
+        prefs.edit().putBoolean("cluster_map_enabled", true).commit()
+        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(context, true)
+        BydClusterMapPause.clusterMapShown = false // mirrors normally suppress pause
+        BydClusterMapPause.readMode = { error("Player must not need an ADB read") }
+        var streaming = true
+        BydClusterMapPause.streamControl = { streaming = it }
+        BydClusterMapPause::class.java.getDeclaredField("context").apply { isAccessible = true }.set(null, context)
+        val tick = BydClusterMapPause::class.java.getDeclaredMethod("tick").apply { isAccessible = true }
+        try {
+            tick.invoke(BydClusterMapPause)
+            org.junit.Assert.assertFalse(streaming)
+            com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(context, false)
+            tick.invoke(BydClusterMapPause)
+            assertTrue(streaming)
+        } finally { prefs.edit().clear().commit() }
+    }
+
     @Test
     fun initializationDoesNotWaitForAPendingAdbRead() {
         val reading = CountDownLatch(1)

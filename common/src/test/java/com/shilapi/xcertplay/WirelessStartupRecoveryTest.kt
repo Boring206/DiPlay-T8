@@ -8,7 +8,9 @@ import android.os.Looper
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
@@ -48,6 +50,8 @@ class WirelessStartupRecoveryTest {
     }
 
     @After fun cleanup() {
+        // A rebuild posts the next start once the old stack closes; it must not run in a later test.
+        ReflectionHelpers.getField<AtomicBoolean>(activity, "shuttingDown").set(true)
         ReflectionHelpers.getField<Handler>(activity, "mainHandler").removeCallbacksAndMessages(null)
         CarPlayBackgroundSession.clear()
     }
@@ -95,6 +99,21 @@ class WirelessStartupRecoveryTest {
         assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
         assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
         assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    // PR 1178 report (XTRONS IX): every RFCOMM connect returns in 1 to 5 ms, so a silent link looked like
+    // Bluetooth that reaches no phone, although an earlier link had carried iAP2. That silence is retried.
+    @Test fun aSilentLinkOnAnAdapterThatCarriedDataIsRetried() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val failure = BluetoothLinkCheck.failure(BluetoothLinkCheck.Verdict.ADAPTER_PROVEN,
+            BluetoothLinkCheck.Trigger.SILENCE, controlMillis = 4)!!
+        assertFalse(failure is WirelessStartupException)
+        report(status = CarPlayStatus.Failed(failure.message!!))
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.GONE, retry.visibility)
+        assertNotEquals(activity.getString(R.string.bluetooth_connections_not_real), stage.text.toString())
     }
 
     // Issue 709: every connect fails inside Android. The iPhone is not what is missing, and no retry helps.
@@ -267,6 +286,70 @@ class WirelessStartupRecoveryTest {
     @Test fun aHotspotCauseIsNamedUntilTheRetriesStop() = assertNamedUntilRetriesStop(
         hotspotNotReady.copy(knownCause = ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND), R.string.hotspot_interface_not_found)
 
+    // A display change or a switch to USB rebuilds the stack after the retries stopped, which is a new attempt.
+    // Turning the screen left "Getting CarPlay ready…" next to the help, and its failure was never shown.
+    @Test fun aRebuildAfterTheStopShowsTheNewAttemptsFailure() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val offline = CarPlayStatus.Failed("The car hotspot is off. Turn it on in the car settings and connect again.",
+            startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION)
+        report(status = offline)
+        val stopped = activity.getString(R.string.hotspot_network_not_ready) + "\n" +
+            activity.getString(R.string.wireless_startup_retries_exhausted)
+
+        rebuild("Display changed 1080x2249 -> 2249x1080")
+        assertEquals(View.GONE, retry.visibility)
+        report(ReflectionHelpers.getField(activity, "restartGeneration"), offline)
+
+        assertEquals(stopped, stage.text.toString())
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun aSessionThatDropsAfterARebuildIsReconnected() {
+        report(status = CarPlayStatus.Failed("The car hotspot is off. Turn it on in the car settings and connect again.",
+            startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION))
+        rebuild("switching to USB")
+        val generation = ReflectionHelpers.getField<Int>(activity, "restartGeneration")
+        ReflectionHelpers.callInstanceMethod<AirPlaySessionListener>(activity, "createSessionListener",
+            from(Int::class.javaPrimitiveType, generation)).onTransportError("control I/O failed: Connection reset")
+
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+    }
+
+    // A display change while a retry waits rebuilds the stack. The old retry kept reconnectScheduled set until it
+    // fired, so a fast failure of the new attempt was dropped: its text stayed, with no retry and no Retry button.
+    @Test fun aRebuildWhileARetryWaitsShowsTheNewAttemptsFailure() {
+        report()
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+
+        rebuild("Display changed 1080x2249 -> 2249x1080")
+        report(ReflectionHelpers.getField(activity, "restartGeneration"), CarPlayStatus.Failed(
+            "The car hotspot is off. Turn it on in the car settings and connect again.",
+            startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION))
+
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun aRebuildWhileARetryWaitsLetsTheNewAttemptRetry() {
+        report()
+        rebuild("Display changed 1080x2249 -> 2249x1080")
+        report(ReflectionHelpers.getField(activity, "restartGeneration"))
+
+        assertEquals(2, ReflectionHelpers.getField<Int>(activity, "reconnectAttempts"))
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+    }
+
+    private fun rebuild(reason: String) {
+        val size = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
+            .getDeclaredConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }.newInstance(2249, 1080)
+        ReflectionHelpers.setField(activity, "activeDisplaySize", size)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "restartCarPlay", from(String::class.java, reason))
+        // The old stack has closed and the new attempt is running, which is when its statuses arrive.
+        ReflectionHelpers.setField(activity, "handshakeResetInProgress", false)
+    }
+
     @Test fun aCarHotspotThatIsOffIsNamedWhereTheRetriesStop() {
         val stage = TextView(activity)
         ReflectionHelpers.setField(activity, "stageStatusView", stage)
@@ -275,6 +358,21 @@ class WirelessStartupRecoveryTest {
             activity.getString(R.string.wireless_startup_retries_exhausted), stage.text.toString())
         assertEquals(0, budget().retries)
         assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    // #1256: a head unit without Wi-Fi Direct looped on "Connection interrupted. Retrying…" with no cause.
+    @Test fun aHeadUnitWithoutWifiDirectSaysSoAndDoesNotRetry() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val failure = WifiDirectSupport.unsupported()
+        report(status = CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: ${failure.message}",
+            startupFailure = failure.reason, knownCause = failure.knownCause))
+        assertEquals(activity.getString(R.string.this_head_unit_does_not_support_wi_fi_direct) + "\n" +
+            activity.getString(R.string.wireless_startup_retries_exhausted), stage.text.toString())
+        assertEquals(0, budget().retries)
+        assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
         assertEquals(View.VISIBLE, retry.visibility)
     }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Vista</string>
+    <string name="settings_cluster_player_map">Mapa</string>
+    <string name="settings_cluster_player">Reproductor (experimental)</string>
+    <string name="settings_cluster_player_description">Cambia al instante entre mapa y reproductor, respetando el formato de proyección guardado. El reproductor pausa el mapa y sus copias centrales; no muestra indicaciones de giro en el cluster. El coche controla los indicadores nativos.</string>
+    <string name="settings_cluster_player_speed">Mostrar velocidad en el reproductor</string>
+    <string name="settings_cluster_player_speed_description">Velocidad del vehículo en km/h, sin recuadro. Requiere la lectura del vehículo por ADB; si no hay datos recientes aparece —.</string>
+    <string name="settings_cluster_player_idle">Sin reproducción</string>
+    <string name="settings_cluster_player_vehicle">Mostrar datos del vehículo en el reproductor</string>
+    <string name="settings_cluster_player_vehicle_description">Marcha, porcentaje de batería y autonomía eléctrica, leídos por ADB. Si un dato no está disponible o actualizado aparece —. Los testigos y avisos nativos siguen siendo necesarios.</string>
+    <string name="cluster_player_vehicle_readout">Marcha %1$s   ·   Batería %2$s   ·   Autonomía %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Ajustar reproductor entre las franjas</string>
+    <string name="settings_cluster_player_fit_visible_description">Distribución temporal para cuadros con franjas del vehículo arriba y abajo. Mantiene portada, canción, velocidad y progreso dentro del área visible; el fondo sigue llenando la proyección. Cambia al instante y no oculta indicadores nativos.</string>
+</resources>

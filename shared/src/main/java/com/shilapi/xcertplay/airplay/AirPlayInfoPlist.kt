@@ -60,7 +60,7 @@ object AirPlayInfoPlist {
         info["hidDevices"] = listOf(
             AirPlayHid.touchHidDevice(config.main.widthPixels, config.main.heightPixels, MAIN_UUID),
             AirPlayHid.knobHidDevice(MAIN_UUID),
-            AirPlayHid.mediaHidDevice(MAIN_UUID),
+            AirPlayHid.mediaHidDevice(MAIN_UUID, config.mediaSeekKeys),
             AirPlayHid.telephonyHidDevice(MAIN_UUID),
         )
         if (config.icons.isNotEmpty()) {

@@ -3,7 +3,8 @@ package com.shilapi.xcertplay.media
 /**
  * Jitter buffer for streams mapped to the media channel. Wireless CarPlay delivers audio over the same Wi-Fi link as
  * video; radio gaps of several hundred milliseconds are normal, so music needs a buffer that
- * outlasts them. Calls, Siri and navigation prompts keep the small low-latency buffer.
+ * outlasts them. Siri and navigation prompts keep the small low-latency buffer; calls keep it over USB
+ * and start a little later over Wi-Fi ([WIRELESS_CALL_MILLIS]).
  * Wireless and wired USB keep separate settings. Wireless offers the classic presets that outlast Wi-Fi gaps.
  * Wired USB has no radio gaps, so it also offers short presets that let music start and pause sooner.
  * The device minimum AudioTrack size can still make the real buffer longer than a short preset.
@@ -26,14 +27,35 @@ object MediaAudioBuffer {
 
     data class Plan(val trackBufferBytes: Int, val startBytes: Int)
 
-    /** AudioTrack capacity and the amount to queue before play() for one output stream. */
-    fun plan(isMedia: Boolean, sampleRate: Int, channels: Int, minBufferBytes: Int, mediaMillis: Int): Plan {
+    /**
+     * Over Wi-Fi the iPhone sent call audio in bursts about 60 ms apart (Geely Monjaro, ECARX KX11, car hotspot),
+     * and the low-latency start level (about 40 ms) ran dry after each burst: WhatsApp calls broke up.
+     * Only the first fill gets it: calls are not rebuffered after a longer gap, as music is.
+     * Siri and prompts are left out: a sound shorter than the start level would wait for the tail timeout.
+     */
+    const val WIRELESS_CALL_MILLIS = 120
+
+    /** The call start level for a session: [WIRELESS_CALL_MILLIS] over Wi-Fi, the low-latency level over USB. */
+    fun callMillis(wireless: Boolean): Int = if (wireless) WIRELESS_CALL_MILLIS else 0
+
+    /**
+     * AudioTrack capacity and the amount to queue before play() for one output stream. [callMillis] above
+     * zero, passed for a call only, queues at least that much before it starts, with the same headroom.
+     */
+    fun plan(isMedia: Boolean, sampleRate: Int, channels: Int, minBufferBytes: Int, mediaMillis: Int,
+        callMillis: Int = 0): Plan {
         val lowLatency = Plan(
             trackBufferBytes = maxOf(minBufferBytes * 4, MIN_TRACK_BUFFER_BYTES),
             startBytes = maxOf(minBufferBytes, MIN_START_BUFFER_BYTES),
         )
-        if (!isMedia) return lowLatency
         val bytesPerSecond = sampleRate.toLong() * channels.coerceIn(1, 2) * 2
+        if (!isMedia) {
+            if (callMillis <= 0) return lowLatency
+            return Plan(
+                trackBufferBytes = maxOf((bytesPerSecond * (callMillis + HEADROOM_MILLIS) / 1000).toInt(), lowLatency.trackBufferBytes),
+                startBytes = maxOf((bytesPerSecond * callMillis / 1000).toInt(), lowLatency.startBytes),
+            )
+        }
         val start = (bytesPerSecond * sanitize(mediaMillis) / 1000).toInt()
         val capacity = (bytesPerSecond * (sanitize(mediaMillis) + HEADROOM_MILLIS) / 1000).toInt()
         return Plan(

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Görünüm</string>
+    <string name="settings_cluster_player_map">Harita</string>
+    <string name="settings_cluster_player">Oynatıcı (deneysel)</string>
+    <string name="settings_cluster_player_description">Kaydedilen gösterim biçimiyle harita ve oynatıcı arasında anında geçiş yapar. Oynatıcı haritayı ve orta ekran kopyalarını duraklatır; göstergede dönüş yönlendirmesi sunmaz. Yerel göstergeleri araç yönetir.</string>
+    <string name="settings_cluster_player_speed">Oynatıcıda hızı göster</string>
+    <string name="settings_cluster_player_speed_description">Çerçevesiz km/sa araç hızı. ADB üzerinden araç okuması gerekir; güncel veri yoksa — görünür.</string>
+    <string name="settings_cluster_player_idle">Oynatılmıyor</string>
+    <string name="settings_cluster_player_vehicle">Oynatıcıda araç bilgilerini göster</string>
+    <string name="settings_cluster_player_vehicle_description">Vites, pil yüzdesi ve elektrikli menzil ADB üzerinden okunur. Eksik veya eski veriler — olarak gösterilir. Yerel uyarı lambaları ve bildirimler hâlâ gereklidir.</string>
+    <string name="cluster_player_vehicle_readout">Vites %1$s   ·   Pil %2$s   ·   Menzil %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Oynatıcıyı yerel şeritlerin arasına sığdır</string>
+    <string name="settings_cluster_player_fit_visible_description">Üstte ve altta araç şeritleri olan göstergeler için geçici düzen. Kapak, şarkı, hız ve ilerleme görünür alana sığar; arka plan tüm yansıtmayı doldurur. Hemen uygulanır ve yerel göstergeleri gizlemez.</string>
+</resources>

@@ -101,6 +101,8 @@ object EthernetIpv6Codec {
             optionOffset += optionBytes
         }
 
+        // The IPv6 payload length is 16 bits. Appending the 8-byte option must not wrap it to zero.
+        if (payloadBytes > 0xffff - 8) return ipv6
         val result = ipv6.copyOf(payloadEnd + 8)
         result[IPV6_PAYLOAD_LENGTH_OFFSET] = ((payloadBytes + 8) ushr 8).toByte()
         result[IPV6_PAYLOAD_LENGTH_OFFSET + 1] = (payloadBytes + 8).toByte()

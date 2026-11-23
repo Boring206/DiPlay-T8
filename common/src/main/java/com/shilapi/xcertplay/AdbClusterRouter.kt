@@ -3,11 +3,16 @@ package com.shilapi.xcertplay
 import android.content.Context
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
+import com.shilapi.xcertplay.setup.DiLinkGeneration
 import java.io.File
 
 /** Strict projection target, discovered afresh through the authorized shell. */
 internal object AdbClusterRouter {
     private const val REPORT = "adb-cluster-route.txt"
+    // launch() writes about 10 lines plus output.take(1500); 200 lines bounds a blown-up route file.
+    private const val MAX_REPORT_LINES = 200
+    // A line cap alone cannot bound memory: readLine() loads a file with no newlines in full (256 KiB cap).
+    private const val MAX_REPORT_BYTES = 262144L
     data class Result(val success: Boolean, val report: String)
 
     /** Known 5/5.1 displays win; the explicit legacy route may own the measured projection task. */
@@ -16,10 +21,52 @@ internal object AdbClusterRouter {
         val public = ClusterMapPresentation.findDisplay(context)
         if (AirPlayPersistence.loadLegacyClusterEnabled(context)) {
             // Only the measured projection may use the independent task; public 5/5.1 wins.
-            return public == null || DiLink4ClusterDisplay.matches(public.name,
-                ClusterMapPresentation.sizeOf(public).x, ClusterMapPresentation.sizeOf(public).y)
+            return (public == null || DiLink4ClusterDisplay.matches(public.name,
+                ClusterMapPresentation.sizeOf(public).x, ClusterMapPresentation.sizeOf(public).y)) && bydHeadUnit(context)
         }
-        return AirPlayPersistence.loadAdbClusterEnabled(context) && public == null
+        // A switch saved before it was BYD-only must not ask another unit's iPhone for video nobody sees (#1327).
+        return AirPlayPersistence.loadAdbClusterEnabled(context) && public == null && bydHeadUnit(context)
+    }
+
+    /**
+     * Both DiLink 4 routes look for BYD's xdja projection display, which other head units do not have (#1327).
+     * Firmware that names its DiLink generation counts too, so a BYD unit without the usual packages keeps them.
+     */
+    fun bydHeadUnit(context: Context): Boolean = CarHotspotSetup.isBydHeadUnit(context) ||
+        DiLinkGeneration.detect().source == DiLinkGeneration.Source.SYSTEM_VERSION
+
+    /**
+     * Probes in this process read real display lists with no projection display for at least
+     * [MISSING_SPAN_MILLIS], and none ever found one. Until the route settings change, the next connection
+     * does not ask for the 1920x720 stream (#1327). A unit where the route has worked once in this process
+     * keeps asking for it, so a cluster display that is briefly gone (standby, re-creation) changes nothing,
+     * and the span lets xdja create its display after a cold boot. A display that appears later still
+     * confirms the route, and that asks for the native stream.
+     */
+    @Volatile var targetMissing = false
+        private set
+
+    /** Probes that found no projection display since the first one, and how long they span (for the log). */
+    @Volatile var missingProbes = 0
+        private set
+    @Volatile var missingSpanMillis = 0L
+        private set
+
+    private const val MISSING_SPAN_MILLIS = 30_000L
+    @Volatile private var targetSeen = false
+    private var firstMissingAt = -1L
+
+    /** Settings changed: the next connection asks for the native stream again. */
+    @Synchronized fun forgetMissingTarget() {
+        targetMissing = false
+        firstMissingAt = -1L
+        missingProbes = 0
+        missingSpanMillis = 0L
+    }
+
+    @Synchronized internal fun resetProbeForTest() {
+        forgetMissingTarget()
+        targetSeen = false
     }
 
     // Match only the base logical display, not a device's layer-stack number or override record.
@@ -31,6 +78,28 @@ internal object AdbClusterRouter {
             Regex("displayId (\\d+)\"").find(line)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
         }.distinct().toList()
         return candidates.singleOrNull()
+    }
+
+    /** The projection display in [dump], remembering whether real display lists have kept having none. */
+    internal fun probe(dump: String, now: Long = android.os.SystemClock.elapsedRealtime()): Int? =
+        displayId(dump).also { display -> record(display != null, missing(dump), now) }
+
+    // Every display list has the built-in screen's base record; without one the dump failed and proves nothing.
+    // An xdja record that is ambiguous or does not match yet still shows the unit has the display.
+    private fun missing(dump: String) =
+        dump.contains("mBaseDisplayInfo=DisplayInfo{") && !dump.contains(DiLink4ClusterDisplay.NAME)
+
+    @Synchronized private fun record(found: Boolean, missing: Boolean, now: Long) {
+        if (found) {
+            targetSeen = true
+            forgetMissingTarget()
+            return
+        }
+        if (!missing || targetSeen) return
+        if (firstMissingAt < 0) firstMissingAt = now
+        missingProbes++
+        missingSpanMillis = now - firstMissingAt
+        if (missingSpanMillis >= MISSING_SPAN_MILLIS) targetMissing = true
     }
 
     // Direct shell launch, following Hanxu4131's legacy platform-21 adapter.
@@ -75,7 +144,7 @@ internal object AdbClusterRouter {
                     val access = adb.connect(mayAsk = false)
                     appendLine("adbAccess=$access")
                     if (access != LocalAdb.Access.READY) return@use
-                    val display = displayId(adb.shell("dumpsys display").orEmpty())
+                    val display = probe(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
                     if (display == null || !enabled(context) || !prepare(display)) return@use
                     val held = AirPlayPersistence.loadLegacyClusterEnabled(context) || !holdStockMap || com.shilapi.xcertplay.hud.BydOemClusterNavi.holdForLaunch(context, token) {
@@ -89,7 +158,8 @@ internal object AdbClusterRouter {
                     appendLine("launchAccepted=$success; awaiting actual display confirmation")
                 }
             } catch (error: Exception) {
-                appendLine("routeError=${error.javaClass.simpleName}: ${error.message}")
+                appendLine("routeError=${error.javaClass.simpleName}" +
+                    (error.message?.lineSequence()?.firstOrNull()?.take(120)?.let { ": $it" } ?: ""))
             }
         }
         // A failed diagnostic write must not leave launchPending stuck forever.
@@ -104,7 +174,12 @@ internal object AdbClusterRouter {
         }
     }.getOrNull()
 
-    fun report(context: Context): String = File(context.filesDir, REPORT).let {
-        if (it.isFile) it.readText() else "ADB cluster routing has not been run."
+    fun report(context: Context): String = File(context.filesDir, REPORT).let { file ->
+        if (!file.isFile) return@let "ADB cluster routing has not been run."
+        // take(MAX_REPORT_LINES) caps lines, not bytes: readLine() would still load a file
+        // with no newlines in full. Refuse oversized files before opening a reader.
+        val bytes = file.length()
+        if (bytes > MAX_REPORT_BYTES) return@let "too large ($bytes bytes)"
+        file.useLines { lines -> lines.take(MAX_REPORT_LINES).joinToString("\n") }
     }
 }

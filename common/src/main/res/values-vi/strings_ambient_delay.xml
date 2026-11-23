@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ambient_delay_title">Độ trễ chuyển đổi</string>
+    <string name="ambient_delay_hint">Nhập 0–60 giây. Số 0 sẽ chuyển ngay.</string>
+    <string name="custom_number_error">Nhập số nguyên từ %1$d đến %2$d.</string>
+    <string name="ambient_delay_summary">%1$d giây</string>
+</resources>

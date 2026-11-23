@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Градієнт обкладинки для тла спідометра</string>
+    <string name="settings_cluster_speedometer_artwork_description">Окрема опція. Замінює одноколірне тло зі збереженням розміру й непрозорості. Вимкнення повертає колір альбому або чорний. Рух вмикається окремо.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Рух тла спідометра</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Типово вимкнено. Вмикає повільний рух тла під час відтворення. Плавна зміна треків зберігається й без руху.</string>
+</resources>

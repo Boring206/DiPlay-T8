@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.KeyEvent
 import androidx.core.graphics.drawable.toBitmap
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
+import com.shilapi.xcertplay.airplay.LongPressSeekKeys
 import com.shilapi.xcertplay.compat.AudioFocusRequestCompat
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -42,6 +43,11 @@ internal object CarPlayMediaKeys {
         PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val seekHold = MediaSeekHold(
+        schedule = { task, delayMillis -> mainHandler.postDelayed(task, delayMillis) },
+        cancel = mainHandler::removeCallbacks,
+        note = ::noteMediaKey,
+    )
     private val artworkQueue = NowPlayingArtworkQueue(
         worker = Executors.newSingleThreadExecutor { task ->
             Thread(task, "diplay-now-playing-artwork").apply { isDaemon = true }
@@ -145,7 +151,7 @@ internal object CarPlayMediaKeys {
                 if (nowPlaying.elapsedMillis != update.elapsedMillis) elapsedUpdatedAt = SystemClock.elapsedRealtime()
                 val metadataChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
                 nowPlaying = update
-                if (metadataChanged) ClusterMusicState.publish(update, artwork)
+                ClusterMusicState.publish(update, artwork)
                 updateInitialAlbumRecovery(expected)
                 // The iPhone repeats NowPlayingUpdate about twice a second for the position alone.
                 // Republishing the metadata each time sent a copy of the artwork through system_server
@@ -197,7 +203,7 @@ internal object CarPlayMediaKeys {
 
     private fun albumRecoveryEnabled(): Boolean {
         val context = appContext ?: return false
-        if (ClusterMusicSettings.enabled(context)) return true
+        if (ClusterMusicSettings.enabled(context) || com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(context)) return true
         val settings = com.shilapi.xcertplay.media.AmbientMusicSettings.load(context)
         return settings.enabled && settings.colorSource == com.shilapi.xcertplay.media.AmbientColorSource.ALBUM
     }
@@ -433,7 +439,25 @@ internal object CarPlayMediaKeys {
 
     private fun notUsed(source: String) {
         Log.i(TAG, "media key $source not used by CarPlay")
-        WheelKeyLog.note("media key $source not used by CarPlay")
+        WheelKeyLog.noteAwaitingRelease("media $source", "media key $source not used by CarPlay")
+    }
+
+    /** [timing] goes on the key's "not used" line: when its release came after its downTime (#1190). */
+    private fun notUsedReleased(source: String, timing: String) {
+        Log.i(TAG, "media key $source not used by CarPlay$timing")
+        WheelKeyLog.released("media $source", timing)
+    }
+
+    /**
+     * A wheel long press with the long-press seek setting on (#1190): Fast Forward or Rewind, held on the
+     * iPhone by [seekHold]. Main thread.
+     */
+    private fun seek(index: Int, source: String, event: KeyEvent) =
+        seekHold.onKey(index, source, event, CarPlayVideo::onMediaKey) { synchronized(this) { controller } }
+
+    private fun noteMediaKey(message: String) {
+        Log.i(TAG, message)
+        WheelKeyLog.note(message)
     }
 
     /** A steering-wheel media key captured outside the Android key stream (Geely/Lynk). */
@@ -447,7 +471,10 @@ internal object CarPlayMediaKeys {
 
     private val callback = CarPlayMediaCallback(
         experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
+        longPressSeek = { appContext?.let(AirPlayPersistence::loadWheelLongPressSeek) == true },
+        seek = ::seek,
         notUsed = ::notUsed,
+        notUsedReleased = ::notUsedReleased,
         send = ::send,
     )
 
@@ -556,20 +583,41 @@ internal object CarPlayMediaKeys {
  * Media-session input → CarPlay presses. Hardware keys arrive as button events and keep the toggle;
  * media controllers (not hardware keys) call [onPlay] and [onPause] with an explicit intent.
  * A button that is not a CarPlay key goes to [notUsed]: a car that sends its own code for a wheel key
- * then shows that code in the report, instead of looking like a car that sent nothing (#610).
+ * then shows that code in the report, instead of looking like a car that sent nothing (#610). Its release
+ * goes to [notUsedReleased] with when it came, so the report shows whether a car sends a long press at its
+ * threshold or at the release (#1190).
+ *
+ * With [longPressSeek] on, DiLink 3's long-press next and previous keys ([seekKeys], matched by the name
+ * KeyEvent.keyCodeToString gives their code) go to [seek] as Fast Forward and Rewind, press and release alike.
  */
 internal class CarPlayMediaCallback(
     private val experimentalDiLink3Keys: () -> Boolean = { false },
+    private val longPressSeek: () -> Boolean = { false },
+    private val seekKeys: LongPressSeekKeys = CarPlayMediaButton.longPressSeekKeys,
+    private val seek: (index: Int, source: String, event: KeyEvent) -> Unit = { _, _, _ -> },
     private val notUsed: (source: String) -> Unit = {},
+    private val notUsedReleased: (source: String, timing: String) -> Unit = { _, _ -> },
+    private val uptime: () -> Long = SystemClock::uptimeMillis,
     private val send: (index: Int, source: String) -> Unit,
 ) : MediaSession.Callback() {
+    private val unusedTiming = KeyHoldTiming<Int>(uptime)
+
     override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
         @Suppress("DEPRECATION")
         val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
         val press = event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        seekKeys.seekFor(event.keyCode)?.takeIf { longPressSeek() }?.let { seekIndex ->
+            seek(seekIndex, KeyEvent.keyCodeToString(event.keyCode), event)
+            return true
+        }
         val index = CarPlayMediaButton.forKeyCode(event.keyCode, experimentalDiLink3Keys())
         if (index == null) {
-            if (press) notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            if (press) {
+                unusedTiming.pressed(event.keyCode, event)
+                notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            } else {
+                unusedTiming.after(event.keyCode, event)?.let { notUsedReleased(KeyEvent.keyCodeToString(event.keyCode), it) }
+            }
             return super.onMediaButtonEvent(mediaButtonIntent)
         }
         if (press) send(index, KeyEvent.keyCodeToString(event.keyCode))

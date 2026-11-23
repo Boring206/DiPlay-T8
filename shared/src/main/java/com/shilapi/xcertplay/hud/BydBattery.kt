@@ -33,19 +33,28 @@ internal object BydBattery {
     private const val REMAINING = "service call autoservice 7 i32 1005 i32 882901008" // float kWh
     private const val BMS_CHARGING = 1
 
-    /** Unknown protocols give no reading; CAN has no verified remaining-energy address. */
-    fun read(shell: (String) -> String?): BydBatteryReading? {
-        // Most firmware sets ro.car.protocol; the Tang's DiLink 5 (dynasty di5, 2025) sets only sys.car.protocol.
+    // The Tang with DiLink 5 sets only sys.car.protocol; keep that fallback.
+    fun protocol(shell: (String) -> String?): BydBatteryProtocol? {
         val property = shell("getprop ro.car.protocol")?.trim()?.takeIf { it.isNotEmpty() }
             ?: shell("getprop sys.car.protocol")?.trim()
-        val protocol = when (property) {
+        return when (property) {
             "CAN" -> BydBatteryProtocol.CAN
             "CANFD" -> BydBatteryProtocol.CANFD
-            else -> return null
+            else -> null
         }
-        val percent = BydParcel.value(shell("service call autoservice 7 i32 1014 i32 ${protocol.percentId}"))
+    }
+
+    fun percentReply(shell: (String) -> String?, protocol: BydBatteryProtocol) =
+        shell("service call autoservice 7 i32 1014 i32 ${protocol.percentId}")
+    fun rangeReply(shell: (String) -> String?, protocol: BydBatteryProtocol) =
+        shell("service call autoservice 5 i32 1014 i32 ${protocol.rangeId}")
+
+    /** Unknown protocols give no reading; CAN has no verified remaining-energy address. */
+    fun read(shell: (String) -> String?): BydBatteryReading? {
+        val protocol = protocol(shell) ?: return null
+        val percent = BydParcel.value(percentReply(shell, protocol))
             ?.let(::float)?.takeIf { it in 0.0..100.0 } ?: return null
-        val range = BydParcel.value(shell("service call autoservice 5 i32 1014 i32 ${protocol.rangeId}"))
+        val range = BydParcel.value(rangeReply(shell, protocol))
             ?.takeIf { it in 0..3000 } ?: return null
         val remaining = if (protocol == BydBatteryProtocol.CANFD) {
             BydParcel.value(shell(REMAINING))?.let(::float)?.takeIf { it in 0.0..300.0 } ?: return null

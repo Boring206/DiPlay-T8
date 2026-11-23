@@ -16,6 +16,9 @@ internal class MicrophoneCaptureStats(
 ) {
     private val type = typeAndSource(config.audioType).first
     private val format = format(config)
+    private val streamRate = config.sampleRate
+    private var sourceLabel = typeAndSource(config.audioType).second
+    private var captureRateLabel = ""
     private var metadata = metadata(config)
     private var windowStart = nowNs()
     private var readStart = windowStart
@@ -40,10 +43,22 @@ internal class MicrophoneCaptureStats(
 
     /**
      * The source the recorder is built with: a call in the car's phone state records from VOICE_RECOGNITION,
-     * not the VOICE_COMMUNICATION its audio type suggests (#987). Call before the capture thread starts;
-     * [metadata] is not volatile.
+     * not the VOICE_COMMUNICATION its audio type suggests (#987). Call before the capture thread starts, or on
+     * that thread when it falls back to another source; [metadata] is not volatile.
      */
-    fun useSource(source: Int) { metadata = "type=$type source=${sourceName(source)} $format" }
+    fun useSource(source: Int) {
+        sourceLabel = sourceName(source)
+        metadata = "type=$type source=$sourceLabel $format$captureRateLabel"
+    }
+
+    /**
+     * The rate the recorder runs at when it is below the stream's: a call that recorded too slowly or silently is
+     * rebuilt at the vocoder's rate and upsampled (#1172). Like [useSource], only from the capture thread.
+     */
+    fun useCaptureRate(rate: Int) {
+        captureRateLabel = if (rate == streamRate) "" else " captureRate=$rate"
+        metadata = "type=$type source=$sourceLabel $format$captureRateLabel"
+    }
 
     fun reading() { readStart = nowNs() }
 
@@ -84,10 +99,60 @@ internal class MicrophoneCaptureStats(
 
     fun sendFailed() { sendErrors++ }
 
-    fun restarted(attempt: Int, reason: String, routeType: Int?) {
+    /**
+     * Recording works again. [newRecorder] says whether the failed recorder was replaced; a new one also names
+     * the platform effects now enabled on its session and, on a call, whether DiPlay's echo canceller still runs.
+     */
+    fun restarted(
+        attempt: Int,
+        reason: String,
+        routeType: Int?,
+        newRecorder: Boolean = false,
+        platformEffects: String? = null,
+        diplayEchoCanceller: Boolean? = null,
+    ) {
         emit("Microphone: recording restarted $metadata attempt=$attempt reason=$reason " +
-            "routedDeviceType=${routeType ?: "unknown"}")
+            "routedDeviceType=${routeType ?: "unknown"} recorder=${recorderKind(newRecorder)}" +
+            (platformEffects?.let { " platformEffects=$it" } ?: "") +
+            (diplayEchoCanceller?.let { " diplayEchoCanceller=${if (it) "on" else "off"}" } ?: ""))
     }
+
+    /** One attempt to record again did not work; [state] is the recorder's recordingState, null when none was built. */
+    fun restartFailed(attempt: Int, reason: String, newRecorder: Boolean, state: Int?) {
+        emit("Microphone: recording restart failed $metadata attempt=$attempt reason=$reason " +
+            "recorder=${recorderKind(newRecorder)} recordingState=${state ?: "none"}")
+    }
+
+    /** Every attempt failed, so capture ends for this stream. */
+    fun recoveryEnded(attempts: Int) {
+        emit("Microphone: capture stopped $metadata reason=recording-failed attempts=$attempts")
+    }
+
+    /**
+     * A call's recorder source changed after the first one kept failing; see MicrophoneUplink. The effects the
+     * new recorder gets are on its 'recording restarted' line, since they are only known once it is built.
+     */
+    fun sourceFallback(from: Int, to: Int, failedRecorders: Int) {
+        emit("Microphone: source fallback type=$type from=${sourceName(from)} to=${sourceName(to)} " +
+            "failedRecorders=$failedRecorders")
+    }
+
+    /**
+     * The verdict of a call's [MicrophoneCaptureCheck] and what capture does about it: "keep" the recorder, or
+     * "rebuild" one from [nextSource] at [nextCaptureRate]. One line per check, with no audio and no addresses.
+     */
+    fun captureCheck(result: MicrophoneCaptureCheck.Result, nextSource: Int? = null, nextCaptureRate: Int? = null) {
+        val action = if (nextSource != null && nextCaptureRate != null) {
+            "rebuild nextSource=${sourceName(nextSource)} nextCaptureRate=$nextCaptureRate"
+        } else {
+            "keep"
+        }
+        emit("Microphone: capture check $metadata realtimePercent=${result.realtimePercent} " +
+            "peakDbfs=${peakDbfs(result.peak)} audioMode=${result.audioMode ?: "unknown"} " +
+            "verdict=${result.verdict.label} action=$action")
+    }
+
+    private fun recorderKind(newRecorder: Boolean) = if (newRecorder) "new" else "same"
 
     fun failure(stage: MicrophoneFailureStage, error: Throwable? = null, code: Int? = null) {
         emit(failureMessage(metadata, stage, error, code))

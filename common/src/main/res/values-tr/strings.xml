@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Mevcut Wi-Fi / Aynı Yerel Ağ</string>
     <string name="existing_wifi_description">Mevcut bir yönlendirici veya taşınabilir Wi-Fi kullanın. iPhone ve aracı internet erişimi olan aynı ağda tutun.</string>
     <string name="existing_wifi_hint">Mevcut Wi-Fi · Her iki cihazı da aynı Wi-Fi ağında ve Bluetooth\'u açık tutun. Araç erişim noktası gerekmez.</string>
-    <string name="existing_wifi_instructions">Sistem ayarlarından aracı ve iPhone\'u aynı harici Wi-Fi ağına bağlayın. Aşağıya tam adını ve WPA2 parolasını girin; parolayı yalnızca açık ağlar için boş bırakın. WPA2 veya karma WPA2/WPA3 modunu kullanın ve yönlendiricide istemci yalıtımını devre dışı bırakın. DiPlay bu Wi-Fi bağlantısını korur ve erişim noktası oluşturmaz.</string>
+    <string name="existing_wifi_instructions">Sistem ayarlarından aracı ve iPhone\'u aynı harici Wi-Fi ağına bağlayın. Aşağıya tam adını ve WPA2 parolasını girin; parolasız açık bir ağ çalışmaz, çünkü iPhone kablosuz CarPlay\'i yalnızca parolalı bir ağda başlatır. WPA2 veya karma WPA2/WPA3 modunu kullanın ve yönlendiricide istemci yalıtımını devre dışı bırakın. DiPlay bu Wi-Fi bağlantısını korur ve erişim noktası oluşturmaz.</string>
     <string name="existing_wifi_details">Harici Wi-Fi ayrıntıları</string>
     <string name="existing_wifi_ssid">Harici Wi-Fi adı (SSID)</string>
     <string name="existing_wifi_password">Harici Wi-Fi parolası</string>
@@ -186,7 +186,6 @@
     <string name="could_not_save_image">Görsel kaydedilemedi</string>
     <string name="could_not_save_the_report">Rapor kaydedilemedi</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay başlatılamadı. DiPlay\'e dönün ve uygulama izinlerini kontrol edin.</string>
-    <string name="custom_1_1_icon">Özel 1:1 simge</string>
     <string name="debug_logs">Hata ayıklama günlükleri</string>
     <string name="default_icon">Varsayılan simge</string>
     <string name="default_placeholder_icon">Varsayılan yer tutucu simge</string>
@@ -580,6 +579,8 @@
     <string name="wheel_speed_for_tunnels_description">Konumu iPhone\'a bildir açıkken, DiPlay aracın tekerlek hızını ve vitesini de gönderir, böylece Apple Haritalar tünellerde ve otoparklarda konumunuzu ilerletmeye devam edebilir. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
     <string name="video_while_parked">Park halindeyken video</string>
     <string name="video_while_parked_description">iOS 27: iPhone\'da CarPlay\'e gönderdiğiniz bir video, araç P konumundayken araç ekranında oynatılır. P konumundan çıktığınızda oynatıcı kapanır; ADB olmadan video kapalı kalır ve iPhone yalnızca ses çalar. Düz HTTPS video (örneğin Safari\'den) oynatılır; Apple TV+ gibi FairPlay korumalı videolar lisanslı bir alıcı gerektirir ve burada oynatılamaz. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
+    <string name="video_off_gear_unreadable">Videolar araç ekranında oynatılamıyor: DiPlay vitesi okuyamıyor.</string>
+    <string name="video_gear_no_reply">Ana ünitenin ADB\'si vites okumasına yanıt vermedi.</string>
     <string name="cluster_song">Gösterge panelinde parça</string>
     <string name="cluster_song_description">CarPlay şarkı adı ve sanatçısı, oynat ve duraklat ile birlikte gösterge panelindeki müzik kartında görünür. Gösterge paneli CarPlay\'in kendi kaynağını çizmediğinden kart BYD\'nin “Diğer” müzik kaynağı olarak gösterilir. Hemen uygulanır. Ana ünitede ağ üzerinden ADB gerektirir.</string>
     <string name="video_back_to_carplay">CarPlay\'e Geri Dön</string>
@@ -684,8 +685,9 @@
     <string name="settings_usb_charging">iPhone şarjı</string>
     <string name="settings_usb_charging_normal">Normal (2,4 A)</string>
     <string name="settings_usb_charging_reduced">Azaltılmış (1,5 A)</string>
+    <string name="settings_usb_charging_medium">Orta (1 A)</string>
     <string name="settings_usb_charging_low">Düşük (0,5 A)</string>
-    <string name="settings_usb_charging_description">DiPlay\'in USB üzerinden iPhone\'a ne kadar şarj akımı sunduğu. Kablolu CarPlay birkaç saniyede bir kesiliyor ve iPhone kendi kendine yeniden bağlanıyorsa, aracın USB bağlantı noktası yeterli güç sağlamıyor olabilir: Azaltılmış\'ı, ardından Düşük\'ü deneyin. iPhone daha yavaş şarj olur. Sonraki USB bağlantısında geçerli olur.</string>
+    <string name="settings_usb_charging_description">DiPlay\'in USB üzerinden iPhone\'a ne kadar şarj akımı sunduğu. Kablolu CarPlay birkaç saniyede bir kesiliyor ve iPhone kendi kendine yeniden bağlanıyorsa, aracın USB bağlantı noktası yeterli güç sağlamıyor olabilir: Azaltılmış\'ı, ardından Orta\'yı, sonra Düşük\'ü deneyin. iPhone daha yavaş şarj olur. Sonraki USB bağlantısında geçerli olur.</string>
     <string name="wheel_joystick_auto_off">Kumanda kolu kendiliğinden kapanır</string>
     <string name="wheel_joystick_auto_off_description">Bir tuşa basılmadan 15 saniye geçtikten sonra ve bir rota başladığında, tuşlar tekrar müziğe ve ses düzeyine döner.</string>
     <string name="wheel_joystick_on">Kumanda kolu açık</string>
@@ -775,6 +777,17 @@
     <string name="car_button_name">Ad</string>
     <string name="car_button_description">CarPlay bu simgeyi ve adı uygulama listesinde gösterir. Aracın kendi ekranına dönmek için dokunun. Değişiklikler CarPlay\'in bir sonraki bağlanışında geçerli olur.</string>
     <string name="car_button_saved_next_connection">Kaydedildi. CarPlay bir sonraki bağlanışında yeni simgeyi ve adı gösterecektir.</string>
+    <string name="settings_car_brand_title">Marka amblemi</string>
+    <string name="settings_car_brand_summary">CarPlay uygulama listesinde gösterilecek BYD serisi amblemini seçin. Ad yalnızca varsayılan veya bir amblem adı olduğunda güncellenir. Amblem seçmek özel görüntünün yerini alır.</string>
+    <string name="settings_car_brand_default">Varsayılan (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Marka amblemine sıfırla</string>
+<string name="settings_car_brand_reset">Varsayılan amblemi ve adı geri yükle</string>
     <string name="this_head_unit_has_no_image_picker">Bu ana ünitede resim seçici yok.</string>
     <string name="settings_ambient_title">Ambiyans aydınlatması (deneysel)</string>
     <string name="settings_ambient_configuration">Ambiyans ışığı ayarları</string>
@@ -955,6 +968,8 @@
     <string name="settings_navigation_attenuation">Navigasyon yönlendirme ses düzeyi</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Müzik veya arama sesini değiştirmeden CarPlay navigasyon yönlendirmesini azaltın. Hemen geçerli olur; ana ünitenizin navigasyon ses düzeyi çalışmaya devam eder.</string>
+    <string name="settings_call_attenuation">Arama sesi düzeyi</string>
+    <string name="settings_call_attenuation_description">Aracın arama ses düzeyini değiştirmeden CarPlay aramalarında arayanın sesini azaltır. Arama hangi çıkışı kullanırsa kullansın hemen geçerli olur. Aramalarınız cızırtılı veya anlaşılmaz değilse 0 dB\'de bırakın. Bir BYD Han\'da (DiLink 3) dinleme testinde yaklaşık -12 ile -16 dB arasında arama net duyuldu.</string>
     <string name="settings_car_hotspot_control">Araç erişim noktası</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay açıldığında ve kablosuz bağlantıdan önce kayıtlı araç erişim noktasını açar. DiPlay\'in Android\'in “Sistem ayarlarını değiştir” erişimine ihtiyacı vardır; ADB gerekmez. Tam yeniden başlatmanın ardından erişim noktasına sahip olmak için araç çalıştıktan sonra DiPlay\'i açmayı da etkinleştirin. Erişim noktası otomatik olarak kapatılmaz.</string>
     <string name="settings_car_hotspot_config_title">Araç erişim noktası ayrıntılarını içe aktar (deneysel)</string>
@@ -976,6 +991,7 @@
     <string name="settings_write_settings_allow">Erişime izin ver</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay sırasında aracın Wi-Fi aramasını duraklat · ADB gerektirir</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi Direct üzerinden araç birkaç saniyede bir Wi-Fi ağlarını arar ve her arama müzik ve videoda takılmaya neden olur. Bu açıkken DiPlay, CarPlay çalışırken aramayı duraklatır. Araç ayrıca CarPlay bitene kadar telefonunuzun erişim noktası gibi bilinen bir ağa kendiliğinden katılmaz; yine de aracın Wi-Fi ayarlarından katılabilirsiniz. Aracın otomatik katılmasına izin vermek için kapatın. Sonraki bağlantıda geçerli olur.</string>
+    <string name="settings_car_hotspot_scan_pause_description">Bazı ana üniteler araç erişim noktasının yanında kendi Wi-Fi istemcisini açık tutar ve düzenli olarak ağ arar; her arama müziği kısa süreliğine keser. Bu açıkken DiPlay, CarPlay çalıştığı sürece bu aramayı yalnızca bu tür ünitelerde duraklatır. Araç da CarPlay bitene kadar telefonunuzun erişim noktası gibi bilinen bir ağa kendiliğinden bağlanmaz. Aracın otomatik bağlanması için kapatın. Bir sonraki bağlantıda geçerli olur.</string>
     <string name="temporary_system_bars">Geçici sistem çubukları (5 saniye)</string>
     <string name="temporary_system_bars_description">İsteğe bağlı: gizli araç durum/navigasyon çubuklarını beş saniye boyunca göstermek için yapılandırılmış ayarlar hareketi parmaklarıyla yukarı kaydırın; aşağı kaydırma yine DiPlay ayarlarını açar. Çakışan hareketleri olan ana ünitelerde devre dışı bırakın. Bazı donanım yazılımları bu isteği yok sayabilir.</string>
     <string name="wheel_media_play_pause">Direksiyonda oynat/duraklat tuşu</string>
@@ -1010,6 +1026,8 @@
     <string name="cluster_song_gate">Müzik kartını otomatik etkinleştir</string>
     <string name="cluster_song_gate_description">Kart, aracın medya yığını açılana kadar gizli kalır. Kapıyı açmak bunu yapar; bu da medya ekranını kısa süre öne getirir ve ardından DiPlay\'e döner. Ekran yanıp sönmesini atlamak için kapalı bırakın. Hemen geçerli olur.</string>
     <string name="connection_help_car_hotspot_details_differ">Bağlantı kurulumunda, Kaydedilen erişim noktasını düzenle\'ye dokunun ve aracın erişim noktası ayarlarından ad ve parolayı kopyalayın, ardından tekrar deneyin.</string>
+    <string name="existing_wifi_needs_password">Paylaşılan Wi-Fi bir parola gerektirir</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhone kablosuz CarPlay\'i yalnızca parolalı bir Wi-Fi ağında başlatır. Yönlendiricinin WPA2 parolasını Bağlantı kurulumuna girin. Yönlendiricinin parolası yoksa bir parola ayarlayın ve aracı ve iPhone\'u bu ağa yeniden bağlayın. Ardından tekrar deneyin.</string>
     <string name="connection_help_car_hotspot_off">Araç ayarlarından araç erişim noktasını açın, ardından tekrar deneyin.</string>
     <string name="connection_help_choose_iphone">Araçla birden fazla cihaz eşleştirilmiş. DiPlay\'e dönün, iPhone seç\'e dokunup kendinizinkini seçin, ardından tekrar deneyin.</string>
     <string name="connection_help_chosen_iphone_not_paired">iPhone\'u tekrar aracın Bluetooth\'u ile eşleştirin veya DiPlay\'e dönüp başka bir tane seçmek için iPhone seç\'e dokunun. Ardından tekrar deneyin.</string>
@@ -1020,13 +1038,16 @@
     <string name="hotspot_interface_not_found">Yapılandırılan erişim noktası arayüzü bu ana ünitede bulunamadı</string>
     <string name="iphone_sent_no_picture">iPhone bağlandı ancak görüntü göndermedi</string>
     <string name="last_connection_attempt">Son bağlantı denemesi (%1$s): %2$s</string>
+    <string name="last_carplay_connection_problem">Son CarPlay bağlantısı (%1$s): %2$s</string>
     <string name="option_size_custom">Özel</string>
     <string name="preview_decoder_hardware">donanımsal</string>
     <string name="preview_decoder_software">yazılımsal</string>
     <string name="preview_list_separator">, </string>
     <string name="preview_transport_hevc">HEVC (H.265, %1$s)</string>
     <string name="settings_call_at_call_rate">Aramalar kendi örnekleme hızında (deneysel)</string>
-    <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
+    <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Yalnızca USB kablosu: Wi-Fi üzerinden iPhone bu durumda tüm CarPlay sesini kendinde tutuyordu, bu yüzden kablosuz bağlantı olağan biçimleri sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
+    <string name="settings_wheel_long_press_seek">Sonraki/önceki uzun basışla ileri-geri sar (deneysel)</string>
+    <string name="settings_wheel_long_press_seek_description">Direksiyonu sonraki ve önceki için kendi uzun basış tuşlarını gönderen ana ünitelerde (BYD DiLink 3), uzun basış hiçbir şey yapmamak yerine yaklaşık 2,5 saniye ileri veya geri sarar. Henüz bir iPhone ile denenmedi. Bir sonraki bağlantıda geçerli olur.</string>
     <string name="settings_declare_automatic_appearance">Otomatik CarPlay görünümünü bildir (deneysel)</string>
     <string name="settings_declare_automatic_appearance_description">iPhone bağlandığında ona CarPlay\'in ve haritasının açık veya koyu görünümü otomatik seçtiğini bildirir; DiPlay 0.2.16 ile 0.2.22 arasında böyle yapıyordu. Yalnızca bu ayar kapalıyken CarPlay, CarPlay gündüz/gece modunu takip etmeyi bırakırsa açın. Sonraki bağlantıda geçerli olur.</string>
     <string name="settings_carplay_same_task">CarPlay\'i başlatıcı kartında tut (deneysel)</string>
@@ -1044,4 +1065,9 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="settings_fit_screen_shape">Çentik ve yuvarlak köşelerden kaçın</string>
+    <string name="settings_fit_screen_shape_description">Ana ünite olarak kullanılan bir telefon veya tablet içindir. CarPlay\'in düğmelerini ve dock\'unu kamera çentiğinden ve yuvarlak köşelerden uzak tutar; haritalar yine tüm ekranı doldurur. Oturum menüsünde ayarlanan güvenli alan önceliklidir. Sonraki bağlantıda geçerli olur.</string>
+    <string name="settings_safe_area_fitted_summary">Güvenli alan: çentiğe ve köşelere uyarlandı, %5$d x %6$d içinde (%3$d, %4$d) konumunda %1$d x %2$d</string>
+    <string name="settings_wifi_direct_unavailable">Kullanılamıyor</string>
+    <string name="settings_wifi_direct_unsupported_help">Bağlantı kurulumunda Aracın dahili erişim noktası veya Mevcut Wi-Fi / Aynı Yerel Ağ seçeneğini seçin, ardından tekrar deneyin.</string>
 </resources>

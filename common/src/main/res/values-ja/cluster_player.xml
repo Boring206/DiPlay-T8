@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">表示</string>
+    <string name="settings_cluster_player_map">地図</string>
+    <string name="settings_cluster_player">プレーヤー（実験的機能）</string>
+    <string name="settings_cluster_player_description">保存された表示形式で地図とプレーヤーを即座に切り替えます。プレーヤーは地図と中央画面のコピーを停止し、メーター内の右左折案内は表示しません。純正表示は車両が制御します。</string>
+    <string name="settings_cluster_player_speed">プレーヤーに速度を表示</string>
+    <string name="settings_cluster_player_speed_description">枠なしで車速をkm/h表示。ADBでの車両読み取りが必要です。最新データがなければ — を表示します。</string>
+    <string name="settings_cluster_player_idle">再生していません</string>
+    <string name="settings_cluster_player_vehicle">プレーヤーに車両情報を表示</string>
+    <string name="settings_cluster_player_vehicle_description">ADBでギア、バッテリー残量、電動走行可能距離を読み取ります。取得できない情報や古い情報は — と表示します。純正の警告灯と警告表示は引き続き必要です。</string>
+    <string name="cluster_player_vehicle_readout">ギア %1$s   ·   バッテリー %2$s   ·   航続距離 %3$s</string>
+    <string name="settings_cluster_player_fit_visible">純正の上下帯の間にプレーヤーを配置</string>
+    <string name="settings_cluster_player_fit_visible_description">車両情報の帯が上下にある画面向けの一時的な配置です。ジャケット、曲名、速度、進行状況を見える範囲に収め、背景は投影全体に表示します。即座に適用され、純正の表示灯は隠しません。</string>
+</resources>

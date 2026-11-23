@@ -8,6 +8,12 @@ interface CarPlayVideoListener {
     /** Whether the car is in P, or null when it cannot tell. Blocking; read once a second while CarPlay runs. */
     fun readParked(): Boolean?
 
+    /** Why the latest [readParked] returned null, for the report, such as "adb=NOT_APPROVED" (#1180). Same thread. */
+    fun gearUnreadableReason(): String? = null
+
+    /** The gear reading changed: true in P, false out of P, null unreadable. Gate thread. */
+    fun onGearObserved(parked: Boolean?) = Unit
+
     /** Video became allowed or not; when not, the player must close. Any thread. */
     fun onVideoAllowedChanged(allowed: Boolean)
 
@@ -28,16 +34,25 @@ interface CarPlayVideoListener {
 internal class VideoInCarGate(
     private val readParked: () -> Boolean?,
     private val onChanged: (Boolean) -> Unit,
-    private val onObserved: (Boolean?) -> Unit = {},
+    private val onObserved: (parked: Boolean?, reason: String?) -> Unit = { _, _ -> },
+    private val unreadableReason: () -> String? = { null },
 ) : Closeable {
     @Volatile private var closed = false
     private var observed = false
     private var lastParked: Boolean? = null
+    private var lastReason: String? = null
 
     fun start() {
         Thread({
             while (!closed) {
-                update(runCatching(readParked).getOrNull())
+                val reading = runCatching(readParked)
+                val parked = reading.getOrNull()
+                val reason = when {
+                    parked != null -> null
+                    reading.isFailure -> "read failed ${reading.exceptionOrNull()?.javaClass?.simpleName}"
+                    else -> runCatching(unreadableReason).getOrNull()
+                }
+                update(parked, reason)
                 try {
                     Thread.sleep(POLL_MILLIS)
                 } catch (_: InterruptedException) {
@@ -47,11 +62,13 @@ internal class VideoInCarGate(
         }, "diplay-video-gate").apply { isDaemon = true }.start()
     }
 
-    internal fun update(parked: Boolean?) {
-        if (!observed || parked != lastParked) {
+    /** [reason] says why [parked] is null; a new reason for an unreadable gear is a new observation. */
+    internal fun update(parked: Boolean?, reason: String? = null) {
+        if (!observed || parked != lastParked || reason != lastReason) {
             observed = true
             lastParked = parked
-            onObserved(parked)
+            lastReason = reason
+            onObserved(parked, reason)
         }
         val allowed = parked == true
         if (allowed == VideoInCar.allowed || closed) return
@@ -66,5 +83,15 @@ internal class VideoInCarGate(
 
     private companion object {
         const val POLL_MILLIS = 1_000L
+    }
+}
+
+/** Report lines for video in car. */
+object VideoInCarDiagnostics {
+    /** The gear the video gate read; an unreadable gear names why (#1180), since it keeps video off. */
+    fun gearLine(parked: Boolean?, reason: String?): String = when (parked) {
+        true -> "video in car gear=P"
+        false -> "video in car gear=not-P"
+        null -> "video in car gear=unknown ${reason ?: "reason=unknown"}; video stays off until the gear reads P"
     }
 }
