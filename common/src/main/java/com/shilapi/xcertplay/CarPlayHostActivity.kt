@@ -5531,8 +5531,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             override fun onDebugLog(message: String) {
                 if (DiagnosticRedactor.redact(message) == null) return
                 if (message.startsWith(CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX + " ")) {
-                    // Retain old-controller teardown evidence without accepting its UI/session state.
-                    AsyncDiagnosticLog.append(diagnosticLog, message)
+                    // Retain old-controller teardown evidence without accepting its UI/session state, also once
+                    // this screen has closed its log.
+                    AsyncDiagnosticLog.append(diagnosticLog, message, afterClose = true)
                     return
                 }
                 runOnUiThread {
