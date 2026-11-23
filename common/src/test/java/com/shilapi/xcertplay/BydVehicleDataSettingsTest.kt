@@ -55,6 +55,7 @@ class BydVehicleDataSettingsTest {
         shadowOf(context.packageManager).removePackage("com.byd.amapservice")
         context.getSharedPreferences("diplay_byd_outputs", 0).edit().clear().commit()
         context.getSharedPreferences("diplay_byd_vehicle_fields", 0).edit().clear().commit()
+        context.getSharedPreferences("diplay_last_problem", 0).edit().clear().commit()
         BydVehicleFieldStore.clearMemoryForTests()
     }
 
@@ -96,6 +97,41 @@ class BydVehicleDataSettingsTest {
         backend.run("diplay-adb-state")
         shadowOf(android.os.Looper.getMainLooper()).idle()
         assertEquals(activity.getString(R.string.adb_off), org.robolectric.shadows.ShadowToast.getTextOfLatestToast())
+    }
+
+    // #1180: after the driver fixes ADB, Check ADB access that reads the gear ends Home's "videos can't play" line.
+    @Test fun anAdbCheckThatReadsTheGearClearsTheVideoLine() {
+        BydOutputSettings.setVideoWhileParked(context, true)
+        LastConnectionProblem.videoGearUnreadable(context, LocalAdb.Access.NOT_APPROVED, replied = false)
+        openSettings()
+        texts().single { it.text == activity.getString(R.string.advanced_vehicle_data) }.performClick()
+
+        backend.checkResult = BydAdbAccess.Status(BydAdbAccess.State.READY, batteryPercent = 75.0, rangeKm = 450)
+        texts().single { it.text == activity.getString(R.string.check_adb_access) }.performClick()
+        backend.run("diplay-adb-state")
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(VideoGearProblem.NOT_APPROVED, LastConnectionProblem.loadVideo(context)?.problem)
+
+        backend.checkResult = readableStatus()
+        texts().single { it.text == activity.getString(R.string.check_adb_access) }.performClick()
+        backend.run("diplay-adb-state")
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(null, LastConnectionProblem.loadVideo(context))
+    }
+
+    @Test fun turningVideoWhileParkedOffAndOnDoesNotBringBackAStaleVideoLine() {
+        BydOutputSettings.setVideoWhileParked(context, true)
+        LastConnectionProblem.videoGearUnreadable(context, LocalAdb.Access.NOT_APPROVED, replied = false)
+        openSettings()
+        texts().single { it.text == activity.getString(R.string.advanced_vehicle_data) }.performClick()
+
+        vehicleSwitch(R.string.video_while_parked).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        vehicleSwitch(R.string.video_while_parked).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(BydOutputSettings.videoWhileParked(context))
+        assertEquals(null, LastConnectionProblem.loadVideo(context))
     }
 
     @Test fun anAdbCheckWithUsbDebuggingOnSaysTheNetworkDoesNotAnswer() {

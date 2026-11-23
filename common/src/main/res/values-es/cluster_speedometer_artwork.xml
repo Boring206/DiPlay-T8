@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Degradado de la portada para el fondo del velocímetro</string>
+    <string name="settings_cluster_speedometer_artwork_description">Opción independiente. Sustituye el fondo sólido al activarla, conservando tamaño y opacidad. Al desactivarla vuelve al color sólido del álbum o negro. El movimiento es opcional.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Mover el fondo del velocímetro</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Desactivado por defecto. Activa el movimiento suave del fondo durante la reproducción. Los cambios de canción conservan el fundido aunque esté desactivado.</string>
+</resources>

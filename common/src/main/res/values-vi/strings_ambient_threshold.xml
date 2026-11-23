@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ambient_light_threshold_title">Ngưỡng độ sáng</string>
+    <string name="ambient_light_threshold_summary">%1$d lux</string>
+    <string name="ambient_light_threshold_value">Ngưỡng chuyển đổi (lux)</string>
+    <string name="ambient_light_threshold_hint">Dưới ngưỡng (lux) sẽ chọn ban đêm; bằng hoặc trên ngưỡng sẽ chọn ban ngày. Số đọc phải ở phía mới trong suốt độ trễ đã chọn. Nhập số nguyên từ 1 đến 200000.</string>
+    <string name="ambient_light_threshold_error">Nhập số nguyên từ 1 đến 200000.</string>
+    <string name="ambient_light_reset_defaults">Đặt lại mặc định</string>
+</resources>

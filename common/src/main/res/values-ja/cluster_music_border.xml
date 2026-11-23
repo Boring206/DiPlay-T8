@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">アルバムアートの枠を表示</string>
+    <string name="settings_cluster_music_border_description">メーターの地図に表示するアルバムアートに細い枠を付けます。</string>
+</resources>

@@ -45,6 +45,7 @@ class WheelKeyService : AccessibilityService() {
     private val navigationKeys = NavigationWheelKeyPolicy()
     private val joystick = WheelJoystick()
     private val siriKey = WheelSiriKey()
+    private val unusedKeyTiming = KeyHoldTiming<PhysicalWheelKey>()
     /** A remapped media key is handled by the same accessibility input filter as the Siri key. */
     internal var sendMedia: (Int) -> Boolean = { index ->
         CarPlayBackgroundSession.snapshot()?.controller?.sendMediaButton(index) == true
@@ -154,9 +155,23 @@ class WheelKeyService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         lastObservedDoubleSiriEvent = null
         val kept = handleKey(event)
-        // A held key repeats many times a second; its first press is the evidence.
+        // A held key repeats many times a second; its first press is the evidence, its repeats and release
+        // only add to that entry.
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) recordPress(event, kept)
+        else recordHold(event)
         return kept
+    }
+
+    /**
+     * When a key left to the head unit repeated and went up, added to its press's entry (#1190): whether BYD
+     * sends a long press at its threshold or holds it until the driver lets go.
+     */
+    private fun recordHold(event: KeyEvent) {
+        runCatching {
+            val timing = unusedKeyTiming.after(PhysicalWheelKey(event.deviceId, event.keyCode, event.scanCode), event)
+                ?: return
+            WheelKeyLog.keyReleased(event.keyCode, event.scanCode, event.deviceId, timing)
+        }
     }
 
     /** One entry per press for the diagnostic report; it must never be in the way of the key itself. */
@@ -171,7 +186,9 @@ class WheelKeyService : AccessibilityService() {
                 }
                 else -> null
             }
-            WheelKeyLog.press(event.keyCode, event.scanCode, event.deviceId, kept, detail, text)
+            if (WheelKeyLog.press(event.keyCode, event.scanCode, event.deviceId, kept, detail, text)) {
+                unusedKeyTiming.pressed(PhysicalWheelKey(event.deviceId, event.keyCode, event.scanCode), event)
+            }
         }
     }
 

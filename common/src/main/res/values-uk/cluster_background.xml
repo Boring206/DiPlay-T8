@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_background_motion">Рухоме тло</string>
+    <string name="settings_cluster_background_motion_description">Типово вимкнено. Вмикає повільний рух тла під час відтворення. Плавна зміна треків зберігається й без руху.</string>
+</resources>

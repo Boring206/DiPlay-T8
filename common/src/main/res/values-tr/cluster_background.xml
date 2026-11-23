@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_background_motion">Hareketli arka plan</string>
+    <string name="settings_cluster_background_motion_description">Varsayılan olarak kapalıdır. Çalma sırasında yavaş arka plan hareketini açar. Kapalıyken de şarkı geçişleri yumuşaktır.</string>
+</resources>

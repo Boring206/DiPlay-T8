@@ -45,6 +45,46 @@ class VideoDecodeQueueTest {
         assertNull(queue.poll(0))
     }
 
+    @Test fun frameAndByteLimitsCountFramesAcrossControlJobsAtExactBoundary() {
+        val queue = VideoDecodeQueue(maxFrames = 3, maxBytes = 6)
+        val control = VideoJob.SurfaceChanged(null)
+        val first = VideoJob.Frame(ByteArray(2))
+        val second = VideoJob.Frame(ByteArray(2))
+        val third = VideoJob.Frame(ByteArray(2))
+        queue.offer(first)
+        queue.offer(control)
+        queue.offer(second)
+        queue.offer(third) // Exactly six bytes and three frames are permitted.
+        assertSame(first, queue.poll(0))
+        assertSame(control, queue.poll(0))
+        assertSame(second, queue.poll(0))
+        assertSame(third, queue.poll(0))
+        assertNull(queue.poll(0))
+
+        queue.offer(first)
+        queue.offer(control)
+        queue.offer(second)
+        queue.offer(VideoJob.Frame(ByteArray(3))) // Seven bytes: discard frames, keep control.
+        assertSame(control, queue.poll(0))
+        assertEquals(VideoJob.Resync, queue.poll(0))
+        assertEquals(3, (queue.poll(0) as VideoJob.Frame).nalus.size)
+        assertNull(queue.poll(0))
+    }
+
+    @Test fun zeroFrameLimitAndOversizedFirstFramePreserveRecovery() {
+        val noFrameBudget = VideoDecodeQueue(maxFrames = 0)
+        val frame = VideoJob.Frame(ByteArray(1))
+        noFrameBudget.offer(frame)
+        assertEquals(VideoJob.Resync, noFrameBudget.poll(0))
+        assertSame(frame, noFrameBudget.poll(0))
+        assertNull(noFrameBudget.poll(0))
+
+        val noByteBudget = VideoDecodeQueue(maxBytes = 2)
+        noByteBudget.offer(VideoJob.Frame(ByteArray(3)))
+        assertEquals(VideoJob.Resync, noByteBudget.poll(0))
+        assertNull(noByteBudget.poll(0))
+    }
+
     @Test fun fullOutputMustBeDrainedWhileRetryingTheSameInput() {
         var heldOutputs = 2
         var dequeues = 0

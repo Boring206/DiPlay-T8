@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carplay_night_mode">Chế độ ngày/đêm của CarPlay</string>
+    <string name="settings_app_appearance">Giao diện ứng dụng</string>
+    <string name="settings_app_appearance_dark">Tối</string>
+    <string name="settings_app_appearance_light">Sáng</string>
+    <string name="settings_app_appearance_auto">Tự động</string>
+    <string name="settings_app_appearance_description">Tự động theo cài đặt ngày/đêm đã lưu của CarPlay; khi CarPlay đang mở, sẽ theo kết quả thực tế. Sáng và Tối luôn cố định và không cần kết nối lại.</string>
+    <string name="settings_switch_to_light_appearance">Chuyển sang giao diện sáng</string>
+    <string name="settings_switch_to_dark_appearance">Chuyển sang giao diện tối</string>
+    <string name="carplay_night_system">Theo hệ thống Android</string>
+    <string name="carplay_night_ambient">Theo ánh sáng môi trường</string>
+    <string name="carplay_night_day">Luôn ban ngày</string>
+    <string name="carplay_night_night">Luôn ban đêm</string>
+    <string name="carplay_night_schedule">Theo lịch</string>
+    <string name="carplay_night_start">Ban đêm bắt đầu</string>
+    <string name="carplay_night_end">Ban đêm kết thúc</string>
+    <string name="carplay_night_schedule_hint">Dùng giờ địa phương của hệ thống giải trí. Đặt thời gian bắt đầu và kết thúc khác nhau; hỗ trợ khoảng thời gian qua đêm.</string>
+    <string name="carplay_night_schedule_same_time">Thời gian bắt đầu và kết thúc phải khác nhau.</string>
+    <string name="carplay_night_hint">Lưu và quay lại CarPlay để áp dụng.</string>
+    <string name="carplay_night_ambient_hint">Dùng ngưỡng và độ trễ bên dưới. Nếu không có cảm biến ánh sáng, sẽ theo Android.</string>
+    <string name="carplay_night_time_note">Khi giao diện được đặt là Tự động trong cài đặt CarPlay, CarPlay cũng xét đến giờ trên iPhone. Ngay cả khi bạn chọn Luôn ban ngày, CarPlay vẫn có thể hiện tối vào ban đêm.</string>
+</resources>

@@ -177,21 +177,24 @@ object ScreenCodec {
         if (payload.size < 4 || payload.startsWithStartCode()) return payload
 
         var offset = 0
-        while (offset + 4 <= payload.size) {
+        while (offset <= payload.size - 4) {
             val length = readU32Be(payload, offset)
             offset += 4
-            if (length <= 0 || offset + length > payload.size) return payload
+            // Subtraction avoids Int overflow: `offset + length` wraps for lengths like 0x7FFFFFFF.
+            // A valid length also keeps offset + length (and 4 + length later) within payload.size.
+            if (length <= 0 || length > payload.size - offset) return payload
             offset += length
         }
         if (offset != payload.size) return payload
 
         offset = 0
-        while (offset + 4 <= payload.size) {
+        while (offset <= payload.size - 4) {
             val length = readU32Be(payload, offset)
             payload[offset] = 0
             payload[offset + 1] = 0
             payload[offset + 2] = 0
             payload[offset + 3] = 1
+            // 4 + length <= payload.size - offset after validation, so this addition is safe.
             offset += 4 + length
         }
         return payload

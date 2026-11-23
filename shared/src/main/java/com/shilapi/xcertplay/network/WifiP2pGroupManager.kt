@@ -48,7 +48,7 @@ class WifiP2pGroupManager(
     }
     private val appContext = context.applicationContext
     private val p2pManager = appContext.getSystemService(WifiP2pManager::class.java)
-        ?: throw IllegalStateException("WifiP2pManager is unavailable")
+        ?: throw WifiDirectSupport.unsupported()
     private val stateLock = Object()
     // The legacy channel API changes shared supplicant state, rather than this Channel object.
     // Keep selection, compensation and Channel.close ordered even when startup is cancelled.
