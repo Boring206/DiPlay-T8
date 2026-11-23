@@ -1083,4 +1083,5 @@
     <string name="settings_call_attenuation_description">Giảm âm lượng giọng người gọi trong cuộc gọi CarPlay mà không thay đổi âm lượng cuộc gọi của xe. Áp dụng ngay, dù cuộc gọi phát qua đầu ra nào. Hãy để ở 0 dB trừ khi cuộc gọi nghe bị méo hoặc chói. Trên một chiếc BYD Han (DiLink 3), cuộc gọi nghe rõ ở khoảng -12 đến -16 dB trong một lần thử nghe.</string>
     <string name="settings_wifi_direct_unavailable">Không khả dụng</string>
     <string name="settings_wifi_direct_unsupported_help">Trong «Thiết lập kết nối», chọn «Điểm phát sóng tích hợp của xe» hoặc «Wi-Fi có sẵn / Cùng mạng LAN», rồi thử lại.</string>
+    <string name="wired_teardown_pending">Vẫn đang dọn dẹp kết nối USB. Hãy rút iPhone, chờ một lát rồi nhấn “%1$s”.</string>
 </resources>
