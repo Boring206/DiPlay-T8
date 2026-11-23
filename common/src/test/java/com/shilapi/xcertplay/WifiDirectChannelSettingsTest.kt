@@ -2,7 +2,9 @@ package com.shilapi.xcertplay
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Looper
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -20,7 +22,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowAlertDialog
+import org.robolectric.shadows.ShadowContextImpl
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [32], qualifiers = "en", manifest = Config.NONE)
@@ -34,6 +38,40 @@ class WifiDirectChannelSettingsTest {
         activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.WIFI_P2P)
+    }
+
+    // #1256: without Wi-Fi Direct the choice could only fail, so it is marked and cannot be chosen.
+    @Test fun aHeadUnitWithoutWifiDirectMarksTheChoiceAndSaysWhatToChoose() {
+        // The #1256 unit: no wifip2p service, so Android gives no WifiP2pManager.
+        Shadow.extract<ShadowContextImpl>(activity.baseContext).removeSystemService(Context.WIFI_P2P_SERVICE)
+        val chosen = controls()
+        val choice = findButton(chosen, "✓  Wi-Fi Direct · Not available")!!
+        assertFalse(choice.isEnabled)
+        // It opens nothing, so it stays a centred tile without the setting-row chevron.
+        assertEquals(Gravity.CENTER, choice.gravity)
+        assertTrue(choice.compoundDrawablesRelative.all { it == null })
+        assertTrue(findText(chosen, activity.getString(R.string.this_head_unit_does_not_support_wi_fi_direct)))
+        assertTrue(findText(chosen, activity.getString(R.string.settings_wifi_direct_unsupported_help)))
+        assertNull(channelControl(chosen))
+        assertNull(findSwitch(chosen, activity.getString(R.string.settings_wifi_direct_scan_pause)))
+        assertTrue(findButton(chosen, activity.getString(R.string.settings_built_in_car_hotspot_recommended))!!.isEnabled)
+        assertTrue(findButton(chosen, activity.getString(R.string.existing_wifi_title))!!.isEnabled)
+
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
+        val other = controls()
+        assertFalse(findButton(other, "Wi-Fi Direct · Not available")!!.isEnabled)
+        assertFalse(findText(other, activity.getString(R.string.settings_wifi_direct_unsupported_help)))
+    }
+
+    @Test fun aHeadUnitWithWifiDirectKeepsTheChoice() {
+        // A manager alone keeps Wi-Fi Direct, also where the firmware does not declare the feature.
+        shadowOf(activity.packageManager).setSystemFeature(PackageManager.FEATURE_WIFI_DIRECT, false)
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
+        val view = controls()
+        val choice = findButton(view, activity.getString(R.string.wifi_direct))!!
+        assertTrue(choice.isEnabled)
+        assertTrue(findText(view, activity.getString(R.string.hotspot_mode_p2p_desc)))
+        assertFalse(findText(view, activity.getString(R.string.this_head_unit_does_not_support_wi_fi_direct)))
     }
 
     @Test fun defaultIsAutoAndCancelDoesNotSavePreviewedChannel() {
@@ -116,10 +154,33 @@ class WifiDirectChannelSettingsTest {
         assertFalse(prefs.getBoolean(AirPlayPersistence.KEY_WIFI_DIRECT_SCAN_PAUSE, true))
     }
 
-    @Test fun theScanPauseSwitchIsOnlyForWifiDirect() {
+    @Test fun theScanPauseSwitchIsForWifiDirectAndTheCarHotspotOnly() {
+        val title = activity.getString(R.string.settings_wifi_direct_scan_pause)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
-        assertNull(findSwitch(controls(), activity.getString(R.string.settings_wifi_direct_scan_pause)))
+        val hotspot = controls()
+        val switch = findSwitch(hotspot, title)!!
+        // The car hotspot's own description: the pause only runs where the car keeps its client on beside it.
+        val shown = texts(hotspot)
+        assertTrue(activity.getString(R.string.settings_car_hotspot_scan_pause_description) in shown)
+        assertFalse(activity.getString(R.string.settings_wifi_direct_scan_pause_description) in shown)
+        switch.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(AirPlayPersistence.loadWifiDirectScanPause(activity))
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.EXISTING_WIFI)
+        assertNull(findSwitch(controls(), title))
     }
+
+    private fun findButton(view: View, text: String): Button? {
+        if (view is Button && view.text.toString() == text) return view
+        if (view is ViewGroup) for (index in 0 until view.childCount) {
+            findButton(view.getChildAt(index), text)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findText(view: View, text: String): Boolean = view is android.widget.TextView && view !is Button &&
+        view.text.toString() == text ||
+        view is ViewGroup && (0 until view.childCount).any { findText(view.getChildAt(it), text) }
 
     private fun findSwitch(view: View, title: String): android.widget.Switch? {
         if (view is android.widget.Switch && view.contentDescription == title) return view
@@ -127,6 +188,12 @@ class WifiDirectChannelSettingsTest {
             findSwitch(view.getChildAt(index), title)?.let { return it }
         }
         return null
+    }
+
+    private fun texts(view: View): List<String> = when (view) {
+        is android.widget.TextView -> listOf(view.text.toString())
+        is ViewGroup -> (0 until view.childCount).flatMap { texts(view.getChildAt(it)) }
+        else -> emptyList()
     }
 
     private val choices get() = listOf(WifiP2pChannels.AUTO) + WifiP2pChannels.bandChoices + WifiP2pChannels.channels

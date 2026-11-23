@@ -1,7 +1,12 @@
 package com.shilapi.xcertplay
 
+import java.io.File
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
 class AdbClusterRouterTest {
     private fun record(id: Int = 7, size: String = "1920 x 720", owner: String = "com.xdja.containerservice") =
@@ -39,5 +44,25 @@ class AdbClusterRouterTest {
         assertNull(AdbClusterRouter.activityDisplay(dump.replace("Display #7", "Display #0"), pkg, 12))
         assertNull(AdbClusterRouter.activityDisplay("ResumedActivity: $record", pkg, 12))
         assertNull(AdbClusterRouter.activityDisplay(dump.replace(pkg, "other.package"), pkg, 12))
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33], manifest = Config.NONE)
+class AdbClusterRouterReportTest {
+    private val context get() = RuntimeEnvironment.getApplication()
+
+    @Test fun aThreeHundredLineRouteFileIsBoundedByTheLineCap() {
+        val file = File(context.filesDir, "adb-cluster-route.txt")
+        file.parentFile?.mkdirs()
+        val sentinel = "SENTINEL_AT_TAIL_9f8e7d6c"
+        file.writeText(buildString {
+            repeat(300) { appendLine("route line $it ok") }
+            appendLine(sentinel)
+        })
+
+        val report = AdbClusterRouter.report(context)
+        assertEquals(200, report.lines().size)
+        assertFalse("tail leaked into the bounded report", report.contains(sentinel))
     }
 }

@@ -39,7 +39,8 @@ internal class BydStandaloneHudOutput private constructor(context: Context) {
 
     companion object {
         private const val TAG = "BYD-Standalone-Live"
-        private val TARGET = ComponentName("com.byd.clusterdebug", "com.byd.clusterdebug.BroadcastReceiverCAN")
+        const val RECEIVER_PACKAGE = "com.byd.clusterdebug"
+        private val TARGET = ComponentName(RECEIVER_PACKAGE, "com.byd.clusterdebug.BroadcastReceiverCAN")
         @Volatile var syntheticHold = false
 
         fun create(context: Context): BydStandaloneHudOutput? =

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Album art gradient for speedometer background</string>
+    <string name="settings_cluster_speedometer_artwork_description">Separate opt-in. Replaces the solid background while enabled, keeping size and opacity. Off restores your solid album color or black. Motion is optional.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Move speedometer background</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Off by default. Enable slow background motion while music plays. Track changes still fade when off.</string>
+</resources>

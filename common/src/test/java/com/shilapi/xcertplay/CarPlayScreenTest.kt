@@ -85,6 +85,24 @@ class CarPlayScreenTest {
         assertEquals(own.softInputMode, shared.softInputMode)
     }
 
+    @Test fun screensInDiPlaysTaskMayOpenInALauncherCard() {
+        // A launcher card is a private display that the launcher owns. When a screen that does not allow embedding
+        // opens there, Android moves the whole task back to the main display (#463, Dudu launcher on DiLink 3).
+        val inDiPlaysTask = listOf(
+            DiPlayActivity::class.java,
+            SameTaskCarPlayHostActivity::class.java,
+            // Started from the application context with a new-task flag, so it joins the task with DiPlay's affinity.
+            CarPlayVideoActivity::class.java,
+        )
+        inDiPlaysTask.forEach { type ->
+            val info = activityInfo(type)
+            assertEquals(type.simpleName, app.packageName, info.taskAffinity)
+            assertTrue("${type.simpleName} must allow embedding", info.flags and FLAG_ALLOW_EMBEDDED != 0)
+        }
+        // CarPlay in its own task stays out of launcher cards, as since 0.2.12.
+        assertFalse(activityInfo(CarPlayHostActivity::class.java).flags and FLAG_ALLOW_EMBEDDED != 0)
+    }
+
     @Test fun withTheSettingOnDiPlayOpensCarPlayInDiPlaysTask() {
         AirPlayPersistence.saveCarPlaySameTask(app, true)
         assertEquals(SameTaskCarPlayHostActivity::class.java, CarPlayScreen.target(app))
@@ -212,5 +230,10 @@ class CarPlayScreenTest {
     private fun descendants(view: View): Sequence<View> = sequence {
         yield(view)
         if (view is ViewGroup) for (index in 0 until view.childCount) yieldAll(descendants(view.getChildAt(index)))
+    }
+
+    private companion object {
+        /** `ActivityInfo.FLAG_ALLOW_EMBEDDED` (0x80000000), set by `android:allowEmbedded`; hidden from the SDK. */
+        const val FLAG_ALLOW_EMBEDDED = Int.MIN_VALUE
     }
 }

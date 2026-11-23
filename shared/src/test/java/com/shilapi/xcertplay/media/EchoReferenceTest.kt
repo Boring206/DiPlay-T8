@@ -118,4 +118,10 @@ class EchoReferenceTest {
         assertTrue(reference.read(out, endNs = 600_000_000))
         assertEquals(490, out[0].toInt())
     }
+
+@Test fun aZeroSampleRateCannotLeaveAnEmptyRing() {
+        val reference = EchoReference(sampleRate = 0)
+        reference.append(pcm(1, 2), 0, 4, 1, pendingFrames = 0, nowNs = 0)
+        assertTrue(reference.read(ShortArray(2), endNs = 0))
+    }
 }
