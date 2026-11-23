@@ -799,7 +799,7 @@
     <string name="settings_direct_video_output">직접 영상 출력 (실험 기능)</string>
     <string name="settings_direct_video_output_description">CarPlay 화면을 DiPlay 창 안에 그리는 대신 헤드 유닛의 컴포지터로 바로 보냅니다. 화면 새로고침 주기 약 한 번만큼 지연이 줄어들 수 있습니다. 화면 보정은 적용되지 않습니다. CarPlay를 다시 연결합니다.</string>
     <string name="settings_low_latency_decoder">저지연 디코딩 (실험 기능)</string>
-    <string name="settings_low_latency_decoder_description">Qualcomm 동영상 디코더가 다음 프레임을 보류하지 않고 각 프레임을 디코딩하는 즉시 출력하도록 요청하고, 전용 스레드에서 다음 프레임을 기다리지 않고 디코딩된 프레임을 표시합니다. 지연이 수십 밀리초 줄어들 수 있습니다. 화면에 깨짐이 나타나거나 멈추면 끄세요. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_low_latency_decoder_description">동영상 디코더가 다음 프레임을 보류하지 않고 각 프레임을 디코딩하는 즉시 출력하도록 요청하고, 전용 스레드에서 다음 프레임을 기다리지 않고 디코딩된 프레임을 표시합니다. 저지연 요청 자체는 Qualcomm 디코더에만 적용되며, Spreadtrum을 포함한 다른 디코더에서는 이 설정이 전용 출력 스레드를 활성화합니다. 지연이 수십 밀리초 줄어들 수 있습니다. 화면에 깨짐이 나타나거나 멈추면 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="settings_fps_counter">FPS 표시기</string>
     <string name="settings_fps_counter_description">CarPlay 오른쪽 위에 초당 표시 프레임 수(50 이상은 녹색, 30 이상은 노란색, 그 미만은 빨간색), iPhone에서 초당 수신한 프레임 수, 디코딩 시간을 표시합니다. 정지 화면에서는 iPhone이 프레임을 보내지 않으므로 표시되는 프레임 수가 적습니다.</string>
     <string name="car_button_in_carplay">CarPlay의 차량 버튼</string>
