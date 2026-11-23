@@ -1972,6 +1972,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCarPlaySameTask(this, enabled)
                 CarPlayScreen.closeIfElsewhere(this)
             }
+            toggle(card, getString(R.string.settings_declare_automatic_appearance),
+                getString(R.string.settings_declare_automatic_appearance_description),
+                AirPlayPersistence.loadDeclareAutomaticAppearance(this)) {
+                AirPlayPersistence.saveDeclareAutomaticAppearance(this, it)
+                markReconnectNeeded()
+            }
             toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
                 SplitScreenSettings.enabled(this)) {
                 SplitScreenSettings.setEnabled(this, it)

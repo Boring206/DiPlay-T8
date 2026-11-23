@@ -183,6 +183,23 @@ class SettingsBackupCodecTest {
     }
 
     @Test
+    fun anImportedAppearanceDeclarationOfAnotherTypeNeverReachesItsReader() {
+        // The key is new, so upgraded installs have not stored it; the reader calls getBoolean.
+        for (wrong in listOf("\"true\"", "1", "1.5")) {
+            prefs("xcertplay_airplay").edit().clear().commit()
+            val outcome = SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": $wrong}}}""".toByteArray())
+            assertEquals(0, outcome.applied)
+            assertFalse(prefs("xcertplay_airplay").contains("declare_automatic_appearance"))
+            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // ClassCastException when a String, Int or Float was stored
+        }
+        prefs("xcertplay_airplay").edit().clear().commit()
+        SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": false}}}""".toByteArray())
+        assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+        SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": true}}}""".toByteArray())
+        assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+    }
+
+    @Test
     fun exportKeepsUnlistedKeysOfPictureAndHotspotFilesOut() {
         prefs("carplay_picture").edit().putInt("brightness", 5).putString("stray", "x").apply()
         prefs("diplay_car_hotspot").edit().putBoolean("auto_enable", true).putString("stray", "x").apply()

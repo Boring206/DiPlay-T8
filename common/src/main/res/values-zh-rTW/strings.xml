@@ -949,6 +949,8 @@
     <string name="settings_call_at_call_rate_description">以通話自身的取樣率（8、16、24 或 32 kHz）的 PCM 提供通話音訊，而不是 48 kHz 的 Opus，與原廠 CarPlay 接收器一致。僅限 USB 傳輸線：透過 Wi-Fi 時 iPhone 會把所有 CarPlay 聲音留在手機上，因此無線連線提供一般格式。下次連線時生效。如果通話沒有聲音，請關閉此項。</string>
     <string name="settings_wheel_long_press_seek">長按下一首／上一首快轉倒轉（實驗性）</string>
     <string name="settings_wheel_long_press_seek_description">在方向盤為長按「下一首」和「上一首」送出單獨按鍵的車機上（比亞迪 DiLink 3），長按會快轉或倒轉約 2.5 秒，而不是沒有反應。尚未在 iPhone 上測試。下次連線時生效。</string>
+    <string name="settings_declare_automatic_appearance">告知 iPhone CarPlay 外觀為自動（實驗性）</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone 連線時告知它 CarPlay 及其地圖會自動選擇淺色或深色，DiPlay 自 0.2.16 起一直這樣做。如果 CarPlay 不跟隨「CarPlay 日夜模式」設定，請關閉此項。下次連線時生效。</string>
     <string name="bluetooth_connections_not_real">此車機的系統藍牙回報「已連線」，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這裡的藍牙由廠商自己的模組處理，App 無法使用，所以此車機無法使用無線 CarPlay。請嘗試使用 USB 連線。</string>
     <string name="bluetooth_cannot_open_connections">此車機的系統藍牙無法替 App 建立連線：韌體沒有提供 App 連線要用的那一部分。車機自己的藍牙通話和音樂不受影響，但此車機無法使用無線 CarPlay。請嘗試使用 USB 連線。</string>
     <string name="bluetooth_will_not_stay_on_hint">如果藍牙在那裡開不起來，或開了又自己關掉，代表這台車機的藍牙只供它自己的通話和音樂使用，App 無法使用。這種情況下無法使用無線 CarPlay，請改用 USB 線。</string>

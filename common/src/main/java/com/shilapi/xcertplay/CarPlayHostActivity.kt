@@ -5193,6 +5193,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             mainBufferedAudio = AirPlayPersistence.loadMainBufferedAudio(this),
             speechWithout8And16Khz = AirPlayPersistence.loadSpeechWithout8And16Khz(this),
             callAtCallRate = AirPlayPersistence.loadCallAtCallRate(this),
+            declareAutomaticAppearance = AirPlayPersistence.loadDeclareAutomaticAppearance(this),
             disableAudioOutput = carBluetoothAudio,
             mediaSeekKeys = AirPlayPersistence.loadWheelLongPressSeek(this),
         )

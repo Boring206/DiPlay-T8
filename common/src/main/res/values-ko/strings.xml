@@ -1058,6 +1058,8 @@
     <string name="settings_call_at_call_rate_description">기본 CarPlay 수신기처럼 통화 오디오를 48 kHz Opus 대신 통화의 원래 샘플링 레이트(8, 16, 24 또는 32 kHz)의 PCM으로 제공합니다. USB 케이블 전용: Wi-Fi에서는 iPhone이 CarPlay 소리를 모두 자체에서 재생했기 때문에 무선 연결은 일반 형식을 제공합니다. 다음 연결부터 적용됩니다. 통화 소리가 들리지 않으면 끄세요.</string>
     <string name="settings_wheel_long_press_seek">다음/이전 길게 눌러 빨리 감기·되감기 (실험 기능)</string>
     <string name="settings_wheel_long_press_seek_description">스티어링 휠이 다음·이전 길게 누르기에 별도의 키를 보내는 헤드 유닛(BYD DiLink 3)에서 길게 누르면 아무 동작도 하지 않는 대신 약 2.5초 동안 빨리 감거나 되감습니다. 아직 iPhone에서 테스트되지 않았습니다. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_declare_automatic_appearance">CarPlay 모양이 자동임을 iPhone에 알리기 (실험 기능)</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone이 연결될 때 CarPlay와 CarPlay 지도가 라이트 또는 다크를 자동으로 선택한다고 알립니다. DiPlay 0.2.16부터의 동작과 같습니다. CarPlay가 CarPlay 주간/야간 모드 설정을 따르지 않으면 이 설정을 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="chosen_iphone_not_paired">DiPlay에서 선택한 iPhone이 더 이상 차량과 페어링되어 있지 않습니다</string>
     <string name="connection_help_chosen_iphone_not_paired">iPhone을 차량의 Bluetooth와 다시 페어링하거나, DiPlay로 돌아가 iPhone 선택을 눌러 다른 기기를 선택하세요. 그런 다음 다시 시도하세요.</string>
     <string name="connection_help_choose_iphone">여러 기기가 차량과 페어링되어 있습니다. DiPlay로 돌아가 iPhone 선택을 누르고 사용할 iPhone을 선택한 뒤 다시 시도하세요.</string>
