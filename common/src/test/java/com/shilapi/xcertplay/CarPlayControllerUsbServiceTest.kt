@@ -105,10 +105,10 @@ class CarPlayControllerUsbServiceTest {
 
     @Test fun wiredCloseSetupExceptionDoesNotSkipRemainingCleanup() {
         val context = UsbContext(true)
-        val logs = mutableListOf<String>()
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>() // start() logs from its own threads too
         val controller = controller(context, CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
         controller.start()
-        assertEquals(2, context.receivers.size)
+        assertEquals(3, context.receivers.size)
         val hotspot = org.mockito.Mockito.mock(ManualHotspotManager::class.java)
         org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(hotspot).close()
         ReflectionHelpers.setField(controller, "hotspot", hotspot)
