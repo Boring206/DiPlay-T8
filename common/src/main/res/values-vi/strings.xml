@@ -1016,6 +1016,8 @@
     <string name="settings_mfi_target_description">Chỉ chọn USB/CH341 khi bộ chuyển đổi xác thực CH341 đang được kết nối với hệ thống giải trí. Nếu không có, hãy chọn Cục bộ ngoại tuyến. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="settings_call_speakerphone">Cuộc gọi qua loa ngoài</string>
     <string name="settings_call_speakerphone_description">Dành cho điện thoại hoặc máy tính bảng Android dùng làm hệ thống giải trí: phát cuộc gọi CarPlay qua loa ngoài thay vì loa thoại và dùng micrô rảnh tay của thiết bị. Để tắt trên hệ thống giải trí của xe. Áp dụng từ cuộc gọi tiếp theo.</string>
+    <string name="settings_call_media_output">Cuộc gọi qua đầu ra đa phương tiện (thử nghiệm)</string>
+    <string name="settings_call_media_output_description">Dành cho hệ thống giải trí phát được nhạc nhưng cuộc gọi CarPlay không có tiếng: phát cuộc gọi giống như phát nhạc, không dùng chế độ cuộc gọi của Android, và ghi âm bằng micrô thông thường. Tính năng khử tiếng vọng và giảm tiếng ồn cuộc gọi của Android không hoạt động, vì vậy hãy bật “Khử tiếng vọng cuộc gọi” nếu người bên kia nghe thấy tiếng vọng. Cuộc gọi theo âm lượng đa phương tiện. Không có tác dụng khi “Âm thanh điện thoại của xe cho cuộc gọi CarPlay” đang bật. Để tắt nếu cuộc gọi đã có tiếng. Áp dụng từ cuộc gọi tiếp theo.</string>
     <string name="settings_navigation_attenuation">Âm lượng chỉ dẫn đường</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Giảm âm lượng chỉ dẫn đường của CarPlay mà không thay đổi âm lượng nhạc hoặc cuộc gọi. Áp dụng ngay; âm lượng dẫn đường của hệ thống giải trí vẫn hoạt động.</string>
