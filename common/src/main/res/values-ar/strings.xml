@@ -690,6 +690,8 @@
     <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
     <string name="settings_car_bluetooth_audio">صوت CarPlay عبر بلوتوث السيارة (تجريبي)</string>
     <string name="settings_car_bluetooth_audio_description">لا يقدّم DiPlay صوت CarPlay إلى iPhone، لذا يُفترض أن تمر الموسيقى والملاحة والمكالمات عبر اتصال البلوتوث بين iPhone والسيارة. أبقِ iPhone مقترنًا بالسيارة واختر البلوتوث مصدرًا للصوت في السيارة. إذا خرج الصوت من iPhone بدلًا من ذلك، فأوقف هذا الخيار. يعيد توصيل CarPlay.</string>
+    <string name="settings_car_music_link_drop">قطع موسيقى بلوتوث السيارة أثناء CarPlay (تجريبي)</string>
+    <string name="settings_car_music_link_drop_description">في بعض الوحدات، يوقف اتصال موسيقى البلوتوث الخاص بالسيارة مع iPhone موسيقى CarPlay مؤقتًا فور بدئها. عند التفعيل، يقطع DiPlay اتصال الموسيقى فقط مع iPhone هذه الجلسة أثناء عمل CarPlay ويحاول إعادة توصيله عند انتهاء CarPlay؛ وفي بعض الوحدات لا يمكن ذلك، وقد تبقى موسيقى بلوتوث السيارة مقطوعة بعد انتهاء CarPlay. تبقى المكالمات عبر بلوتوث السيارة والاقتران كما هي. لا يفعل شيئًا إذا كان صوت CarPlay يعمل عبر بلوتوث السيارة. عند الاتصال بالكابل يُستخدم iPhone المختار في DiPlay. يسري عند الاتصال التالي.</string>
     <string name="call_echo_cancellation">إلغاء صدى المكالمات (تجريبي)</string>
     <string name="call_echo_cancellation_description">يحاول تقليل صدى السماعات المرسل إلى الطرف الآخر أثناء مكالمات CarPlay. تعتمد النتيجة على وحدة السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح (تجريبي)</string>

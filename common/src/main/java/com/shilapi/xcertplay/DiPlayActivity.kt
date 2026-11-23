@@ -2106,6 +2106,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCarBluetoothAudio(this, it)
                 reconnectIfRunning()
             }
+            toggle(card, getString(R.string.settings_car_music_link_drop), getString(R.string.settings_car_music_link_drop_description),
+                AirPlayPersistence.loadCarMusicLinkDrop(this)) {
+                AirPlayPersistence.saveCarMusicLinkDrop(this, it)
+                markReconnectNeeded()
+            }
         }
         filteredSection(content, SettingsSection.CAR_BUTTON,
             getString(R.string.car_button_in_carplay), R.drawable.ic_dp_car) { card -> carButtonCard = card; carButtonControls(card) }

@@ -82,6 +82,8 @@ object AirPlayPersistence {
     private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
     private const val KEY_WHEEL_LONG_PRESS_SEEK = "wheel_long_press_seek"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
+    /** Read by CarPlayController under the same name. */
+    private const val KEY_CAR_MUSIC_LINK_DROP = "car_music_link_drop"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
     private const val KEY_CALL_SPEAKERPHONE = "call_speakerphone"
@@ -786,6 +788,14 @@ object AirPlayPersistence {
 
     fun saveCarBluetoothAudio(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CAR_BLUETOOTH_AUDIO, enabled).apply()
+    }
+
+    /** Drop the car's own Bluetooth music link to the session's iPhone while CarPlay runs (#1343); applies at reconnect. */
+    fun loadCarMusicLinkDrop(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CAR_MUSIC_LINK_DROP, false)
+
+    fun saveCarMusicLinkDrop(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CAR_MUSIC_LINK_DROP, enabled).apply()
     }
 
     fun loadSmoothVideo(context: Context): Boolean =
