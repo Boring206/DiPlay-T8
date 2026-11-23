@@ -10,7 +10,7 @@
     <string name="existing_wifi_title">既存のWi-Fi／同一LAN</string>
     <string name="existing_wifi_description">既存のルーターやモバイルWi-Fiを使用します。iPhoneと車載端末を、インターネットに接続できる同じネットワークにつないでください。</string>
     <string name="existing_wifi_hint">既存のWi-Fi · 両端末を同じWi-Fiに接続し、Bluetoothもオンにしてください。車のホットスポットは不要です。</string>
-    <string name="existing_wifi_instructions">車載端末とiPhoneをシステム設定で同じWi-Fiに接続してください。下に正確なネットワーク名とWPA2パスワードを入力します。パスワードを空にできるのはオープンネットワークだけです。ルーターはWPA2またはWPA2/WPA3混在モードを使用し、クライアント分離を無効にしてください。DiPlayは既存のWi-Fiを使い、ホットスポットを作成しません。</string>
+    <string name="existing_wifi_instructions">車載端末とiPhoneをシステム設定で同じWi-Fiに接続してください。下に正確なネットワーク名とWPA2パスワードを入力します。パスワードのないオープンネットワークは使えません。iPhoneはパスワード付きのネットワークでしかワイヤレスCarPlayを開始しないためです。ルーターはWPA2またはWPA2/WPA3混在モードを使用し、クライアント分離を無効にしてください。DiPlayは既存のWi-Fiを使い、ホットスポットを作成しません。</string>
     <string name="existing_wifi_details">外部Wi-Fiの情報</string>
     <string name="existing_wifi_ssid">外部Wi-Fi名（SSID）</string>
     <string name="existing_wifi_password">外部Wi-Fiのパスワード</string>
@@ -190,7 +190,6 @@
     <string name="could_not_save_image">画像を保存できませんでした</string>
     <string name="could_not_save_the_report">レポートを保存できませんでした</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlayを起動できませんでした。DiPlayに戻り、アプリの権限を確認してください。</string>
-    <string name="custom_1_1_icon">カスタムの正方形アイコン</string>
     <string name="debug_logs">デバッグログ</string>
     <string name="default_icon">標準アイコン</string>
     <string name="default_placeholder_icon">標準の仮アイコン</string>
@@ -598,6 +597,8 @@
     <string name="wheel_speed_for_tunnels_description">iPhoneへの位置情報送信が有効な場合、車輪速度とギア位置も送ります。トンネルや駐車場内でもAppleマップが車両位置を追跡しやすくなります。CarPlayを再接続すると反映されます。車載端末のネットワークADBが必要です。</string>
     <string name="video_while_parked">駐車中の動画再生</string>
     <string name="video_while_parked_description">iOS 27向けの機能です。車を駐車（シフト位置P）した状態では、iPhoneからCarPlayへ送った動画を車載画面で再生できます。P以外に切り替えるとプレーヤーを閉じます。ADBがない場合は映像再生を無効にし、音声のみiPhoneで再生します。Safariなどから送る通常のHTTPS動画には対応しますが、Apple TV+などFairPlayで保護された動画にはライセンスを持つレシーバーが必要なため再生できません。CarPlayを再接続すると反映されます。車載端末のネットワークADBが必要です。</string>
+    <string name="video_off_gear_unreadable">車の画面で動画を再生できません：DiPlay がギア位置を読み取れません。</string>
+    <string name="video_gear_no_reply">車載端末のADBがギア位置の読み取りに応答しませんでした。</string>
     <string name="cluster_song">メーターに曲を表示</string>
     <string name="cluster_song_description">CarPlayの曲名とアーティストを、再生・一時停止状態とともにメーターの音楽カードに表示します。メーターがCarPlayの音源を直接表示できないため、BYDの「その他の音楽」として表示されます。変更はすぐに反映されます。車載端末のネットワークADBが必要です。</string>
     <string name="cluster_song_gate">音楽カードを自動起動</string>
@@ -718,8 +719,9 @@
     <string name="settings_usb_charging">iPhoneの充電</string>
     <string name="settings_usb_charging_normal">通常（2.4 A）</string>
     <string name="settings_usb_charging_reduced">低め（1.5 A）</string>
+    <string name="settings_usb_charging_medium">中（1 A）</string>
     <string name="settings_usb_charging_low">低（0.5 A）</string>
-    <string name="settings_usb_charging_description">DiPlayがUSB接続でiPhoneに提供する充電電流を設定します。有線CarPlayが数秒ごとに切断・再接続される場合は、車のUSBポートの電力不足が考えられます。「低減」、次に「低」を試してください。充電速度は遅くなります。次回のUSB接続から反映されます。</string>
+    <string name="settings_usb_charging_description">DiPlayがUSB接続でiPhoneに提供する充電電流を設定します。有線CarPlayが数秒ごとに切断・再接続される場合は、車のUSBポートの電力不足が考えられます。「低め」、「中」、「低」の順に試してください。充電速度は遅くなります。次回のUSB接続から反映されます。</string>
     <string name="wheel_joystick_auto_off">ジョイスティックを自動でオフ</string>
     <string name="wheel_joystick_auto_off_description">15秒間操作しない場合と、経路案内の開始時に、キーを通常の音楽・音量操作へ戻します。</string>
     <string name="wheel_joystick_on">ジョイスティック：オン</string>
@@ -816,6 +818,17 @@
     <string name="car_button_name">名前</string>
     <string name="car_button_description">このアイコンと名前がCarPlayのアプリ一覧に表示されます。タップすると車の画面に戻ります。変更は次回CarPlay接続時から有効です。</string>
     <string name="car_button_saved_next_connection">保存しました。新しいアイコンと名前は次回のCarPlay接続時に表示されます。</string>
+    <string name="settings_car_brand_title">カーブランドバッジ</string>
+    <string name="settings_car_brand_summary">CarPlay がアプリ一覧に表示する BYD シリーズのバッジを選択します。名前が既定値またはバッジ名の場合にのみ更新されます。バッジを選ぶとカスタム画像は置き換えられます。</string>
+    <string name="settings_car_brand_default">既定 (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">ブランドバッジにリセット</string>
+<string name="settings_car_brand_reset">既定のバッジと名前に戻す</string>
     <string name="this_head_unit_has_no_image_picker">この車載端末には画像選択機能がありません。</string>
     <string name="settings_ambient_title">アンビエントライト（実験的機能）</string>
     <string name="settings_ambient_configuration">アンビエントライトの設定</string>
@@ -969,8 +982,10 @@
     <string name="settings_hotspot_name_non_english">中国語など英数字以外の文字を含むホットスポット名では、CarPlayが「準備中」のままになる場合があります。一部の車載端末がiPhoneから検出できない形式で送信するためです。その場合はホットスポット名を英数字に変更してください。</string>
     <string name="settings_speech_without_low_rates">USBナビ案内の音声を明瞭にする（実験的機能）</string>
     <string name="settings_speech_without_low_rates_description">USBではiPhoneのナビ案内やSiriの応答が電話品質の8 kHz音声で送信される場合があります。8 kHzと16 kHzを使用候補から外し、より高い音質を選ばせます。案内音声が出なくなったらオフにしてください。CarPlayを再接続します。</string>
-    <string name="settings_call_at_call_rate">通話を通話本来のレートで再生（試験的）</string>
-    <string name="settings_call_at_call_rate_description">通話を48 kHzのOpusではなく、通話本来のレート（8・16・24・32 kHz）のPCMとして提示します。純正のCarPlayレシーバーと同じ方式です。次回の接続から有効になります。通話に音が出ない場合はオフにしてください。</string>
+    <string name="settings_call_at_call_rate">通話を通話本来のレートで再生（実験的機能）</string>
+    <string name="settings_call_at_call_rate_description">通話を48 kHzのOpusではなく、通話本来のレート（8・16・24・32 kHz）のPCMとして提示します。純正のCarPlayレシーバーと同じ方式です。USBケーブル接続のみ：Wi-Fi経由ではiPhoneがCarPlayの音声をすべて自分で再生してしまったため、ワイヤレス接続では通常の形式を提示します。次回の接続から有効になります。通話に音が出ない場合はオフにしてください。</string>
+    <string name="settings_wheel_long_press_seek">次へ／前へを長押しで早送り・巻き戻し（実験的機能）</string>
+    <string name="settings_wheel_long_press_seek_description">ハンドルが次へ・前への長押しに専用のキーを送るヘッドユニット（BYD DiLink 3）では、長押しすると何も起きない代わりに約2.5秒間早送りまたは巻き戻しします。iPhoneではまだテストされていません。次回の接続から有効になります。</string>
     <string name="bluetooth_connections_not_real">この車載端末のAndroid Bluetoothは接続中と報告しますが、iPhoneには実際の通信が届きません。存在しないサービスへの接続さえ成功と表示されます。メーカー独自のBluetoothモジュールをアプリが利用できないため、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>
     <string name="bluetooth_cannot_open_connections">この車載端末のAndroid Bluetoothはアプリからの接続を開始できません。アプリが接続に使う部分がファームウェアにありません。車載Bluetoothの通話と音楽には影響しませんが、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>
     <string name="bluetooth_will_not_stay_on_hint">そこでBluetoothをオンのままにできない場合、この車載端末のBluetoothは端末自身の通話と音楽専用で、アプリからは利用できません。その場合ワイヤレスCarPlayは使用できないため、USBケーブルで接続してください。</string>
@@ -1000,10 +1015,13 @@
     <string name="connection_help_usb_device_not_iphone">USBデータケーブルで車のUSBデータポートまたはCarPlay用ポートに接続し、ほかのUSBデバイスを外して、iPhoneのロックを解除してください。</string>
     <string name="car_hotspot_details_differ">車載ホットスポットの設定がDiPlayに保存された内容と異なります</string>
     <string name="connection_help_car_hotspot_details_differ">「接続設定」で「保存済みのホットスポットを編集」をタップし、車のホットスポット設定から名前とパスワードを転記してから再試行してください。</string>
+    <string name="existing_wifi_needs_password">共有Wi-Fiにはパスワードが必要です</string>
+    <string name="connection_help_existing_wifi_needs_password">iPhoneはパスワード付きのWi-FiでしかワイヤレスCarPlayを開始しません。「接続設定」にルーターのWPA2パスワードを入力してください。ルーターにパスワードがない場合は設定し、車載端末とiPhoneを接続し直してください。その後、再試行してください。</string>
     <string name="hotspot_interface_not_found">DiPlayに保存されたホットスポットのインターフェースがこの車にありません</string>
     <string name="connection_help_hotspot_interface_not_found">「接続設定」で「保存済みのホットスポットを編集」をタップし、「ホットスポットのインターフェース（任意）」を空欄にしてから再試行してください。</string>
     <string name="connection_help_car_hotspot_off">車の設定で車載ホットスポットをオンにしてから再試行してください。</string>
     <string name="last_connection_attempt">前回の接続試行（%1$s）：%2$s</string>
+    <string name="last_carplay_connection_problem">前回のCarPlay接続（%1$s）：%2$s</string>
     <string name="connection_help_hotspot">車載端末のテザリングがオンで、名前とパスワードがDiPlayの設定と一致するか確認してください。可能なら5 GHzにして再試行してください。</string>
     <string name="connection_help_iphone_wifi">Wi-FiとBluetoothをオンにしてください。iPhoneで車載端末のWi-Fiに接続し、「自動接続」を有効にして再試行してください。改善しない場合は診断レポートを保存してください。</string>
     <string name="connection_help_permissions">車載端末でDiPlayにUSB、「付近のデバイス」、位置情報の権限を必要に応じて許可してから、再試行してください。</string>
@@ -1020,6 +1038,8 @@
     <string name="settings_navigation_attenuation">ナビ案内の音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">CarPlayのナビ案内だけ音量を下げます。音楽や通話の音量は変わりません。変更はすぐに反映され、車載端末側のナビ音量も引き続き使用できます。</string>
+    <string name="settings_call_attenuation">通話相手の声のレベル</string>
+    <string name="settings_call_attenuation_description">CarPlay通話の相手の声を、車の通話音量を変えずに下げます。通話がどの出力を使っていても、すぐに反映されます。通話の音がざらついたり聞き取りにくい場合を除き、0 dBのままにしてください。BYD Han（DiLink 3）の1台では、聴感テストで約-12〜-16 dBのとき通話がクリアに聞こえました。</string>
     <string name="settings_car_hotspot_control">車のホットスポット</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay を開いたときとワイヤレス接続の前に、保存済みの車のホットスポットをオンにします。Android の「システム設定の変更」へのアクセスが必要です。ADB は不要です。完全に再起動した後もホットスポットを使うには、車の起動後に DiPlay を開く設定もオンにしてください。ホットスポットは自動ではオフになりません。</string>
     <string name="settings_write_settings_granted">「システム設定の変更」へのアクセス: 許可済み</string>
@@ -1027,6 +1047,7 @@
     <string name="settings_write_settings_allow">アクセスを許可</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay中は車のWi-Fi検索を一時停止 · ADBが必要</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi Directでは車が数秒ごとにWi-Fiネットワークを検索し、そのたびに音楽と映像が途切れます。オンにすると、CarPlayの実行中はDiPlayがこの検索を止めます。その間、車はスマートフォンのテザリングなど既知のネットワークにも自動では接続しません（車のWi-Fi設定から手動では接続できます）。自動で接続させたい場合はオフにしてください。次の接続から適用されます。</string>
+    <string name="settings_car_hotspot_scan_pause_description">一部のヘッドユニットは車のホットスポットと並行して自身のWi-Fiクライアントをオンのままにし、定期的にネットワークを検索します。検索のたびに音楽が短く途切れます。オンにすると、そのようなユニットでのみ、CarPlayの動作中はDiPlayがこの検索を一時停止します。その間、車はスマートフォンのテザリングなどの既知のネットワークにも自動で接続しません。自動接続させるにはオフにしてください。次回の接続から有効になります。</string>
     <string name="temporary_system_bars">システムバーを5秒間だけ表示</string>
     <string name="temporary_system_bars_description">有効にすると、設定メニューで指定した本数の指で上にスワイプすると、隠した車載端末のステータスバー・ナビゲーションバーを5秒間表示します。下スワイプは従来どおりDiPlay設定を開きます。端末側のジェスチャーと競合する場合はオフにしてください。機種によっては表示できません。</string>
     <string name="wheel_media_play_pause">ステアリングキーで再生・一時停止</string>
@@ -1056,4 +1077,9 @@
     <string name="cluster_projection_shape_description">小画面ではメーター本来の車速や状態表示が地図の横に残ります。全画面では地図がメーター全体を覆います。CarPlayの地図が表示されるとDiPlayがこの形態を設定するため、クルマ側で選んだナビモードは上書きされます。車載機のネットワークADBが必要です。</string>
     <string name="settings_cluster_speedometer_album_color">速度計の背景にアルバムの色を使用</string>
     <string name="settings_cluster_speedometer_album_color_description">アルバムの枠の色に滑らかに切り替わります。選択した不透明度は維持されます。</string>
+    <string name="settings_fit_screen_shape">ノッチと角丸を避ける</string>
+    <string name="settings_fit_screen_shape_description">車載端末として使うスマートフォンやタブレット向けです。CarPlayのボタンとDockをカメラのノッチと画面の角丸から離します。地図は画面全体に表示されたままです。接続中のメニューで設定したセーフエリアが優先されます。次回の接続から反映されます。</string>
+    <string name="settings_safe_area_fitted_summary">セーフエリア：ノッチと角に合わせて調整、%5$d×%6$d内の(%3$d, %4$d)に%1$d×%2$d</string>
+    <string name="settings_wifi_direct_unavailable">利用不可</string>
+    <string name="settings_wifi_direct_unsupported_help">「接続設定」で「車載ホットスポット」または「既存のWi-Fi／同一LAN」を選んでから再試行してください。</string>
 </resources>

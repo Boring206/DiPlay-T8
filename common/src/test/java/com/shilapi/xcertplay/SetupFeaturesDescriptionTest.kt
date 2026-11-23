@@ -65,6 +65,15 @@ class SetupFeaturesDescriptionTest {
         assertFalse(shown.toString(), shown.any { screen.getString(R.string.dilink_not_sure) in it })
     }
 
+    // #1327: a driver may pick DiLink 4 on another make of head unit, which has no BYD projection display.
+    @Test fun theDiLink4AdbClusterSwitchNeedsABydHeadUnit() {
+        DiLinkGeneration.save(context, DiLinkGeneration.DILINK_4)
+        val route = context.getString(R.string.adb_cluster_activity_mode)
+        assertFalse(route in texts(featuresStep()))
+        installBydCarSettings(context)
+        assertTrue(route in texts(featuresStep()))
+    }
+
     @Test fun aKnownCarIsNamed() {
         DiLinkGeneration.save(context, DiLinkGeneration.DILINK_4)
         val screen = featuresStep()

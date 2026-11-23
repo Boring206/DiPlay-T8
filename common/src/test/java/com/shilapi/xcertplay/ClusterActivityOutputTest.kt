@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -11,6 +12,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterActivityOutputTest {
+    @Before fun bydHeadUnit() = installBydCarSettings(org.robolectric.RuntimeEnvironment.getApplication())
+
     @Test fun launchRejectsWrongTokenAndDisplayAndStopInvalidatesTheTicket() {
         val app = org.robolectric.RuntimeEnvironment.getApplication()
         AirPlayPersistence.saveAdbClusterEnabled(app, true)

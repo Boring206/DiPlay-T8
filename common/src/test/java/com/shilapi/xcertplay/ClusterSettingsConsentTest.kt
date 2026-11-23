@@ -44,6 +44,7 @@ class ClusterSettingsConsentTest {
         PendingReconnect.clear()
         CarPlayBackgroundSession.clear()
         ClusterActivityOutput.stopForSettings()
+        installBydCarSettings(app)
         activity = Robolectric.buildActivity(DiPlayActivity::class.java)
         screen = activity.get()
         screen.setTheme(android.R.style.Theme_Material_NoActionBar)

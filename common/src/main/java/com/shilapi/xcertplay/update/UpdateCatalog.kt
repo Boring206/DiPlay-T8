@@ -29,7 +29,7 @@ internal object UpdateCatalog {
         for (index in 0 until releases.length()) {
             val release = releases.optJSONObject(index) ?: continue
             if (release.optBoolean("draft")) continue
-            val assets = release.optJSONArray("assets") ?: return null
+            val assets = release.optJSONArray("assets") ?: continue
             var apkName = ""
             var apkUrl = ""
             var checksumsUrl = ""
@@ -44,7 +44,7 @@ internal object UpdateCatalog {
                 }
                 if (name.equals(CHECKSUMS_FILE, ignoreCase = true)) checksumsUrl = url
             }
-            if (apkUrl.isEmpty() || checksumsUrl.isEmpty()) return null
+            if (apkUrl.isEmpty() || checksumsUrl.isEmpty()) continue
             return UpdateRelease(release.optString("tag_name"), apkName, apkUrl, checksumsUrl)
         }
         return null

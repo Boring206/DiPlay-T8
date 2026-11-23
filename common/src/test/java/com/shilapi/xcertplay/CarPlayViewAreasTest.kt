@@ -6,6 +6,7 @@ import com.shilapi.xcertplay.airplay.AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE
 import com.shilapi.xcertplay.airplay.AirPlayViewArea
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CarPlayViewAreasTest {
@@ -198,5 +199,11 @@ class CarPlayViewAreasTest {
         assertEquals(1f, portrait.first, 1e-6f)
         assertEquals(1154f / 2560, portrait.second, 1e-6f)
         assertNull(SplitScreenSettings.expectedWindow(true, 0, 0, 112, 120, 20))
+    }
+
+@Test
+    fun aScreenNarrowerThanTwoPixelsDoesNotBreakSplitScreenAreas() {
+        val areas = CarPlayViewAreas.build(1, 1, CarPlayDock.BOTTOM, 0.5f to 0.5f)!!
+        assertTrue(areas.areas.isNotEmpty())
     }
 }

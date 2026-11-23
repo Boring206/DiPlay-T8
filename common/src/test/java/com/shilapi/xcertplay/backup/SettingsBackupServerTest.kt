@@ -1,11 +1,13 @@
 package com.shilapi.xcertplay.backup
 
+import com.shilapi.xcertplay.airplay.RtspMessage
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.Socket
 import java.net.URL
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -17,6 +19,7 @@ class SettingsBackupServerTest {
     private lateinit var server: SettingsBackupServer
     private lateinit var endpoint: SettingsBackupEndpoint
     private val imported = AtomicReference<SettingsImportOutcome?>()
+    private val receivedDocument = AtomicReference<ByteArray?>()
 
     @Before
     fun startServer() {
@@ -26,6 +29,7 @@ class SettingsBackupServerTest {
             import = { document ->
                 val outcome = SettingsImportOutcome(4, 1, invalid = false)
                 imported.set(outcome)
+                receivedDocument.set(document)
                 outcome
             },
             report = { "DiPlay diagnostic report\n診斷".toByteArray(Charsets.UTF_8) },
@@ -474,5 +478,127 @@ class SettingsBackupServerTest {
         assertEquals(2, SettingsBackupServer.rank("p2p0", "ap"))
         assertEquals(3, SettingsBackupServer.rank("wlan1", "p2p"))
         assertEquals(4, SettingsBackupServer.rank("rmnet_data0", "p2p"))
+    }
+
+    // A large import body reaches the server in many small pieces. It used to be copied in full and
+    // re-parsed from byte 0 on every read; it must still be read whole and answered in time.
+    @Test(timeout = 20_000L)
+    fun anImportBodyArrivingInManyPiecesIsReadWhole() {
+        val body = ByteArray(512 * 1024) { (it % 251).toByte() }
+        val head = ("POST /b/${endpoint.token}/import HTTP/1.1\r\n" +
+            "Host: 127.0.0.1\r\n" +
+            "Content-Length: ${body.size}\r\n" +
+            "Connection: close\r\n\r\n").toByteArray(Charsets.US_ASCII)
+        val pieces = 256
+        val pieceSize = body.size / pieces
+        Socket("127.0.0.1", endpoint.port).use { socket ->
+            socket.soTimeout = 10_000
+            socket.tcpNoDelay = true
+            val out = socket.getOutputStream()
+            out.write(head)
+            out.flush()
+            var sent = 0
+            repeat(pieces) { index ->
+                val length = if (index == pieces - 1) body.size - sent else pieceSize
+                out.write(body, sent, length)
+                out.flush()
+                sent += length
+                // A fixed tiny pause so each piece is read separately on loopback; a deterministic
+                // way to exercise the multi-read path, not a guess at real network latency.
+                Thread.sleep(1)
+            }
+            val response = socket.getInputStream().readBytes().toString(Charsets.UTF_8)
+            assertTrue(response.take(120), response.startsWith("HTTP/1.1 200"))
+            assertTrue(response.contains("\"applied\":4"))
+            assertTrue(response.contains("\"skipped\":1"))
+            assertTrue(response.contains("\"invalid\":false"))
+        }
+        assertEquals(4, imported.get()?.applied)
+        val received = receivedDocument.get()
+        assertNotNull("the import body reached the importer", received)
+        assertArrayEquals(body, received!!)
+    }
+
+    // The header can be split across reads, including the terminating \r\n\r\n. A request with no
+    // Content-Length must still be answered the moment its header ends, as before.
+    @Test(timeout = 10_000L)
+    fun aHeaderSplitAcrossReadsWithNoContentLengthIsStillAnswered() {
+        val head = "GET /b/${endpoint.token}/ HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+        val firstBreak = head.indexOf("\r\n") + 1
+        val parts = listOf(
+            head.substring(0, firstBreak),
+            head.substring(firstBreak, head.length - 2),
+            head.substring(head.length - 2),
+        )
+        Socket("127.0.0.1", endpoint.port).use { socket ->
+            socket.soTimeout = 5_000
+            socket.tcpNoDelay = true
+            val out = socket.getOutputStream()
+            for (part in parts) {
+                out.write(part.toByteArray(Charsets.US_ASCII))
+                out.flush()
+                Thread.sleep(1)
+            }
+            val response = socket.getInputStream().readBytes().toString(Charsets.UTF_8)
+            assertTrue(response.take(120), response.startsWith("HTTP/1.1 200"))
+            assertTrue(response.contains("backup-page"))
+        }
+    }
+
+    // An oversized Content-Length is still rejected as soon as the header is parsed, without
+    // buffering the declared body. parseMessages owns that cap; the fix must not bypass it.
+    @Test(timeout = 10_000L)
+    fun anOversizedContentLengthIsRejectedEarly() {
+        Socket("127.0.0.1", endpoint.port).use { socket ->
+            socket.soTimeout = 5_000
+            socket.tcpNoDelay = true
+            socket.getOutputStream().apply {
+                write(("POST /b/${endpoint.token}/import HTTP/1.1\r\n" +
+                    "Host: 127.0.0.1\r\n" +
+                    "Content-Length: 8388608\r\n\r\n").toByteArray(Charsets.US_ASCII))
+                flush()
+            }
+            // parseMessages fails the oversized body, so the connection is closed with no reply.
+            val reply = runCatching { socket.getInputStream().read() }
+            assertTrue(reply.getOrNull() == -1 || reply.exceptionOrNull() is java.net.SocketException)
+        }
+    }
+
+    // requiredBytes decides when readRequest stops copying and parsing. If it ever disagreed with
+    // parseMessages, an import would either wait out the 10 s read timeout or be answered too early.
+    // Pin the two together: at the byte count requiredBytes returns, parseMessages yields exactly
+    // one message, and one byte short of a body it yields none. These guard existing behavior, so
+    // they pass on main too; they do not measure the improvement.
+    @Test
+    fun requiredBytesAgreesWithParseMessages() {
+        fun request(headers: List<String>, body: ByteArray): ByteArray {
+            val head = (listOf("POST /import HTTP/1.1") + headers)
+                .joinToString("\r\n", postfix = "\r\n\r\n")
+            return head.toByteArray(Charsets.US_ASCII) + body
+        }
+        val five = ByteArray(5) { it.toByte() }
+        val cases = listOf(
+            Triple("content-length in lower case", listOf("Host: localhost", "content-length: 5"), five),
+            Triple("content-length in mixed case", listOf("Host: localhost", "CoNtEnT-LeNgTh: 5"), five),
+            Triple("spaces around the value", listOf("Host: localhost", "Content-Length:   5   "), five),
+            Triple("two Content-Length headers, last wins", listOf("Content-Length: 3", "Content-Length: 5"), five),
+            Triple("no Content-Length", listOf("Host: localhost"), ByteArray(0)),
+            Triple("+5", listOf("Content-Length: +5"), five),
+            Triple("-5", listOf("Content-Length: -5"), ByteArray(0)),
+            Triple("abc", listOf("Content-Length: abc"), ByteArray(0)),
+            Triple("body contains CRLFCRLF", listOf("Content-Length: 6"), "A\r\n\r\nB".toByteArray(Charsets.US_ASCII)),
+        )
+        for ((name, headers, body) in cases) {
+            val bytes = request(headers, body)
+            val needed = checkNotNull(SettingsBackupServer.requiredBytes(bytes)) {
+                "$name: a complete header should give a byte count"
+            }
+            assertEquals("$name: one message at needed bytes", 1,
+                RtspMessage.parseMessages(bytes.copyOf(needed)).messages.size)
+            if (body.isNotEmpty()) {
+                assertTrue("$name: no message one byte short",
+                    RtspMessage.parseMessages(bytes.copyOf(needed - 1)).messages.isEmpty())
+            }
+        }
     }
 }

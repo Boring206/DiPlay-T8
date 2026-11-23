@@ -1,7 +1,9 @@
 package com.shilapi.xcertplay
 
+import android.bluetooth.BluetoothDevice
 import org.junit.Assert.*
 import org.junit.Test
+import com.shilapi.xcertplay.orchestration.ConnectionDiagnosticLines
 import com.shilapi.xcertplay.iap2.message.Iap2ControlMessages
 import com.shilapi.xcertplay.iap2.trace.Iap2FrameFormatter
 import com.shilapi.xcertplay.iap2.trace.Iap2TraceDirection
@@ -49,14 +51,44 @@ class DiagnosticRedactorTest {
     @Test fun connectionTimingAndCachedServiceMetadataSurviveWithoutPersonalIdentifiers() {
         val lines = listOf(
             "CONNECTION_DIAGNOSTIC attempt=2 phase=CONTROL wired io final readCalls=105 writeCalls=50 readTimeouts=3 ends=0 failures=1 maxReadMs=909 maxWriteMs=1937",
-            "CONNECTION_DIAGNOSTIC attempt=2 phase=WIRELESS Bluetooth snapshot point=after-failure enabled=true bondState=12 cachedServiceCount=5 cachedIap2Service=false",
+            // The line CarPlayController writes, not a hand-made sample: one without "bondName=" hid #1151.
+            "CONNECTION_DIAGNOSTIC attempt=2 run=1 phase=WIRELESS " + ConnectionDiagnosticLines.bluetoothSnapshot(
+                point = "after-failure", adapterEnabled = true, bondState = BluetoothDevice.BOND_BONDED,
+                cachedServicesReadable = true, cachedServiceCount = 5, cachedIap2Service = false),
             "CONNECTION_DIAGNOSTIC generation=2 restart teardownWaitCompleted=false elapsedMs=4000",
             "CONNECTION_DIAGNOSTIC attempt=2 phase=USB_DISCOVERY USB configuration ready=true configurationId=6 reenumerationAttempts=0 action=reuse-descriptors",
+            "wired start: NCM connection attempts to=advertised port=7000 syn=12 connections=3 synAck=12 rst=0 unsent=0; to=otherLinkLocal port=7000 syn=1 connections=1 synAck=0 rst=1 unsent=0",
         )
         for (line in lines) assertEquals(line, DiagnosticRedactor.redact(line))
         assertNull(DiagnosticRedactor.redact("CONNECTION_DIAGNOSTIC attempt=2 payload=private-data"))
         assertFalse(DiagnosticRedactor.redact("CONNECTION_DIAGNOSTIC attempt=2 peer=192.168.49.1 id=0123456789abcdef0123456789abcdef")!!.contains("192.168.49.1"))
     }
+
+    // #1151: "bondName=BONDED" matched the device-name rule, so the saved log dropped every snapshot.
+    @Test fun bluetoothSnapshotsAndIphoneCountsReachTheSavedLog() {
+        val prefix = "12:00:00.000  CONNECTION_DIAGNOSTIC attempt=1 run=1 phase=WIRELESS "
+        val lines = listOf(
+            ConnectionDiagnosticLines.bluetoothSnapshot("before-connect", true, BluetoothDevice.BOND_BONDED, true, 7, true),
+            ConnectionDiagnosticLines.bluetoothSnapshot("after-failure", null, BluetoothDevice.BOND_NONE, false, null, null),
+            ConnectionDiagnosticLines.automaticBluetoothIphone(bonded = 3, bondedIphones = 2, directlyConnected = 0, connected = 1),
+            ConnectionDiagnosticLines.savedBluetoothIphone(bonded = 3, stillPaired = false),
+        ).map { prefix + it }
+        assertTrue(lines[0], lines[0].contains(" bond=BONDED "))
+        assertTrue(lines[1], lines[1].endsWith("cachedServiceCount=unknown cachedIap2Service=unknown"))
+        assertNull("the old field name must stay dropped, or the rule changed",
+            DiagnosticRedactor.redact(lines[0].replace(" bond=", " bondName=")))
+        val folder = Files.createTempDirectory("diplay-bluetooth-snapshot").toFile()
+        try {
+            val file = folder.resolve("diplay.log")
+            SessionLogFile(file).use { log ->
+                log.reset("header")
+                lines.forEach(log::append)
+                assertTrue(log.awaitIdle(10_000))
+            }
+            assertEquals(listOf("header") + lines, file.readLines())
+        } finally { folder.deleteRecursively() }
+    }
+
     @Test fun savedDriveReportKeepsMediaPerformanceCounters() {
         val folder = Files.createTempDirectory("diplay-media-report").toFile()
         try {
@@ -183,5 +215,76 @@ class DiagnosticRedactorTest {
         assertEquals("wireless RFCOMM connected address=[address]", DiagnosticRedactor.redact("wireless RFCOMM connected address=C0:A6:00:29:58:0A"))
         assertNull(DiagnosticRedactor.redact("Manual hotspot SSID does not match the active local AP configuration: 'CarWifi-1234'"))
         assertNull(DiagnosticRedactor.redact("WirelessHotspotInfo(backend=Wi-Fi P2P, ssid='DIRECT-xy-Car', passphrase=<redacted>, security=WPA2, channel=6)"))
+    }
+
+    @Test fun connectedDeviceListsAreRedactedToAReadableMarker() {
+        assertEquals("Car Bluetooth audio: start A2DP connected=[redacted]",
+            DiagnosticRedactor.redact("Car Bluetooth audio: start A2DP connected=[Jane's iPhone, 张三的 iPhone]"))
+        assertEquals("Car Bluetooth audio: after30s HFP connected=[redacted]",
+            DiagnosticRedactor.redact("Car Bluetooth audio: after30s HFP connected=[张三的 iPhone, John's iPad]"))
+        assertEquals("connected=[redacted]",
+            DiagnosticRedactor.redact("connected=[Jane's iPhone]"))
+        assertEquals("connected=[redacted]",
+            DiagnosticRedactor.redact("connected=[张三的 iPhone, John's iPad, \"Mom's iPhone\"]"))
+    }
+
+    @Test fun carBluetoothDeviceNamesNeverReachExportedReport() {
+        val lines = listOf(
+            "Car Bluetooth audio: start A2DP connected=[Jane's iPhone, 张三的 iPhone]",
+            "Car Bluetooth audio: after30s HFP connected=[John's iPad, \"Mom's iPhone\", 李四的 iPhone]",
+            "Car Bluetooth audio: start HFP connected=[王五的 iPhone]",
+        )
+        val folder = Files.createTempDirectory("diplay-bt-name-report").toFile()
+        try {
+            val file = folder.resolve("diplay.log")
+            SessionLogFile(file).use { log ->
+                log.reset("started")
+                lines.forEach { log.append(it) }
+                assertTrue(log.awaitIdle(10_000))
+            }
+            val report = file.readText()
+            for (name in listOf("Jane's iPhone", "张三的 iPhone", "John's iPad", "Mom's iPhone", "李四的 iPhone", "王五的 iPhone")) {
+                assertFalse(report, report.contains(name))
+            }
+            assertTrue(report, report.contains("connected=[redacted]"))
+            assertTrue(report, report.contains("Car Bluetooth audio: start A2DP"))
+        } finally { folder.deleteRecursively() }
+    }
+
+    @Test fun connectedNamesRuleDoesNotTouchLegalConnectionDiagnostics() {
+        for (line in listOf("connected=true", "connected=false", "connected=1", "connected=[]", "CarPlay connected")) {
+            assertEquals(line, DiagnosticRedactor.redact(line))
+        }
+        // Every non-empty list comes from logCarBluetoothAudio() and is redacted, including short
+        // hex-looking and MAC-looking lists; only the empty "connected=[]" list stays untouched.
+        assertEquals("connected=[redacted]", DiagnosticRedactor.redact("connected=[aa:bb:cc]"))
+        assertEquals("connected=[redacted]", DiagnosticRedactor.redact("connected=[aa:bb:cc:dd:ee:ff]"))
+        assertEquals("wireless RFCOMM connected address=[address]",
+            DiagnosticRedactor.redact("wireless RFCOMM connected address=C0:A6:00:29:58:0A"))
+    }
+
+    @Test fun hexLetterNamesInConnectedListsAreRedacted() {
+        for (line in listOf("connected=[Dad]", "connected=[Cafe]", "connected=[Bea, Abe]", "connected=[deadbeef, 1234]")) {
+            assertEquals("connected=[redacted]", DiagnosticRedactor.redact(line))
+        }
+        assertEquals("Car Bluetooth audio: start A2DP connected=[redacted]",
+            DiagnosticRedactor.redact("Car Bluetooth audio: start A2DP connected=[Bea, Abe, Cafe]"))
+    }
+
+    @Test fun bracketInsideANameDoesNotExposeTheRestOfTheList() {
+        val redacted = DiagnosticRedactor.redact("Car Bluetooth audio: start A2DP connected=[A]B, Jane's iPhone]")!!
+        assertEquals("Car Bluetooth audio: start A2DP connected=[redacted]", redacted)
+        assertFalse(redacted.contains("Jane's iPhone"))
+        assertFalse(redacted.contains("]B"))
+    }
+
+    @Test fun connectedNamesAreRedactedEvenOnLinesHittingTheExportCap() {
+        val line = "Car Bluetooth audio: start A2DP connected=[Jane's iPhone, 张三的 iPhone] " + "z".repeat(650)
+        assertTrue(line.length > 700)
+        val redacted = DiagnosticRedactor.redact(line)!!
+        assertTrue(redacted.length <= 700)
+        assertFalse(redacted, redacted.contains("Jane's iPhone"))
+        assertFalse(redacted, redacted.contains("张三的 iPhone"))
+        assertTrue(redacted, redacted.contains("connected=[redacted]"))
     }
 }

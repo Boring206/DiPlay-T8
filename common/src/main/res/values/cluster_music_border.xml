@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">Show album cover border</string>
+    <string name="settings_cluster_music_border_description">Draw a thin border around the album cover on the dashboard map.</string>
+</resources>

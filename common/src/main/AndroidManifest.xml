@@ -58,9 +58,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_apk_paths" />
         </provider>
+        <!-- allowEmbedded: a launcher card (Dudu, DiYou) is a private display that the launcher owns. Android opens
+             another app's screen on it only when that screen allows embedding; otherwise it moves the whole task back
+             to the main display (#463). DiPlayActivity, SameTaskCarPlayHostActivity and CarPlayVideoActivity open
+             in DiPlay's own task, so each of them allows it. CarPlayHostActivity, in its own task, does not. -->
         <activity android:name="com.shilapi.xcertplay.DiPlayActivity"
             android:exported="true" android:launchMode="singleTop"
             android:resizeableActivity="true"
+            android:allowEmbedded="true"
             android:configChanges="density|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:theme="@style/Theme.Xcertplay">
             <intent-filter>
@@ -97,6 +102,7 @@
             android:exported="false"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
+            android:allowEmbedded="true"
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.Xcertplay"
             android:windowSoftInputMode="adjustResize" />
@@ -118,6 +124,7 @@
             android:name="com.shilapi.xcertplay.CarPlayVideoActivity"
             android:configChanges="density|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="false"
+            android:allowEmbedded="true"
             android:theme="@style/Theme.Xcertplay" />
 
         <activity

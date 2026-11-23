@@ -68,4 +68,72 @@ class CrashRecordTest {
         val report = CrashRecord.report(context)
         assertTrue(report, report.startsWith("crash atEpochMs=5 thread=main\njava.lang.IllegalStateException: surface released at [ip]"))
     }
+
+    @Test fun anOversizedRecordIsBoundedAndNeverReachesTheTail() {
+        val file = File(context.filesDir, "logs/last-crash.txt")
+        file.parentFile?.mkdirs()
+        val sentinel = "SENTINEL_AT_TAIL_9f8e7d6c"
+        file.writeText(buildString {
+            repeat(10_000) { appendLine("record line $it ok") }
+            appendLine(sentinel)
+        })
+
+        val report = CrashRecord.report(context)
+        val lineCount = report.lines().size
+        assertTrue("report had $lineCount lines", lineCount <= CrashRecord.MAX_REPORT_LINES)
+        assertFalse("tail leaked into the bounded report", report.contains(sentinel))
+    }
+
+    @Test fun aNormalSizedRecordIsReturnedVerbatim() {
+        val file = File(context.filesDir, "logs/last-crash.txt")
+        file.parentFile?.mkdirs()
+        val content = (1..60).joinToString("\n") { "record line $it ok" }
+        file.writeText(content)
+
+        assertEquals(content, CrashRecord.report(context))
+    }
+
+    @Test fun anOverlongLineIsTruncatedWhileTheLineCountStaysBounded() {
+        val file = File(context.filesDir, "logs/last-crash.txt")
+        file.parentFile?.mkdirs()
+        val sentinel = "TAIL_SENTINEL_5e4d3c2b"
+        file.writeText(buildString {
+            appendLine("x".repeat(5_000))
+            repeat(300) { appendLine("record line $it ok") }
+            appendLine(sentinel)
+        })
+
+        val report = CrashRecord.report(context)
+        val lines = report.lines()
+        assertEquals(CrashRecord.MAX_REPORT_LINES, lines.size)
+        assertEquals(700, lines.first().length)
+        assertFalse("tail leaked into the bounded report", report.contains(sentinel))
+    }
+
+    // Pins the 85-line ceiling (1 header + 4 causes x 21 lines): the largest record format() can
+    // emit must survive report() intact, so a later MAX_FRAMES/MAX_CAUSES bump cannot truncate it.
+    @Test fun theLargestPossibleRecordIsReturnedIntactByReport() {
+        // Each cause: >12 framework frames followed by at least 6 com.shilapi. frames.
+        val frames = Array(13) { StackTraceElement("android.app.Activity", "frame$it", "Activity.java", it) } +
+            Array(8) { StackTraceElement("com.shilapi.xcertplay.DiPlayActivity", "call$it", "DiPlayActivity.kt", it) }
+        fun withFrames(error: Throwable) = error.apply { stackTrace = frames }
+        val cause4 = withFrames(IllegalStateException("boom4"))
+        val cause3 = withFrames(RuntimeException("boom3", cause4))
+        val cause2 = withFrames(RuntimeException("boom2", cause3))
+        val cause1 = withFrames(RuntimeException("boom1", cause2))
+
+        val record = CrashRecord.format("main", cause1, 0)
+        // format() ends with a newline; String.lines() counts that trailing empty element, while
+        // useLines()/readLine() does not. Compare real content lines on both sides.
+        val recordLines = record.trimEnd('\n').lines()
+        assertEquals(85, recordLines.size)
+
+        val file = File(context.filesDir, "logs/last-crash.txt")
+        file.parentFile?.mkdirs()
+        file.writeText(record)
+
+        val report = CrashRecord.report(context)
+        assertEquals(recordLines.size, report.lines().size)
+        assertTrue(report, report.contains("caused by java.lang.IllegalStateException: boom4"))
+    }
 }

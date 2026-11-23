@@ -108,6 +108,28 @@ class HomeLastConnectionProblemTest {
         assertTrue(shown(home).toString(), shown(home).none { it.startsWith("Last connection attempt") })
     }
 
+    // #1180: video that stays off is a problem of the running session, so Home shows it while CarPlay runs, and
+    // with the time it was recorded beside the last connection attempt when CarPlay does not run.
+    @Test fun videoThatStaysOffShowsWhileCarPlayIsConnectedAndWithItsTimeAfterwards() {
+        com.shilapi.xcertplay.hud.BydOutputSettings.setVideoWhileParked(context, true)
+        try {
+            fail(ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED)
+            LastConnectionProblem.videoGearUnreadable(context, com.shilapi.xcertplay.adb.LocalAdb.Access.NOT_APPROVED, false)
+            val home = openHome()
+            val video = context.getString(R.string.video_off_gear_unreadable) + " " + context.getString(R.string.adb_not_approved)
+            val idle = shown(home).single { it.startsWith("Last connection attempt") }.lines()
+            assertEquals(idle.toString(), 2, idle.size)
+            assertTrue(idle[1], idle[1].matches(Regex("Last CarPlay connection \\($time\\): " + Regex.escape(video))))
+
+            CarPlayBackgroundSession.active = true
+            refresh(home)
+            assertEquals(shown(home).toString(), 1, shown(home).count { it == video })
+            assertTrue(shown(home).toString(), shown(home).none { it.startsWith("Last connection attempt") })
+        } finally {
+            com.shilapi.xcertplay.hud.BydOutputSettings.setVideoWhileParked(context, false)
+        }
+    }
+
     @Test fun withTheCarHotspotOffHomeKeepsItsOneHotspotWarning() {
         CarHotspotOffConnectTest.HotspotState.on = false
         fail(ConnectionFailureCause.CAR_HOTSPOT_OFF)

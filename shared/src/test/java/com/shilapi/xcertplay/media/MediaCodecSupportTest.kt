@@ -63,6 +63,21 @@ class MediaCodecSupportTest {
         assertEquals(0, MediaCodecSupport.hevcCodecSpecificData(truncated).size)
     }
 
+    @Test
+    fun theLargestAdtsFrameStillFillsTheThirteenBitLengthField() {
+        val header = MediaCodecSupport.adtsFrame(ByteArray(8_184), 48_000, 2).copyOf(7)
+        // frame_length includes the 7-byte header, so 8,184 data bytes give 0x1fff.
+        val length = ((header[3].toInt() and 0x3) shl 11) or
+            ((header[4].toInt() and 0xff) shl 3) or
+            ((header[5].toInt() and 0xe0) ushr 5)
+        assertEquals(0x1fff, length)
+    }
+
+    @Test
+    fun anOversizeAccessUnitIsRefusedInsteadOfWrappingTheLength() {
+        assertEquals(0, MediaCodecSupport.adtsFrame(ByteArray(8_185), 48_000, 2).size)
+    }
+
     private fun hevcRecord(vararg parameterSets: ByteArray): ByteArray {
         var size = 23
         parameterSets.forEach { size += 5 + it.size }
