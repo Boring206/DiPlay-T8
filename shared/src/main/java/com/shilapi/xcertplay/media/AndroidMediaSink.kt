@@ -191,10 +191,13 @@ class AndroidMediaSink(
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
     navigationAttenuationDb: Int = 0,
+    callAttenuationDb: Int = 0,
     context: Context? = null,
     private val navigationStreamType: Int = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
     onScreenStreamActiveChanged: ((Int, Boolean) -> Unit)? = null,
     private val mediaBufferMillis: Int = MediaAudioBuffer.DEFAULT_MILLIS,
+    /** Start level for calls; 0 keeps the low-latency level (see [MediaAudioBuffer.plan]). */
+    private val callBufferMillis: Int = 0,
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
@@ -219,18 +222,13 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
-    /**
-     * Opt-in Spreadtrum decoder tuning: a tuned configure attempt for the detected OMX.sprd
-     * decoder, with fallback to the default decoder in the same configure round.
-     */
-    private val sprdDecoderTuningEnabled: Boolean = false,
     /** Opt-in (#946): navigation prompts request duckable focus while the iPhone ducks audio. Needs [audioFocusEnabled]. */
     navigationPromptAudioFocus: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
     private val appContext = context?.applicationContext
-    private val ambientSinkToken = AmbientMusicController.openSink(appContext)
+    private val ambientSinkToken = AmbientMusicController.openSink(appContext, onAudioDiagnostic)
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
         appContext,
@@ -282,6 +280,14 @@ class AndroidMediaSink(
     fun setNavigationAttenuationDb(db: Int) {
         navigationAttenuationDb = NavigationAudioGain.clamp(db)
         audioRenderers.values.forEach { it.setNavigationAttenuationDb(navigationAttenuationDb) }
+    }
+
+    @Volatile private var callAttenuationDb = NavigationAudioGain.clamp(callAttenuationDb)
+
+    /** Apply a saved Audio setting to calls already playing, without reconnecting CarPlay. */
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+        audioRenderers.values.forEach { it.setCallAttenuationDb(callAttenuationDb) }
     }
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
     private val audioModeLock = Any()
@@ -705,38 +711,26 @@ class AndroidMediaSink(
         }
     }
 
-    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true): VideoDecoder {
-        // Keep the experimental decoder tunings on the main CarPlay picture only. Mirrors and the
+    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true) = VideoDecoder(
+        type,
+        surface,
+        videoWidth,
+        videoHeight,
+        preferSoftwareHevcDecoder,
+        requestKeyFrame = { requestVideoRecovery(type) },
+        report = { videoDiagnosticHandlers[type]?.invoke(it) },
+        statsLabel = statsLabel,
+        onExit = ::onVideoDecoderExit,
+        // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
+        pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
+        operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
+        vendorLowLatency = vendorLowLatencyDecoder,
+        dedicatedOutputThread = vendorLowLatencyDecoder,
+        framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
+        // Keep the experimental MTK mode on the main CarPlay picture only. Mirrors and the
         // cluster have separate timing and must retain their established decoder configuration.
-        // The decoder's mime is only known at configure time, so the existence check covers
-        // both mimes. It guards the backup-restore case: a unit with no Spreadtrum decoder
-        // must not get the output thread (and the tuning) from a restored preference, when
-        // there is no visible toggle to turn it off.
-        val sprdDecoderExists =
-            SprdDecoderTuning.selectedDecoderName(MediaFormat.MIMETYPE_VIDEO_AVC) != null ||
-                SprdDecoderTuning.selectedDecoderName(MediaFormat.MIMETYPE_VIDEO_HEVC) != null
-        val sprdTuning = sprdDecoderTuningEnabled && sprdDecoderExists &&
-            type == MAIN_SCREEN_TYPE && statsLabel == null
-        return VideoDecoder(
-            type,
-            surface,
-            videoWidth,
-            videoHeight,
-            preferSoftwareHevcDecoder,
-            requestKeyFrame = { requestVideoRecovery(type) },
-            report = { videoDiagnosticHandlers[type]?.invoke(it) },
-            statsLabel = statsLabel,
-            onExit = ::onVideoDecoderExit,
-            // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
-            pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
-            operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
-            vendorLowLatency = vendorLowLatencyDecoder,
-            dedicatedOutputThread = vendorLowLatencyDecoder || sprdTuning,
-            framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
-            mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
-            sprdDecoderTuningEnabled = sprdTuning,
-        ).also { if (startImmediately) it.start() }
-    }
+        mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
+    ).also { if (startImmediately) it.start() }
 
     @Synchronized
     private fun audioRenderer(id: AudioStreamId, format: AudioFormat): AudioRenderer {
@@ -768,11 +762,14 @@ class AndroidMediaSink(
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also {
+            if (format.audioType == TELEPHONY_AUDIO_TYPE) it.callBufferMillis = callBufferMillis
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.onRoutedToEarpiece = { moveCallToLoudspeaker(id) }
             audioRenderers[id] = it
             // Cover a Settings change made while this renderer was being prepared.
             it.setNavigationAttenuationDb(navigationAttenuationDb)
+            it.setCallAttenuationDb(callAttenuationDb)
         }
     }
 
@@ -856,12 +853,9 @@ internal fun videoDecoderAttempts(
     softwareDecoder: String?,
     lowLatencyDecoder: String? = null,
     maximumMtkMode: MtkDecoderMode = MtkDecoderMode.NONE,
-    sprdDecoder: String? = null,
 ): List<DecoderAttempt> = buildList {
     if (operatingRate > 0) lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true, operatingRate)) }
     lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true)) }
-    if (operatingRate > 0) sprdDecoder?.let { add(DecoderAttempt(it, tuned = true, operatingRate)) }
-    sprdDecoder?.let { add(DecoderAttempt(it, tuned = true)) }
     val mtkModes = maximumMtkMode.attempts()
     if (operatingRate > 0) {
         mtkModes.forEach { add(DecoderAttempt(null, tuned = true, operatingRate, it)) }
@@ -939,8 +933,6 @@ private class VideoDecoder(
      */
     private val framesAtOnce: Boolean = false,
     private val mtkDecoderTuningEnabled: Boolean = false,
-    /** Try the detected Spreadtrum decoder with a tuned format first. */
-    private val sprdDecoderTuningEnabled: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -1233,14 +1225,6 @@ private class VideoDecoder(
             ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
         val requestedMtkMode = if (mtkDecoderTuningEnabled &&
             MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
-        // With HEVC and the software HEVC decoder on (Android 10+), the named Spreadtrum
-        // attempt would run before createDecoder() and skip the user's software-decoder
-        // choice, so no attempt is requested. Mirrors the toggle hiding in DiPlayActivity.
-        val softwareHevcDecoderChosen = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            mime == MediaFormat.MIMETYPE_VIDEO_HEVC && preferSoftwareHevcDecoder
-        val requestedSprdDecoder = if (sprdDecoderTuningEnabled && !softwareHevcDecoderChosen) {
-            SprdDecoderTuning.selectedDecoderName(mime)
-        } else null
         var configured: ConfiguredVideoDecoder? = null
         var used: DecoderAttempt? = null
         for (attempt in videoDecoderAttempts(
@@ -1248,7 +1232,6 @@ private class VideoDecoder(
             softwareDecoderName(mime),
             requestedLowLatency,
             requestedMtkMode,
-            sprdDecoder = requestedSprdDecoder,
         )) {
             configured = tryConfigure(mime, csd, surface, attempt, atOnce)
             if (configured != null) { used = attempt; break }
@@ -1289,16 +1272,8 @@ private class VideoDecoder(
                     " mtkTuning=${configuredMtkMode.diagnosticName}"
                 else -> ""
             }
-            // The marker reports the explicit attempt, not the decoder: nothing when the
-            // toggle is off (the default first attempt is tuned too), "on" when the named
-            // Spreadtrum attempt configured the decoder, "fallback" when it was refused.
-            val sprd = when {
-                requestedSprdDecoder == null -> ""
-                used?.codecName.equals(requestedSprdDecoder, ignoreCase = true) == true -> " sprdTuning=on"
-                else -> " sprdTuning=fallback"
-            }
             report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
-                "$rate$lowLatency$output$atOnceReport$mtk$sprd")
+                "$rate$lowLatency$output$atOnceReport$mtk")
             Log.i(
                 TAG,
                 "video decoder configured name=${configured.codecName} mime=$mime size=${width}x$height$mtk",
@@ -1709,6 +1684,8 @@ private class VideoDecoder(
         synchronized(outputLock) {
             codec = decoder
             decoder = null
+            // A failure reported for this codec must not retire its replacement.
+            outputFailure = null
             // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
             awaitNotDequeuing(codec)
         }
@@ -1811,7 +1788,10 @@ private class AudioRenderer(
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
 ) : Closeable {
-    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long)
+    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long) {
+        /** Packets Wi-Fi lost right before this one, by sequence number. */
+        var lostBefore = 0
+    }
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
     private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
@@ -1825,12 +1805,19 @@ private class AudioRenderer(
     private val mediaLagGuard = if (format.audioType == "media") MediaPacketLagGuard(format.rtpClockRate) else null
     @Volatile private var newestRtpSample = 0
     private var lagRecoveryReports = 0
+    private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
+    private val sequenceGap = if (lostMusicFill != null) RtpSequenceGap() else null
+    private var underrunsAfterLastWrite = 0
+    private var silence = ByteArray(0)
+    private var lostFramesFilled = 0L
     @Volatile private var running = true
     @Volatile private var started = false
     private var codec: MediaCodec? = null
-    private var track: AudioTrack? = null
+    @Volatile private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
+    @Volatile private var callAttenuationDb = 0
+    private var appliedCallAttenuationDb: Int? = null
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -1843,12 +1830,22 @@ private class AudioRenderer(
     private var inputQueued = 0
     private var inputDropped = 0
     private var shortOpusPackets = 0
+    private var oversizeAacPackets = 0
+    private var firstOversizeAacLogged = false
+    /**
+     * Start level for a call, set before [start]; 0 keeps the low-latency level. A property, not a
+     * constructor parameter: tests find the constructor by its parameter count.
+     */
+    var callBufferMillis = 0
     private var decoderUnavailablePackets = 0
     private var outputBuffers = 0
     private var firstPcmLogged = false
     private val packetsReceived = AtomicInteger()
     private val packetsDropped = AtomicInteger()
+    /** Packets dropped because the queue was full. */
     private val packetsDroppedTotal = AtomicInteger()
+    /** Stale packets the lag guard discarded. */
+    private val packetsDiscardedTotal = AtomicInteger()
     private val lastArrivalNs = AtomicLong()
     private val maxArrivalGapMs = AtomicLong()
     private val frameBytes = if (format.channels >= 2) 4 else 2
@@ -1872,6 +1869,7 @@ private class AudioRenderer(
     private var underrunsAtPlaybackStart = 0
     private var headAtPlaybackStart = 0
     private var droppedAtLastTrim = 0
+    private var discardedAtLastTrim = 0
     private var clockTrim: MediaClockTrim? = null
     /** Called when this call's track is routed to the earpiece; the sink moves the call to the loudspeaker. */
     @Volatile var onRoutedToEarpiece: (() -> Unit)? = null
@@ -1904,7 +1902,7 @@ private class AudioRenderer(
             val removed = mediaLagGuard?.recover(queue, sample, AudioPacket::sample, now) ?: 0
             if (removed > 0) {
                 packetsDropped.addAndGet(removed)
-                packetsDroppedTotal.addAndGet(removed)
+                packetsDiscardedTotal.addAndGet(removed)
                 if (lagRecoveryReports < MAX_REBUFFER_REPORTS) {
                     lagRecoveryReports++
                     report("Audio: stale media packet backlog recovered audioType=${format.audioType} " +
@@ -1912,7 +1910,7 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now))) {
+        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { lostBefore = sequenceGap?.lostBefore(rtp) ?: 0 })) {
             if (started) {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
@@ -1931,8 +1929,33 @@ private class AudioRenderer(
     override fun close() {
         AmbientMusicController.closeRenderer(ambientRendererToken)
         running = false
+        // Drop packets queued for this track. They belong to the song playing
+        // before a skip or pause. Nothing replays them: the worker stops
+        // reading once `running` is false, and the next renderer starts from
+        // its own queue — clearing here only frees them early.
+        queue.clear()
+        // Silence the track now, on the calling thread. The worker thread only
+        // flushes it in its finally block, after a blocking write returns —
+        // on head units whose audio writes wait for room that can be long
+        // after the next track has started on a fresh renderer, so the old
+        // song is heard over the new one (#1031). pause() + flush() are
+        // quick calls; they never wait for the worker thread or for the
+        // vendor codec stop that release() may block in.
+        stopTrackNow()
         NavigationPlayback.close(navigationPlaybackToken)
         thread.interrupt()
+    }
+
+    /**
+     * Pause and discard the track's unplayed audio without taking the renderer
+     * monitor or waiting for the worker thread. The worker's finally block
+     * still runs release(), which repeats the pause/flush and releases the
+     * track; both paths are idempotent.
+     */
+    private fun stopTrackNow() {
+        val current = track ?: return
+        runCatching { current.pause() }
+        runCatching { current.flush() }
     }
 
     private fun run() {
@@ -1953,6 +1976,7 @@ private class AudioRenderer(
             while (running) {
                 // Report Settings changes from this worker, never from the UI thread, also between prompts.
                 applyNavigationAttenuation()
+                applyCallAttenuation()
                 diagnosticStage = "packet"
                 queue.poll(AUDIO_POLL_MILLIS, TimeUnit.MILLISECONDS)?.let(::handle)
                 // Output becomes ready asynchronously, including after the last packet of a burst.
@@ -2045,7 +2069,7 @@ private class AudioRenderer(
         var attributes = audioAttributesFor(selection, streamOverride)
         trackAttributes = attributes
         val plan = MediaAudioBuffer.plan(selection.channel == AudioChannel.MEDIA,
-            format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
+            format.sampleRate, format.channels, minBuffer, mediaBufferMillis, callBufferMillis)
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
         var routeLabel: String
@@ -2166,6 +2190,26 @@ private class AudioRenderer(
     private fun attenuateNavigation(data: ByteArray, offset: Int, length: Int) {
         if (mappedChannel != AudioChannel.NAVIGATION) return
         NavigationAudioGain.scalePcm16(data, offset, length, navigationAttenuationDb)
+    }
+
+    fun setCallAttenuationDb(db: Int) {
+        callAttenuationDb = NavigationAudioGain.clamp(db)
+    }
+
+    /** Worker-thread only. Reports each call level change once, when it reaches this call. */
+    private fun applyCallAttenuation() {
+        if (format.audioType != "telephony") return
+        val requestedDb = callAttenuationDb
+        if (requestedDb == 0 && appliedCallAttenuationDb == null) return
+        if (appliedCallAttenuationDb == requestedDb) return
+        appliedCallAttenuationDb = requestedDb
+        runCatching { report("Audio: call attenuation=" + requestedDb + "dB channel=" + mappedChannel + " applied=true") }
+    }
+
+    /** Lowers a call in the PCM itself, whichever output it plays on; other streams and 0 dB pass through untouched. */
+    private fun attenuateCall(data: ByteArray, offset: Int, length: Int) {
+        if (format.audioType != "telephony") return
+        NavigationAudioGain.scalePcm16(data, offset, length, callAttenuationDb)
     }
 
     private fun audioAttributesFor(
@@ -2290,11 +2334,25 @@ private class AudioRenderer(
         }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
+        if (packet.lostBefore > 0 && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs, packet.lostBefore)
         when (format.codec) {
             AudioCodecKind.LPCM -> writePcm(byteSwapS16(rtp.copyOfRange(12, rtp.size)))
             AudioCodecKind.AAC_LC -> {
                 val accessUnit = rtp.copyOfRange(12, rtp.size)
                 if (accessUnit.isNotEmpty()) {
+                    val frame =
+                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels)
+                    if (frame.isEmpty()) {
+                        oversizeAacPackets++
+                        if (!firstOversizeAacLogged) {
+                            firstOversizeAacLogged = true
+                            Log.i(
+                                TAG,
+                                "audio AAC skipping oversize access unit bytes=${accessUnit.size}",
+                            )
+                        }
+                        return
+                    }
                     if (!firstAacPayloadLogged) {
                         firstAacPayloadLogged = true
                         Log.i(
@@ -2302,10 +2360,7 @@ private class AudioRenderer(
                             "audio AAC access unit bytes=${accessUnit.size}",
                         )
                     }
-                    feedCodec(
-                        MediaCodecSupport.adtsFrame(accessUnit, format.sampleRate, format.channels),
-                        timestampUs,
-                    )
+                    feedCodec(frame, timestampUs)
                 }
             }
             AudioCodecKind.OPUS -> {
@@ -2425,12 +2480,32 @@ private class AudioRenderer(
                     } finally {
                         codec.releaseOutputBuffer(index, false)
                     }
-                    if (copied) writePcm(pcm, 0, size)
+                    if (copied) {
+                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes, fillLimitFrames()) ?: 0
+                        if (fill > 0) writeSilence(fill)
+                        writePcm(pcm, 0, size)
+                        if (lostMusicFill != null) underrunsAfterLastWrite = track?.underrunCount ?: 0
+                    }
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
             }
         }
+    }
+
+    /** The start level while the track still plays what it held before this buffer's hole, else 0. */
+    private fun fillLimitFrames(): Int {
+        val track = track ?: return 0
+        if (!playbackStarted || track.underrunCount != underrunsAfterLastWrite) return 0
+        return startThresholdBytes / frameBytes
+    }
+
+    private fun writeSilence(frames: Int) {
+        val bytes = frames * frameBytes
+        if (silence.size < bytes) silence = ByteArray(bytes) else silence.fill(0, 0, bytes)
+        if (lostFramesFilled == 0L) Log.i(TAG, "audio first lost music filled frames=$frames")
+        lostFramesFilled += frames
+        writePcm(silence, 0, bytes)
     }
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
@@ -2446,6 +2521,8 @@ private class AudioRenderer(
         voiceFilter?.process(data, offset, length)
         applyNavigationAttenuation()
         attenuateNavigation(data, offset, length)
+        applyCallAttenuation()
+        attenuateCall(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
@@ -2540,13 +2617,24 @@ private class AudioRenderer(
             ?: 0L
         val compressedPcmFrames = compressedRtpFrames * format.sampleRate /
             format.rtpClockRate.coerceAtLeast(1)
-        val dropped = packetsDroppedTotal.get() + inputDropped
-        if (dropped != droppedAtLastTrim) {
-            droppedAtLastTrim = dropped
+        // The lag guard cuts a second or more of queued music at once, which lowers the level for good: measure it
+        // again. A full queue or a busy decoder drops one packet at a time. Measuring again on each of those kept the
+        // trim at the slow rate it learned in a stall, so the queue stayed full and kept dropping (#1177).
+        val discarded = packetsDiscardedTotal.get()
+        if (discarded != discardedAtLastTrim) {
+            discardedAtLastTrim = discarded
             trim.measureAgain()
         }
         val head = track.playbackHeadPosition
-        trim.sample(bufferProgress.queuedBytes(head) / frameBytes, now, compressedPcmFrames,
+        val queuedFrames = bufferProgress.queuedBytes(head) / frameBytes
+        val dropped = packetsDroppedTotal.get()
+        if (dropped != droppedAtLastTrim) {
+            droppedAtLastTrim = dropped
+            // Across an RTP timestamp restart the waiting packets read as no time at all, and the track alone is not
+            // what overflowed: a target lowered to it would play music 1.5 % fast for a minute.
+            if (compressedRtpFrames > 0L || queue.size <= 1) trim.overflowed(queuedFrames + compressedPcmFrames)
+        }
+        trim.sample(queuedFrames, now, compressedPcmFrames,
             headMoving = head != headAtPlaybackStart, arrivedFrameNs = queuedFrameNsSince(trim.lastSampleNs, now))
         val rate = trim.rateDue(now) ?: return
         val result = runCatching { track.setPlaybackRate(rate) }.getOrDefault(AudioTrack.ERROR)
@@ -2646,8 +2734,10 @@ private class AudioRenderer(
             // Keep this separate: the exported diagnostic recorder caps each line at 700 characters.
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
-                "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
-                "outputBuffersTotal=$outputBuffers ended=$force"
+                "shortOpusPacketsTotal=$shortOpusPackets oversizeAacPacketsTotal=$oversizeAacPackets " +
+                "decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
+                "outputBuffersTotal=$outputBuffers " +
+                (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
             runCatching { report(decoderLine) }
         }
@@ -2740,7 +2830,8 @@ private class AudioRenderer(
         const val AUDIO_INPUT_WAIT_NS = 100_000_000L
         const val AUDIO_POLL_MILLIS = 10L
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
-        // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
+        // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it. Wired LPCM packets hold about 7 ms,
+        // so the same count is only ~1.4 s of wired music (#1177).
         const val MAX_QUEUED_PACKETS = 192
         const val PREBUFFER_WRITE_CHUNK_BYTES = 2 * 1024
         const val STATS_TAG = "DiPlay-AudioStats"
