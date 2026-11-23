@@ -568,6 +568,9 @@
     <string name="video_play">播放</string>
     <string name="video_pause">暫停</string>
     <string name="video_cannot_play">此影片無法在車機螢幕上播放。受保護的影片（例如 Apple TV+）需要取得授權的接收器。</string>
+    <string name="video_cannot_load">影片已停止載入。請檢查連線後再試一次。</string>
+    <string name="video_cannot_play_here">此影片無法在車機螢幕上播放：車機無法讀取或解碼其格式。</string>
+    <string name="video_cannot_play_on_car">此影片無法在車機螢幕上播放。</string>
     <string name="safe_area_mapping_summary">安全區域：%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
     <string name="navigation_widget_label">CarPlay 導航</string>
     <string name="navigation_widget_description">來自 CarPlay 的下一個轉彎、距離、到達時間和歌曲</string>

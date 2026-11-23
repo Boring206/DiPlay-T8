@@ -599,6 +599,9 @@
     <string name="video_play">Riproduci</string>
     <string name="video_pause">Pausa</string>
     <string name="video_cannot_play">Questo video non può essere riprodotto sullo schermo dell’auto. I video protetti, come Apple TV+, richiedono un ricevitore con licenza.</string>
+    <string name="video_cannot_load">Il video ha smesso di caricarsi. Controlla la connessione e riprova.</string>
+    <string name="video_cannot_play_here">Questo video non può essere riprodotto sullo schermo dell’auto: la head unit non riesce a leggerne o decodificarne il formato.</string>
+    <string name="video_cannot_play_on_car">Questo video non può essere riprodotto sullo schermo dell’auto.</string>
     <string name="navigation_widget_label">Navigazione CarPlay</string>
     <string name="navigation_widget_description">Prossima svolta, distanza, arrivo e brano da CarPlay</string>
     <string name="widget_not_connected">CarPlay non è connesso</string>

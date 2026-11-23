@@ -534,6 +534,9 @@
     <string name="video_play">تشغيل</string>
     <string name="video_pause">إيقاف مؤقت</string>
     <string name="video_cannot_play">لا يمكن تشغيل هذا الفيديو على شاشة السيارة. الفيديو المحمي، مثل Apple TV+، يحتاج إلى مستقبل مرخّص.</string>
+    <string name="video_cannot_load">توقف تحميل الفيديو. تحقّق من الاتصال وحاول مرة أخرى.</string>
+    <string name="video_cannot_play_here">لا يمكن تشغيل هذا الفيديو على شاشة السيارة: لا تستطيع وحدة القيادة قراءة صيغته أو فك ترميزها.</string>
+    <string name="video_cannot_play_on_car">لا يمكن تشغيل هذا الفيديو على شاشة السيارة.</string>
     <string name="safe_area_mapping_summary">المنطقة الآمنة: %1$d x %2$d عند (%3$d، %4$d) ضمن %5$d x %6$d</string>
     <string name="navigation_widget_label">تنقل CarPlay</string>
     <string name="navigation_widget_description">المنعطف التالي والمسافة ووقت الوصول والأغنية من CarPlay</string>

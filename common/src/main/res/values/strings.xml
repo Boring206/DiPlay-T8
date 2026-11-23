@@ -609,6 +609,9 @@
     <string name="video_play">Play</string>
     <string name="video_pause">Pause</string>
     <string name="video_cannot_play">This video can\'t play on the car screen. Protected video, such as Apple TV+, needs a licensed receiver.</string>
+    <string name="video_cannot_load">The video stopped loading. Check the connection and try again.</string>
+    <string name="video_cannot_play_here">This video can\'t play on the car screen: the head unit can\'t read or decode its format.</string>
+    <string name="video_cannot_play_on_car">This video can\'t play on the car screen.</string>
     <string name="navigation_widget_label">CarPlay navigation</string>
     <string name="navigation_widget_description">Next turn, distance, arrival and song from CarPlay</string>
     <string name="widget_not_connected">CarPlay is not connected</string>

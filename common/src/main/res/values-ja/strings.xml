@@ -607,6 +607,9 @@
     <string name="video_play">再生</string>
     <string name="video_pause">一時停止</string>
     <string name="video_cannot_play">この動画は車の画面で再生できません。Apple TV+などの保護された動画には認可されたレシーバーが必要です。</string>
+    <string name="video_cannot_load">動画の読み込みが止まりました。接続を確認して、もう一度お試しください。</string>
+    <string name="video_cannot_play_here">この動画は車の画面で再生できません。車載端末がこの形式を読み込めないか、デコードできません。</string>
+    <string name="video_cannot_play_on_car">この動画は車の画面で再生できません。</string>
     <string name="navigation_widget_label">CarPlayナビ</string>
     <string name="navigation_widget_description">次の曲がり角、距離、到着時刻、CarPlayの再生曲</string>
     <string name="widget_not_connected">CarPlayに接続していません</string>

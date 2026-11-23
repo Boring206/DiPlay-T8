@@ -534,6 +534,9 @@
     <string name="video_play">Воспроизвести</string>
     <string name="video_pause">Пауза</string>
     <string name="video_cannot_play">Это видео нельзя воспроизвести на экране машины. Защищённому видео, например Apple TV+, нужен лицензированный приёмник.</string>
+    <string name="video_cannot_load">Видео перестало загружаться. Проверьте подключение и попробуйте снова.</string>
+    <string name="video_cannot_play_here">Это видео нельзя воспроизвести на экране машины: головное устройство не может прочитать или декодировать его формат.</string>
+    <string name="video_cannot_play_on_car">Это видео нельзя воспроизвести на экране машины.</string>
     <string name="safe_area_mapping_summary">Безопасная область: %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
     <string name="navigation_widget_label">Навигация CarPlay</string>
     <string name="navigation_widget_description">Следующий поворот, расстояние, прибытие и песня из CarPlay</string>

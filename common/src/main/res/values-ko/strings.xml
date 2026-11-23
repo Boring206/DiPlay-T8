@@ -604,6 +604,9 @@
     <string name="video_play">재생</string>
     <string name="video_pause">일시 정지</string>
     <string name="video_cannot_play">이 동영상은 차량 화면에서 재생할 수 없습니다. Apple TV+처럼 보호된 동영상은 인증된 수신기가 필요합니다.</string>
+    <string name="video_cannot_load">동영상 불러오기가 중단되었습니다. 연결을 확인한 뒤 다시 시도하세요.</string>
+    <string name="video_cannot_play_here">이 동영상은 차량 화면에서 재생할 수 없습니다. 헤드 유닛이 이 형식을 읽거나 디코딩할 수 없습니다.</string>
+    <string name="video_cannot_play_on_car">이 동영상은 차량 화면에서 재생할 수 없습니다.</string>
     <string name="navigation_widget_label">CarPlay 내비게이션</string>
     <string name="navigation_widget_description">CarPlay의 다음 회전 안내, 거리, 도착 정보 및 노래</string>
     <string name="widget_not_connected">CarPlay가 연결되지 않음</string>

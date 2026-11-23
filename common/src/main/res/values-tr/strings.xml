@@ -587,6 +587,9 @@
     <string name="video_play">Oynat</string>
     <string name="video_pause">Duraklat</string>
     <string name="video_cannot_play">Bu video araç ekranında oynatılamıyor. Apple TV+ gibi korumalı videolar lisanslı bir alıcı gerektirir.</string>
+    <string name="video_cannot_load">Videonun yüklenmesi durdu. Bağlantıyı kontrol edip yeniden deneyin.</string>
+    <string name="video_cannot_play_here">Bu video araç ekranında oynatılamıyor: ana ünite biçimini okuyamıyor veya çözemiyor.</string>
+    <string name="video_cannot_play_on_car">Bu video araç ekranında oynatılamıyor.</string>
     <string name="navigation_widget_label">CarPlay navigasyonu</string>
     <string name="navigation_widget_description">CarPlay\'den sonraki dönüş, mesafe, varış ve parça</string>
     <string name="widget_not_connected">CarPlay bağlı değil</string>
