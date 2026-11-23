@@ -32,7 +32,7 @@ class ClusterMapShownSignalTest {
         // Without a context the ticker BydClusterMapPauseTest may have left running does nothing.
         pauseContext.set(null, null)
         BydOutputSettings.setClusterStreamPause(context, false)
-        BydNavigationOutputs.setClusterMapShown(false)
+        BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
         BydClusterMapPause.readMode = originalReadMode
         BydClusterMapPause.streamControl = null
         BydClusterMapPause.onNaviMode = null
@@ -45,11 +45,17 @@ class ClusterMapShownSignalTest {
     fun hostSignalNeverLetsACopyClearShown() {
         for (presentation in listOf(false, true)) for (route in listOf(false, true)) for (surface in listOf(false, true)) {
             val onCluster = presentation || (route && surface)
-            for (mirrors in listOf(false, true)) {
-                val signal = BydNavigationOutputs.clusterMapSignal(presentation, route, surface, mirrors)
-                val case = "presentation=$presentation route=$route surface=$surface mirrors=$mirrors"
+            for (mirrors in listOf(false, true)) for (player in listOf(false, true)) {
+                val signal = BydNavigationOutputs.clusterMapSignal(presentation, route, surface, mirrors, player)
+                val case = "presentation=$presentation route=$route surface=$surface mirrors=$mirrors player=$player"
                 assertEquals(case, onCluster, signal.shown)
-                assertEquals(case, mirrors, signal.mirrored)
+                assertEquals(case, mirrors && !player, signal.mirrored)
+
+                // The pause keeps the value the host sent before the signal was split (#1188); the bridge
+                // only follows the map window.
+                BydNavigationOutputs.setClusterMapShown(signal.shown, signal.mirrored)
+                assertEquals(case, onCluster && (!mirrors || player), BydClusterMapPause.clusterMapShown)
+                assertEquals(case, onCluster, BydClusterBridge.mapShown)
             }
         }
     }
@@ -57,7 +63,7 @@ class ClusterMapShownSignalTest {
     @Test
     fun hostSignalWithCentreCopyKeepsClusterProjection() {
         val signal = BydNavigationOutputs.clusterMapSignal(
-            presentation = true, confirmedRoute = false, clusterSurface = false, mirrors = true,
+            presentation = true, confirmedRoute = false, clusterSurface = false, mirrors = true, player = false,
         )
         BydNavigationOutputs.setClusterMapShown(signal.shown, signal.mirrored)
 
@@ -65,7 +71,7 @@ class ClusterMapShownSignalTest {
         assertFalse("the centre card still needs the stream", BydClusterMapPause.clusterMapShown)
 
         val routed = BydNavigationOutputs.clusterMapSignal(
-            presentation = false, confirmedRoute = true, clusterSurface = true, mirrors = true,
+            presentation = false, confirmedRoute = true, clusterSurface = true, mirrors = true, player = false,
         )
         BydNavigationOutputs.setClusterMapShown(routed.shown, routed.mirrored)
         assertTrue("an ADB cluster route with a centre copy stays projected", BydClusterBridge.mapShown)
@@ -95,7 +101,7 @@ class ClusterMapShownSignalTest {
         assertFalse(BydClusterBridge.mapShown)
 
         BydNavigationOutputs.setClusterMapShown(true, mirrored = false)
-        BydNavigationOutputs.setClusterMapShown(false)
+        BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
         assertFalse(BydClusterMapPause.clusterMapShown)
         assertFalse(BydClusterBridge.mapShown)
     }

@@ -37,7 +37,7 @@ object BydNavigationOutputs {
      * copy (the centre card or an embedded launcher map) also draws that stream. A copy only stops
      * the stream pause ([BydClusterMapPause]); the cluster keeps its projection mode.
      */
-    fun setClusterMapShown(shown: Boolean, mirrored: Boolean = false) {
+    fun setClusterMapShown(shown: Boolean, mirrored: Boolean) {
         BydClusterMapPause.clusterMapShown = shown && !mirrored
         BydClusterBridge.setMapShown(shown)
     }
@@ -49,14 +49,19 @@ object BydNavigationOutputs {
      * The host's report, from its presentation, its confirmed ADB cluster route and surface, and
      * whether any centre-screen copy is up. A copy goes only into [ClusterMapSignal.mirrored] and
      * never clears [ClusterMapSignal.shown]: the map is still on the cluster, and on DiLink 3 a false
-     * `shown` switches the cluster back to its stock view (AutoContainer 18).
+     * `shown` switches the cluster back to its stock view (AutoContainer 18). In player mode the
+     * copies get no map frames, so they do not count as mirrored.
      */
     fun clusterMapSignal(
         presentation: Boolean,
         confirmedRoute: Boolean,
         clusterSurface: Boolean,
         mirrors: Boolean,
-    ) = ClusterMapSignal(shown = presentation || (confirmedRoute && clusterSurface), mirrored = mirrors)
+        player: Boolean,
+    ) = ClusterMapSignal(
+        shown = presentation || (confirmedRoute && clusterSurface),
+        mirrored = mirrors && !player,
+    )
 
     /** The running CarPlay session: told every second whether the cluster currently shows the map. */
     fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }
