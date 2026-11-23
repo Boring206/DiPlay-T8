@@ -1,7 +1,6 @@
 package com.shilapi.xcertplay
 
 import android.net.Uri
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.ByteArrayDataSource
@@ -39,7 +38,7 @@ internal class IphoneResolvingDataSource(
         }
         if (scheme in DIRECT_SCHEMES) return openSource(upstream, dataSpec)
         val resolved = resolveOnIphone(url) ?: throw IOException("iPhone did not load the $scheme URL")
-        Log.i(TAG, "iPhone loaded $scheme URL status=${resolved.status} bytes=${resolved.data?.size} redirect=${resolved.location != null}")
+        CarPlayVideo.noteIphoneLoaded(scheme, resolved.status, resolved.data?.size, resolved.location != null)
         resolved.location?.let { location ->
             if (redirects >= MAX_REDIRECTS) throw IOException("Too many iPhone URL redirects")
             // Reapply the policy: a resource loader's Location must not select an Android file,
@@ -85,7 +84,6 @@ internal class IphoneResolvingDataSource(
     }
 
     private companion object {
-        const val TAG = "DiPlay-Video"
         const val MAX_REDIRECTS = 5
         val DIRECT_SCHEMES = setOf("http", "https", "data")
     }

@@ -105,8 +105,22 @@ data class AirPlayConfig(
      * restricted the same way, because the iPhone picks one format for both directions.
      */
     val callAtCallRate: Boolean = false,
+    /**
+     * Declares Fast Forward and Rewind in the media HID device, so a steering-wheel long press can seek
+     * ([CarPlayMediaButton.FAST_FORWARD], [CarPlayMediaButton.REWIND]). Off, the media descriptor is the one
+     * every earlier version sent. Experimental: whether the iPhone seeks on these usages is untested (#1190).
+     */
+    val mediaSeekKeys: Boolean = false,
 )
 
 /** The offer, SETUP and controls must all honor the user's audio-output setting. */
 internal val AirPlayConfig.bufferedAudioOutputEnabled: Boolean
     get() = mainBufferedAudio && !disableAudioOutput
+
+/**
+ * The offer for one session's transport. Calls at the call's own rate apply to wired sessions only: over
+ * Wi-Fi the PCM-only call offer made the iPhone keep all CarPlay audio, music and prompts included, on
+ * itself, and with the usual offer it opened the music stream at once (docs/BYD_NAVIGATION.md).
+ */
+fun AirPlayConfig.forTransport(wireless: Boolean): AirPlayConfig =
+    if (wireless && callAtCallRate) copy(callAtCallRate = false) else this

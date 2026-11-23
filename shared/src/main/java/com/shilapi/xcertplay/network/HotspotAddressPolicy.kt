@@ -55,6 +55,15 @@ internal object HotspotAddressPolicy {
         return if (publishedIsIpv6) null else linkLocal
     }
 
+    /**
+     * The address to publish once the listener is up: [selected] while it has a listener,
+     * otherwise the best served address an iPhone can reach (#1356). Null when none is left.
+     */
+    fun publishedAfterBind(selected: InetAddress, served: List<InetAddress>): InetAddress? {
+        if (served.any { it == selected }) return selected
+        return select(served.filter { it !is Inet6Address || it.scopeId != 0 })
+    }
+
     private fun usable(address: InetAddress): Boolean =
         !address.isLoopbackAddress && !address.isAnyLocalAddress && !address.isLinkLocalAddress &&
             !address.isMulticastAddress

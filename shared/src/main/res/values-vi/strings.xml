@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carapp_hw_status_title">Trạng thái phần cứng xcertplay</string>
+    <string name="carapp_hw_not_configured">Chưa cấu hình truyền tải phần cứng. I2C của bo mạch cần đường dẫn /dev/i2c-N và quyền OS/SELinux; CH341 cần cấu hình VID/PID đã triển khai.</string>
+</resources>

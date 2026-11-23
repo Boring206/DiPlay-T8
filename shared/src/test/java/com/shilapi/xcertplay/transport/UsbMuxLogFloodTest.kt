@@ -3,7 +3,9 @@ package com.shilapi.xcertplay.transport
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -73,6 +75,61 @@ class UsbMuxLogFloodTest {
         assertEquals("FIN line", 1, control.count { it.contains("flags=1 ") })
     }
 
+    @Test fun stalledReceiverIsCappedAndRejectedInsteadOfBufferingForever() {
+        UsbEvidenceReplay.transfers.add(versionReply)
+        val host = Iap2UsbMuxHost.open(pipe())
+        try {
+            val connection = Iap2UsbMuxTcpConnection(host, 1, 2)
+            val payload = ByteArray(65_500) // a realistic maximum-size usbmux TCP payload
+            // Never call recv(): ~12.5 MiB is injected, beyond the 8 MiB cap. Without the cap
+            // the deque would retain every frame and grow without bound.
+            repeat(200) { i -> connection.onPacket(TCP_ACK_FLAG, i, payload) }
+
+            // The stalled connection must be rejected with a protocol error rather than OOM-ing.
+            val failure = assertThrows(IphoneUsbException.Protocol::class.java) {
+                connection.recv(16, 10L)
+            }
+            assertTrue(failure.message!!.contains("receive buffer"))
+            assertTrue(failure.message!!.contains("port 2"))
+            val queuedBytes = ReflectionHelpers.getField<Int>(connection, "receivedBytes")
+            assertTrue("queuedBytes=$queuedBytes must stay within the cap", queuedBytes <= MAX_RECEIVED_BYTES)
+            assertEquals("overflow must release the queued payloads", 0, queuedBytes)
+            val queued: java.util.ArrayDeque<*> = ReflectionHelpers.getField(connection, "received")
+            assertEquals(0, queued.size)
+
+            // Overflow must not just close silently: leave the phone a RST|ACK (0x14), as abort() does.
+            val writes = UsbEvidenceReplay.writes
+            assertTrue("overflow must write a control frame", writes.isNotEmpty())
+            assertEquals(
+                "the last frame must be a RST|ACK so the phone drops the half-open service",
+                0x14,
+                writes.last()[29].toInt() and 0xff,
+            )
+        } finally { host.close() }
+    }
+
+    @Test fun normalSmallPacketsAreDeliveredWithoutLoss() {
+        UsbEvidenceReplay.transfers.add(versionReply)
+        val host = Iap2UsbMuxHost.open(pipe())
+        try {
+            val connection = Iap2UsbMuxTcpConnection(host, 1, 2)
+            val payloadSize = 8 * 1024
+            // More than MAX_RECEIVED_BYTES cumulative, but drained every time: recv() must
+            // decrement the byte counter so a healthy consumer never trips the cap.
+            repeat(MAX_RECEIVED_BYTES / payloadSize + 1) { i ->
+                val packet = ByteArray(payloadSize) { (i + it).toByte() }
+                connection.onPacket(TCP_ACK_FLAG, i, packet)
+                assertArrayEquals("packet $i was lost", packet, connection.recv(payloadSize, 1_000L)!!)
+            }
+            // A partial read splits one packet; the byte accounting must stay exact.
+            val packet = ByteArray(payloadSize) { 0x5a.toByte() }
+            connection.onPacket(TCP_ACK_FLAG, 0, packet)
+            assertArrayEquals(packet.copyOf(100), connection.recv(100, 1_000L)!!)
+            assertArrayEquals(packet.copyOfRange(100, payloadSize), connection.recv(payloadSize, 1_000L)!!)
+            assertEquals(0, ReflectionHelpers.getField<Int>(connection, "receivedBytes"))
+        } finally { host.close() }
+    }
+
     private fun lines(prefix: String) =
         ShadowLog.getLogsForTag("xcertplay-usb").count { it.msg.startsWith(prefix) }
 
@@ -103,6 +160,7 @@ class UsbMuxLogFloodTest {
     private companion object {
         const val FRAMES = 200
         const val MAX_LINES = 50
+        const val TCP_ACK_FLAG = 0x10
         val versionReply = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0)
     }
 }

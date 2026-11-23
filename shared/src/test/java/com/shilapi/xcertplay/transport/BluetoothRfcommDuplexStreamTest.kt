@@ -26,6 +26,51 @@ class BluetoothRfcommDuplexStreamTest {
         answering.close()
     }
 
+    // BluetoothAdapterProof hangs on this: the first byte proves the adapter real, once per link.
+    @Test fun theFirstByteIsAnnouncedOnceAndASilentLinkNeverAnnouncesIt() {
+        val firstBytes = AtomicInteger()
+        val announced = CountDownLatch(1)
+        val oneByteAtATime = object : InputStream() {
+            private val bytes = ArrayDeque(listOf<Byte>(1, 2, 3))
+            override fun read(): Int = bytes.removeFirstOrNull()?.toInt() ?: -1
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                val next = bytes.removeFirstOrNull() ?: return -1
+                b[off] = next
+                return 1
+            }
+        }
+        val answering = BluetoothRfcommDuplexStream(FakeSocket(oneByteAtATime), onFirstByte = {
+            firstBytes.incrementAndGet()
+            announced.countDown()
+        })
+        val received = ByteArrayOutputStream()
+        while (received.size() < 3) {
+            val chunk = answering.recv(16, 2_000)
+            if (chunk == null || chunk.isEmpty()) break
+            received.write(chunk)
+        }
+        assertArrayEquals(byteArrayOf(1, 2, 3), received.toByteArray())
+        assertTrue(announced.await(2, TimeUnit.SECONDS))
+        assertArrayEquals(ByteArray(0), answering.recv(16, 2_000))
+        answering.close()
+        assertEquals(1, firstBytes.get())
+
+        val silentFirstBytes = AtomicInteger()
+        val silent = BluetoothRfcommDuplexStream(FakeSocket(object : InputStream() { override fun read() = -1 }),
+            onFirstByte = { silentFirstBytes.incrementAndGet() })
+        assertArrayEquals(ByteArray(0), silent.recv(16, 2_000))
+        silent.close()
+        assertEquals(0, silentFirstBytes.get())
+    }
+
+    @Test fun aFailingFirstByteCallbackCannotStopTheReader() {
+        val stream = BluetoothRfcommDuplexStream(FakeSocket(ByteArrayInputStream(byteArrayOf(7))),
+            onFirstByte = { throw IllegalStateException("callback failed") })
+        assertArrayEquals(byteArrayOf(7), stream.recv(16, 2_000))
+        assertArrayEquals(ByteArray(0), stream.recv(16, 2_000))
+        stream.close()
+    }
+
     @Test fun missingInputFailsSynchronouslyWithoutReadingOrOpeningOutput() {
         val lines = CopyOnWriteArrayList<String>()
         val socket = FakeSocket(null)

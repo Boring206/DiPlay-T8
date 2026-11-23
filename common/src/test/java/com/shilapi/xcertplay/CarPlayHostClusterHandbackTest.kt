@@ -64,6 +64,24 @@ class CarPlayHostClusterHandbackTest {
         assertFalse(released())
     }
 
+    @Test fun stoppingMapForPlayerKeepsClusterUntilMainSessionStops() {
+        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(activity, true)
+        activity.javaClass.getDeclaredMethod("onScreenStreamStateChanged",
+            Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
+            .apply { isAccessible = true }.invoke(activity, 0, 110, true)
+        clusterStream(true)
+        clusterStream(false)
+        idle(16)
+        assertFalse(released())
+        activity.javaClass.getDeclaredMethod("onScreenStreamStateChanged",
+            Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
+            .apply { isAccessible = true }.invoke(activity, 0, 110, false)
+        // No further alt teardown is required after the player deliberately stopped its map.
+        idle(15)
+        assertTrue(released())
+        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(activity, false)
+    }
+
     private fun clusterStream(active: Boolean) {
         activity.javaClass.getDeclaredMethod("onScreenStreamStateChanged",
             Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)

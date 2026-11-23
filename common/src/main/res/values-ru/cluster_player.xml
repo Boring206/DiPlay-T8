@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Вид</string>
+    <string name="settings_cluster_player_map">Карта</string>
+    <string name="settings_cluster_player">Плеер (экспериментально)</string>
+    <string name="settings_cluster_player_description">Мгновенно переключает карту и плеер с сохранённой формой проекции. Плеер приостанавливает карту и её копии на центральном экране; подсказки поворотов на приборной панели недоступны. Штатными индикаторами управляет автомобиль.</string>
+    <string name="settings_cluster_player_speed">Скорость в плеере</string>
+    <string name="settings_cluster_player_speed_description">Скорость автомобиля в км/ч без рамки. Требуется чтение через ADB; без свежих данных отображается —.</string>
+    <string name="settings_cluster_player_idle">Нет воспроизведения</string>
+    <string name="settings_cluster_player_vehicle">Данные автомобиля в плеере</string>
+    <string name="settings_cluster_player_vehicle_description">Передача, заряд батареи и запас хода на электротяге через ADB. Недоступные или устаревшие данные отображаются как —. Штатные индикаторы и предупреждения по-прежнему необходимы.</string>
+    <string name="cluster_player_vehicle_readout">Передача %1$s   ·   Батарея %2$s   ·   Запас хода %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Разместить плеер между штатными полосами</string>
+    <string name="settings_cluster_player_fit_visible_description">Временная компоновка для панелей со штатными полосами сверху и снизу. Обложка, песня, скорость и прогресс помещаются в видимую область; фон заполняет всю проекцию. Применяется сразу и не скрывает штатные индикаторы.</string>
+</resources>

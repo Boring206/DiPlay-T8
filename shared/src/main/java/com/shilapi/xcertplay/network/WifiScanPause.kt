@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.network
 
 import android.content.Context
+import android.net.wifi.SupplicantState
 import android.os.Build
 import android.util.Log
 import com.shilapi.xcertplay.adb.LocalAdb
@@ -11,13 +12,15 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Pauses the head unit's automatic Wi-Fi network search while a Wi-Fi Direct CarPlay session runs.
+ * Pauses the head unit's automatic Wi-Fi network search while a Wi-Fi Direct CarPlay session runs, and
+ * during a car hotspot session on units that keep their Wi-Fi client searching beside the hotspot.
  *
  * Wi-Fi Direct needs the car's Wi-Fi client switched on. While that client is not joined to a
  * network, BYD firmware searches every band every 10 s (seen on DiLink 3, 4 and 5). The single radio
  * leaves the CarPlay channel for each search, and the iPhone's audio packets sent meanwhile are lost,
- * so music and voice stutter on a 10 s rhythm. The built-in car hotspot runs with the client off and
- * is not affected, and Same LAN needs the search, so only Wi-Fi Direct sessions pause it.
+ * so music and voice stutter on a 10 s rhythm. The built-in car hotspot usually runs with the client off
+ * and is not affected; where the client stays on beside the hotspot, it is paused there too (see
+ * [eligible]). Same LAN needs the search, so it never pauses it.
  *
  * Android offers apps no way to do this. Through the approved local adb shell, [WifiScanPauseMain]
  * runs as the shell user and turns off the framework's automatic joining, which stops these scans:
@@ -58,8 +61,27 @@ internal class WifiScanPause(
         /** app_process start-up on a slow head unit plus the helper's own deadline. */
         internal const val HELPER_TIMEOUT_MS = 15_000
 
-        fun eligible(backend: WirelessHotspotBackend, sdk: Int = Build.VERSION.SDK_INT): Boolean =
-            backend == WirelessHotspotBackend.WIFI_P2P && sdk >= Build.VERSION_CODES.N_MR1
+        /**
+         * [clientSearchingBesideHotspot]: the car's Wi-Fi client is on and joined to no network while the
+         * car hotspot runs, so it keeps searching and leaves the hotspot's channel for each search.
+         */
+        fun eligible(backend: WirelessHotspotBackend, sdk: Int = Build.VERSION.SDK_INT,
+            clientSearchingBesideHotspot: Boolean = false): Boolean =
+            (backend == WirelessHotspotBackend.WIFI_P2P ||
+                (clientSearchingBesideHotspot && backend == WirelessHotspotBackend.MANUAL_HOTSPOT)) &&
+                sdk >= Build.VERSION_CODES.N_MR1
+
+        /**
+         * Whether the car's Wi-Fi client is on and joined to no network, so it keeps searching. The
+         * supplicant state is read because Android 10+ hides the network ID (as -1) from an app that
+         * cannot read scan results. Joined or joining (COMPLETED, associating, handshake) is left alone,
+         * and so is any state not listed here.
+         */
+        fun clientSearching(wifiEnabled: Boolean, state: SupplicantState?): Boolean =
+            wifiEnabled && state in SEARCHING_STATES
+
+        private val SEARCHING_STATES = setOf(SupplicantState.DISCONNECTED, SupplicantState.SCANNING,
+            SupplicantState.INACTIVE)
 
         fun restoreIfNeeded(context: Context) = ProcessWifiScanPause.recover(context.applicationContext)
 

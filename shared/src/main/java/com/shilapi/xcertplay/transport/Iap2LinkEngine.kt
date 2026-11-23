@@ -124,6 +124,10 @@ class Iap2LinkEngine(
     private var state = State.IDLE
     private var peerSynchronization = localSynchronization()
     private var peerSynchronizationReceived = false
+
+    // The peer's SYN sequence, kept until its first in-order data packet arrives.  A SYN+ACK
+    // that repeats it means the peer has not seen our ACK yet.
+    private var peerSynchronizationSequence: Int? = null
     private var sentSequence = INITIAL_SEQUENCE
     private var lastSentAcknowledged: Int? = null
     private var lastReceivedInOrder = 0
@@ -327,7 +331,11 @@ class Iap2LinkEngine(
         }
         if ((header.control and CONTROL_SYNCHRONIZE) != 0) {
             SynchronizationPayload.decode(payload ?: ByteArray(0))?.let {
-                handleSynchronization(it, header.sequence)
+                handleSynchronization(
+                    it,
+                    header.sequence,
+                    acknowledges = (header.control and CONTROL_ACKNOWLEDGEMENT) != 0,
+                )
             }
         }
         if ((header.control and CONTROL_ACKNOWLEDGEMENT) != 0) {
@@ -349,10 +357,22 @@ class Iap2LinkEngine(
         }
     }
 
-    private fun handleSynchronization(sync: SynchronizationPayload, sequence: Int) {
+    private fun handleSynchronization(sync: SynchronizationPayload, sequence: Int, acknowledges: Boolean) {
+        if (state == State.NORMAL) {
+            // The peer re-sends its SYN+ACK until it sees our ACK.  This applies to every link
+            // (wired, wireless RFCOMM and the type-130 tunnel), but it matters most on the zero-
+            // acknowledgement configuration, where no other packet would answer the repeat and
+            // the iPhone would never start identification (#1220).  Re-acknowledge an exact
+            // repeat that arrives before any in-order data; never renegotiate or reset.
+            if (acknowledges && sequence == peerSynchronizationSequence && sync == peerSynchronization) {
+                sendAcknowledgement()
+            }
+            return
+        }
         if (state != State.NEGOTIATING) return
         peerSynchronization = sync
         peerSynchronizationReceived = true
+        peerSynchronizationSequence = sequence
         lastReceivedInOrder = sequence
         lastAcknowledgedReceived = sequence
         sendAcknowledgement()
@@ -435,6 +455,7 @@ class Iap2LinkEngine(
         while (outOfOrder.isNotEmpty() && sequenceDistance(outOfOrder.first().sequence, lastReceivedInOrder) == 1) {
             val inOrder = outOfOrder.removeAt(0)
             lastReceivedInOrder = inOrder.sequence
+            peerSynchronizationSequence = null
             if (inOrder.sessionId == CONTROL_SESSION_ID) {
                 enqueueEvent(Event.Control(inOrder.payload))
             } else {

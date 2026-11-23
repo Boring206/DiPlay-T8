@@ -23,6 +23,8 @@ class AdbClusterSelectionTest {
 
     @Before fun reset() {
         app.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE).edit().clear().commit()
+        installBydCarSettings(app)
+        AdbClusterRouter.forgetMissingTarget()
     }
 
     @Test fun turningOffAdbKeepsTheExistingClusterMapPreference() {
