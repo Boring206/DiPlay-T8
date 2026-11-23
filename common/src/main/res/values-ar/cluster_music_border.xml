@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_music_border">إظهار إطار غلاف الألبوم</string>
+    <string name="settings_cluster_music_border_description">يعرض إطارًا رفيعًا حول غلاف الألبوم على خريطة لوحة العدادات.</string>
+</resources>

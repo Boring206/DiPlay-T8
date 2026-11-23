@@ -203,7 +203,8 @@ object BplistCodec {
             0xd -> {
                 val count = readCount()
                 require(count.toLong() * 2 * refSize <= bytes.size - position) { "bplist: dictionary larger than the data" }
-                val dict = LinkedHashMap<String, Any?>(count)
+                // Not `count`: a plist that refers to itself would allocate that much at every level before the depth limit.
+                val dict = LinkedHashMap<String, Any?>(minOf(count, INITIAL_CAPACITY))
                 for (i in 0 until count) {
                     val keyReference = readReference(bytes, position + i.toLong() * refSize, refSize)
                     val valueReference = readReference(bytes, position + (count + i).toLong() * refSize, refSize)

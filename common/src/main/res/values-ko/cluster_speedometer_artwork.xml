@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">속도계 배경에 앨범 아트 그라데이션 사용</string>
+    <string name="settings_cluster_speedometer_artwork_description">독립 옵션입니다. 크기와 불투명도를 유지하며 단색 배경을 대체합니다. 끄면 기존 앨범 단색 또는 검은색으로 돌아갑니다. 움직임은 선택 사항입니다.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">속도계 배경 움직임</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">기본값은 꺼짐입니다. 재생 중 배경을 천천히 움직입니다. 꺼져 있어도 곡 전환 페이드는 유지됩니다.</string>
+</resources>

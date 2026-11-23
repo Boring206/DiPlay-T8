@@ -11,7 +11,8 @@ import kotlin.math.sign
  * for the samples that were playing over the window it just captured.
  */
 internal class EchoReference(val sampleRate: Int, capacityMillis: Int = 2_000) {
-    private val ring = ShortArray(sampleRate * capacityMillis / 1000)
+    // A zero-length ring is legal to allocate but divides by zero on the first append.
+    private val ring = ShortArray(maxOf(1, (sampleRate.toLong() * capacityMillis / 1000).toInt()))
     private var written = 0L
     private var anchorSample = NOT_PLAYING
     private var anchorNs = 0L

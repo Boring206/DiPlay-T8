@@ -1,5 +1,7 @@
 package com.shilapi.xcertplay
 
+import com.shilapi.xcertplay.host.R
+
 import android.app.Activity
 import android.content.Intent
 import android.content.res.Configuration
@@ -206,7 +208,8 @@ class ClusterSpeedometerSettingsTest {
     }
 
     @Test fun controlsRenderAtCompactAndFullWidthsWithLargeFontsAndRtl() {
-        for ((locale, width) in listOf("es" to 600, "es" to 1280, "ar" to 600)) {
+        for (gradient in listOf(false, true)) for ((locale, width) in listOf("es" to 600, "es" to 1280, "ar" to 600)) {
+            com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.save(context, gradient)
             RuntimeEnvironment.setQualifiers("$locale-w${width}dp-h960dp")
             val old = Configuration(context.resources.configuration)
             context.resources.updateConfiguration(Configuration(old).apply { fontScale = 1.5f }, context.resources.displayMetrics)
@@ -222,16 +225,28 @@ class ClusterSpeedometerSettingsTest {
             }
             ReflectionHelpers.callInstanceMethod<Unit>(activity, "clusterSpeedometerControls",
                 ReflectionHelpers.ClassParameter(LinearLayout::class.java, card))
+            fun labels(view: View): List<String> = when (view) {
+                is android.widget.TextView -> listOf(view.text.toString())
+                is android.view.ViewGroup -> (0 until view.childCount).flatMap { labels(view.getChildAt(it)) }
+                else -> emptyList()
+            }
+            val rows = (0 until card.childCount).map { labels(card.getChildAt(it)) }
+            val solidLabel = activity.getString(R.string.settings_cluster_speedometer_album_color)
+            val gradientLabel = activity.getString(R.string.settings_cluster_speedometer_artwork)
+            val motionLabel = activity.getString(R.string.settings_cluster_speedometer_artwork_motion)
+            assertEquals(!gradient, rows.flatten().contains(solidLabel))
+            assertEquals(gradient, rows.flatten().contains(motionLabel))
+            assertTrue(rows[if (gradient) 1 else 2].contains(gradientLabel))
             val px = (width * context.resources.displayMetrics.density).toInt()
             card.measure(View.MeasureSpec.makeMeasureSpec(px, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
             card.layout(0, 0, card.measuredWidth, card.measuredHeight)
-            assertEquals(6, card.childCount)
+            assertEquals(7, card.childCount)
             for (i in 0 until card.childCount) assertTrue(card.getChildAt(i).height > 0)
             val bitmap = Bitmap.createBitmap(card.width, card.height, Bitmap.Config.ARGB_8888)
             card.draw(Canvas(bitmap))
             val directory = File("build/reports/cluster-speedometer-ui").apply { mkdirs() }
-            File(directory, "$locale-$width.png").outputStream().use {
+            File(directory, "$locale-$width-gradient-$gradient.png").outputStream().use {
                 assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
             }
             bitmap.recycle()

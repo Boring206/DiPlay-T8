@@ -25,6 +25,7 @@ object Iap2FrameFormatter {
     private const val MAX_PARAMETERS = 80
     private const val MAX_STRING_CHARS = 240
     private const val MAX_HEX_BYTES = 24
+    private const val REDACTED = "<redacted>"
 
     fun format(
         direction: Iap2TraceDirection,
@@ -49,7 +50,9 @@ object Iap2FrameFormatter {
                 lines = lines,
             )
         }
-        lines += "  raw-body=${hexPreview(frame.payload)}"
+        // Decided from the spec, not the parsed body, so a malformed body hides its passphrase too.
+        val rawBody = if (endpoint?.fields.orEmpty().hasSecret()) REDACTED else hexPreview(frame.payload)
+        lines += "  raw-body=$rawBody"
 
         val endpointText = endpoint?.let { " ${it.name}" }.orEmpty()
         return buildString {
@@ -101,10 +104,10 @@ object Iap2FrameFormatter {
         parameters.asList().take(MAX_PARAMETERS).forEach { parameter ->
             val field = fields[parameter.id]
             val name = field?.name ?: "param"
-            val value = if (field == null) {
-                formatOpaque(parameter.payload)
-            } else {
-                formatKnown(parameter.payload, field, depth)
+            val value = when {
+                field == null -> formatOpaque(parameter.payload)
+                field.secret -> formatSecret(parameter.payload)
+                else -> formatKnown(parameter.payload, field, depth)
             }
             lines += "${indent(depth)}[${parameter.id}] $name: $value"
         }
@@ -144,6 +147,12 @@ object Iap2FrameFormatter {
     } catch (_: Exception) {
         formatOpaque(payload)
     }
+
+    // An empty passphrase hides nothing and shows that the network is open.
+    private fun formatSecret(payload: ByteArray): String =
+        if (payload.contentEquals(Iap2WireCodec.string(""))) quote("") else REDACTED
+
+    private fun List<Iap2FieldSpec>.hasSecret(): Boolean = any { it.secret || it.children.hasSecret() }
 
     private fun formatOpaque(payload: ByteArray): String {
         if (payload.isEmpty()) return "void"

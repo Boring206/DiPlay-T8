@@ -369,7 +369,13 @@ class CarPlayMediaEngine(
             }
             "GETANCHOR" -> buffered.anchor()
             "FLUSHBUFFERED" -> {
-                (body["flushUntilTS"] as? Number)?.toLong()?.let { buffered.flush(it) }
+                // Pass the sequence as well as the timestamp: the timestamp alone cannot tell
+                // a late old-track frame from a new-track one when the new track restarts its
+                // RTP clock more than half the 32-bit range ahead (#1031). Either value on its
+                // own still flushes; only a body naming neither is ignored, as before.
+                val untilTs = (body["flushUntilTS"] as? Number)?.toLong()
+                val untilSeq = (body["flushUntilSeq"] as? Number)?.toLong()
+                if (untilTs != null || untilSeq != null) buffered.flush(untilTs, untilSeq)
                 null
             }
             else -> null

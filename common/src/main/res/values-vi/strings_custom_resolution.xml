@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="custom_resolution_hint">Nhập 30–160 phần trăm. Áp dụng để kết nối lại CarPlay.</string>
+    <string name="resolution_number_error">Nhập số nguyên từ %1$d đến %2$d.</string>
+    <string name="custom_resolution_summary">%1$d%%</string>
+    <string name="resolution_reset_defaults">Đặt lại mặc định</string>
+    <string name="resolution_canvas_unsupported" formatted="false">Hệ thống giải trí này không thể giải mã độ phân giải đã phóng to. Đang dùng 100%.</string>
+</resources>

@@ -28,6 +28,13 @@ object RtspMessage {
 
     data class Parsed(val messages: List<Request>, val rest: ByteArray)
 
+    /**
+     * The result of scanning a reusable buffer in place. [consumed] is how many leading bytes
+     * belong to complete messages; [needed] is the total buffer size required to finish the
+     * message at the front, or -1 when its header has not ended yet.
+     */
+    internal data class Scan(val messages: List<Request>, val consumed: Int, val needed: Int)
+
     /** Real requests carry headers under 1 KiB; the cap leaves ample room. */
     private const val MAX_HEADER_BYTES = 16 * 1024
 
@@ -48,13 +55,25 @@ object RtspMessage {
      * @throws ProtocolException when a header or body exceeds its cap, so a peer cannot make the caller buffer without limit.
      */
     fun parseMessages(buffer: ByteArray): Parsed {
+        val scanned = scan(buffer, buffer.size)
+        return Parsed(scanned.messages, buffer.copyOfRange(scanned.consumed, buffer.size))
+    }
+
+    /**
+     * The same framing as [parseMessages], but reading only `[0, limit)` of a reusable [buffer] and
+     * reporting a consumed offset instead of copying the remainder. A caller that appends arriving
+     * bytes in place can therefore avoid copying the whole backlog on every read. [needed] lets it
+     * skip scanning altogether until the current message is complete; the header and body caps are
+     * still enforced on the read that finishes the header.
+     */
+    internal fun scan(buffer: ByteArray, limit: Int): Scan {
         val messages = ArrayList<Request>()
         var offset = 0
-        while (offset < buffer.size) {
-            val headerEndIndex = indexOf(buffer, headerEnd, offset)
+        while (offset < limit) {
+            val headerEndIndex = indexOf(buffer, headerEnd, offset, limit)
             if (headerEndIndex == null || headerEndIndex - offset > MAX_HEADER_BYTES) {
-                if (buffer.size - offset > MAX_HEADER_BYTES) throw ProtocolException("RTSP header over $MAX_HEADER_BYTES bytes")
-                break
+                if (limit - offset > MAX_HEADER_BYTES) throw ProtocolException("RTSP header over $MAX_HEADER_BYTES bytes")
+                return Scan(messages, offset, -1)
             }
             val headerText = String(buffer, offset, headerEndIndex - offset, Charsets.US_ASCII)
             val lines = headerText.split("\r\n")
@@ -74,7 +93,7 @@ object RtspMessage {
             val contentLength = headers["content-length"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
             if (contentLength > MAX_BODY_BYTES) throw ProtocolException("RTSP body of $contentLength bytes over $MAX_BODY_BYTES")
             val bodyEnd = bodyStart + contentLength
-            if (bodyEnd > buffer.size) break
+            if (bodyEnd > limit) return Scan(messages, offset, bodyEnd)
             messages.add(
                 Request(
                     method = requestLine[0],
@@ -86,7 +105,7 @@ object RtspMessage {
             )
             offset = bodyEnd
         }
-        return Parsed(messages, buffer.copyOfRange(offset, buffer.size))
+        return Scan(messages, offset, -1)
     }
 
     /** Builds a response, echoing the request protocol and CSeq. */
@@ -107,10 +126,11 @@ object RtspMessage {
         return head.toByteArray(Charsets.US_ASCII) + body
     }
 
-    private fun indexOf(source: ByteArray, target: ByteArray, start: Int): Int? {
+    private fun indexOf(source: ByteArray, target: ByteArray, start: Int, limit: Int): Int? {
         if (target.isEmpty()) return start
         val first = target[0]
-        for (index in start..source.size - target.size) {
+        // `limit`, not source.size: a reusable buffer holds stale bytes past the bytes read so far.
+        for (index in start..limit - target.size) {
             if (source[index] == first && matches(source, index, target)) return index
         }
         return null

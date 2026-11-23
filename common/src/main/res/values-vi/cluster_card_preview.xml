@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="card_preview_title">Xem trước vị trí thẻ chỉ đường</string>
+    <string name="card_preview_note">Vị trí theo tỷ lệ trên toàn bộ màn hình cụm đồng hồ. Mép thực tế của cửa sổ nhỏ khác nhau tùy xe.</string>
+    <string name="card_preview_full">Toàn màn hình</string>
+    <string name="card_preview_small">Cửa sổ nhỏ</string>
+</resources>

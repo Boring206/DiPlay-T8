@@ -10,7 +10,7 @@ class AirPlayDualListenerTest {
     private val addresses = listOf(InetAddress.getByName("::1"), InetAddress.getByName("127.0.0.1"))
 
     @Test fun acceptsBothFamiliesOnTheSamePort() {
-        val servers = AirPlayPortSelector.bindAll(addresses, 0)
+        val servers = AirPlayPortSelector.bindAll(addresses, 0).servers
         try {
             val port = servers.first().localPort
             assertEquals(listOf(port, port), servers.map { it.localPort })
@@ -28,7 +28,7 @@ class AirPlayDualListenerTest {
 
     @Test fun collisionOnSecondFamilyClosesPartialBindAndFallsBackTogether() {
         ServerSocket(0, 50, addresses[1]).use { busy ->
-            val servers = AirPlayPortSelector.bindAll(addresses, busy.localPort, emptyList())
+            val servers = AirPlayPortSelector.bindAll(addresses, busy.localPort, emptyList()).servers
             try {
                 assertEquals(1, servers.map { it.localPort }.distinct().size)
                 assertNotEquals(busy.localPort, servers.first().localPort)

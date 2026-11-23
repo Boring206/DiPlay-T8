@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">速度表背景使用專輯封面漸層</string>
+    <string name="settings_cluster_speedometer_artwork_description">獨立選項。開啟後取代純色背景並保留尺寸和不透明度。關閉後恢復專輯純色或黑色。背景移動可單獨開啟。</string>
+    <string name="settings_cluster_speedometer_artwork_motion">動態速度表背景</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">預設關閉。開啟後，播放音樂時背景緩慢移動。關閉時仍保留切歌淡入淡出。</string>
+</resources>

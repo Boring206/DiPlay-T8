@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">速度計の背景にアルバムアートのグラデーションを使用</string>
+    <string name="settings_cluster_speedometer_artwork_description">独立したオプションです。サイズと不透明度を維持して単色背景を置き換えます。オフで元のアルバム色または黒に戻ります。動きは任意です。</string>
+    <string name="settings_cluster_speedometer_artwork_motion">速度計の背景を動かす</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">初期設定はオフです。再生中に背景をゆっくり動かします。オフでも曲の切り替えはフェードします。</string>
+</resources>

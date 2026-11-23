@@ -32,14 +32,21 @@ class BluetoothRfcommStreamException internal constructor(
 class BluetoothRfcommDuplexStream internal constructor(
     private val socket: BluetoothRfcommSocketAccess,
     private val onDiagnostic: (String) -> Unit = {},
+    /** Called once, on the reader thread, when the peer delivers its first byte. */
+    private val onFirstByte: () -> Unit = {},
 ) : BlockingDuplexByteStream {
-    constructor(socket: BluetoothSocket, onDiagnostic: (String) -> Unit = {}) : this(
+    constructor(
+        socket: BluetoothSocket,
+        onDiagnostic: (String) -> Unit = {},
+        onFirstByte: () -> Unit = {},
+    ) : this(
         object : BluetoothRfcommSocketAccess {
             override fun inputStream(): InputStream? = socket.inputStream
             override fun outputStream(): OutputStream? = socket.outputStream
             override fun close() = socket.close()
         },
         onDiagnostic,
+        onFirstByte,
     )
 
     private val lock = Object()
@@ -191,12 +198,17 @@ class BluetoothRfcommDuplexStream internal constructor(
                     }
 
                     0 -> Unit
-                    else -> synchronized(lock) {
-                        if (closed) return
-                        receivedBytes += count
-                        pending.addLast(if (count == buffer.size) buffer else buffer.copyOf(count))
-                        pendingBytes += count
-                        lock.notifyAll()
+                    else -> {
+                        val first = synchronized(lock) {
+                            if (closed) return
+                            val first = receivedBytes == 0L
+                            receivedBytes += count
+                            pending.addLast(if (count == buffer.size) buffer else buffer.copyOf(count))
+                            pendingBytes += count
+                            lock.notifyAll()
+                            first
+                        }
+                        if (first) notifyFirstByte()
                     }
                 }
             }
@@ -294,6 +306,12 @@ class BluetoothRfcommDuplexStream internal constructor(
     private fun report(message: String) {
         try { onDiagnostic(message) } catch (_: Exception) {
             // A diagnostic callback cannot prevent transport setup or owned-socket cleanup.
+        }
+    }
+
+    private fun notifyFirstByte() {
+        try { onFirstByte() } catch (_: Exception) {
+            // Like diagnostics, the callback cannot stop the reader.
         }
     }
 

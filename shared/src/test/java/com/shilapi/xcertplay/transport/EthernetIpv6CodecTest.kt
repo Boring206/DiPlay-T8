@@ -3,6 +3,7 @@ package com.shilapi.xcertplay.transport
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class EthernetIpv6CodecTest {
@@ -60,6 +61,21 @@ class EthernetIpv6CodecTest {
         assertEquals(1, result[65].toInt() and 0xff)
         assertArrayEquals(mac, result.copyOfRange(66, 72))
         assertEquals(0xffff, ipv6IcmpChecksumSum(result))
+    }
+
+@Test
+    fun `does not wrap the IPv6 payload length when appending the option`() {
+        val payloadBytes = 0xfff8
+        val packet = ByteArray(40 + payloadBytes + 8)
+        packet[0] = 0x60
+        packet[4] = 0xff.toByte()
+        packet[5] = 0xf8.toByte()
+        packet[6] = 58
+        packet[40] = 136.toByte()
+        val mac = byteArrayOf(0x02, 0, 0, 0, 0, 2)
+
+        assertSame(packet, EthernetIpv6Codec.addNeighborAdvertisementTargetMac(packet, mac))
+        assertEquals(payloadBytes, ((packet[4].toInt() and 0xff) shl 8) or (packet[5].toInt() and 0xff))
     }
 
     private fun ipv6IcmpChecksumSum(packet: ByteArray): Int {
