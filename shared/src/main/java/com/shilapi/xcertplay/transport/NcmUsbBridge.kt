@@ -115,6 +115,7 @@ class NcmUsbBridge internal constructor(
             block.size,
             if (bulkOutAccepted) timeoutMillis else minOf(timeoutMillis, NOT_READY_WRITE_TIMEOUT_MILLIS),
         )
+        traffic.sent(frame, delivered = transferred == block.size)
         // Before StartCarPlaySession the phone keeps the NCM data path NAKed. Android reports the
         // resulting timeout as -1; it is not a detach and later packets must be allowed to retry.
         if (transferred <= 0) {
@@ -135,7 +136,6 @@ class NcmUsbBridge internal constructor(
                 "NCM write transferred $transferred of ${block.size} bytes",
             )
         }
-        traffic.sent()
         if (loggedWriteTimeout) {
             loggedWriteTimeout = false
             Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out became ready")
@@ -148,6 +148,10 @@ class NcmUsbBridge internal constructor(
 
     /** Whether the iPhone tried to connect to [port] at or after [sinceNanos]; see [NcmTrafficCounter]. */
     fun connectionAttemptSince(port: Int, sinceNanos: Long): Boolean = traffic.connectionAttemptSince(port, sinceNanos)
+
+    /** Where the iPhone's connection attempts went and what DiPlay answered; see [NcmTrafficCounter]. */
+    fun connectionAttemptSummary(advertisedAddress: ByteArray?): String? =
+        traffic.connectionAttemptSummary(advertisedAddress)
 
     /**
      * Returns the next complete Ethernet frame, or null when [timeoutMillis] elapses without one.

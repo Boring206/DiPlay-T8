@@ -34,8 +34,10 @@ object AirPlayHid {
     fun knobHidDevice(displayUuid: String): Map<String, Any?> =
         hidDeviceEntry(KNOB_HID_UID, "xcertplay Knob", knobDescriptor, displayUuid)
 
-    fun mediaHidDevice(displayUuid: String): Map<String, Any?> =
-        hidDeviceEntry(MEDIA_HID_UID, "xcertplay Media", mediaDescriptor, displayUuid)
+    /** [seekKeys] adds Fast Forward and Rewind (see [AirPlayConfig.mediaSeekKeys]); off, the descriptor is unchanged. */
+    fun mediaHidDevice(displayUuid: String, seekKeys: Boolean = false): Map<String, Any?> =
+        hidDeviceEntry(MEDIA_HID_UID, "xcertplay Media",
+            if (seekKeys) mediaDescriptorWithSeekKeys else mediaDescriptor, displayUuid)
 
     fun telephonyHidDevice(displayUuid: String): Map<String, Any?> =
         hidDeviceEntry(TELEPHONY_HID_UID, "xcertplay Telephony", telephonyDescriptor, displayUuid)
@@ -114,11 +116,20 @@ object AirPlayHid {
         0x09, 0x38, 0x15, 0x81, 0x25, 0x7f, 0x75, 0x08, 0x95, 0x01, 0x81, 0x06, 0xc0,
     )
 
-    private val mediaDescriptor = descriptor(
+    private val mediaDescriptor = mediaDescriptor(seekKeys = false)
+    private val mediaDescriptorWithSeekKeys = mediaDescriptor(seekKeys = true)
+
+    /**
+     * One byte, an index into the usage list: none, Play, Pause, Play/Pause, Scan Next, Scan Previous, 0x29E.
+     * [seekKeys] appends Fast Forward (0xB3) and Rewind (0xB4) as indices 7 and 8 and raises the logical
+     * maximum to match; indices 0 to 6 keep their usages.
+     */
+    private fun mediaDescriptor(seekKeys: Boolean) = descriptor(
         0x05, 0x0c, 0x09, 0x01, 0xa1, 0x01,
-        0x15, 0x00, 0x25, 0x06, 0x05, 0x0c,
+        0x15, 0x00, 0x25, if (seekKeys) 0x08 else 0x06, 0x05, 0x0c,
         0x0a, 0x00, 0x00, 0x0a, 0xb0, 0x00, 0x0a, 0xb1, 0x00, 0x0a, 0xcd, 0x00,
         0x0a, 0xb5, 0x00, 0x0a, 0xb6, 0x00, 0x0a, 0x9e, 0x02,
+        *(if (seekKeys) intArrayOf(0x0a, 0xb3, 0x00, 0x0a, 0xb4, 0x00) else IntArray(0)),
         0x75, 0x08, 0x95, 0x01, 0x81, 0x00, 0xc0,
     )
 

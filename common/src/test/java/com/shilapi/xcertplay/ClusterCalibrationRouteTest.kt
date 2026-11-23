@@ -26,6 +26,7 @@ internal class ClusterCalibrationRouteTest {
 
     @Before fun reset() {
         ClusterActivityOutput.stopForSettings()
+        installBydCarSettings(app)
         AirPlayPersistence.saveAdbClusterEnabled(app, true)
         Router.started = CountDownLatch(1)
         Router.token = null

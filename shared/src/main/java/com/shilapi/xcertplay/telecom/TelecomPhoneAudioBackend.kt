@@ -23,11 +23,17 @@ private const val ACCOUNT_LABEL = "DiPlay call audio"
 private const val ADDRESS = "carplay@diplay"
 private const val START_TIMEOUT_MILLIS = 3_000L
 
+/** Logcat and, through [PhoneAudioRoute.report], the diagnostic report. */
+private fun info(message: String) {
+    Log.i(TAG, message)
+    PhoneAudioRoute.report(message)
+}
+
 /** Places the self-managed call through Telecom and waits until the system has accepted it. */
 internal class TelecomPhoneAudioBackend(private val context: Context) : PhoneAudioBackend {
     override fun start(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            Log.i(TAG, "self-managed calls need Android 8 or newer")
+            info("self-managed calls need Android 8 or newer")
             return false
         }
         return place()
@@ -49,12 +55,14 @@ internal class TelecomPhoneAudioBackend(private val context: Context) : PhoneAud
                 Uri.fromParts(PhoneAccount.SCHEME_SIP, ADDRESS, null),
                 Bundle().apply { putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle) },
             )
-            created.await(START_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS) && PhoneAudioCall.isActive()
+            val answered = created.await(START_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+            if (!answered) PhoneAudioRoute.reportWarning("Telecom did not create the call within $START_TIMEOUT_MILLIS ms")
+            answered && PhoneAudioCall.isActive()
         } catch (error: SecurityException) {
-            Log.w(TAG, "Telecom call not allowed", error)
+            PhoneAudioRoute.reportWarning("Telecom call not allowed", error)
             false
         } catch (error: RuntimeException) {
-            Log.w(TAG, "Telecom call failed", error)
+            PhoneAudioRoute.reportWarning("Telecom call failed", error)
             false
         }
     }
@@ -82,11 +90,11 @@ internal object PhoneAudioCall {
             connection = it
             created?.countDown()
         }
-        Log.i(TAG, "Telecom call active")
+        info("Telecom call active")
     }
 
     fun failed() {
-        Log.w(TAG, "Telecom did not create the call")
+        PhoneAudioRoute.reportWarning("Telecom did not create the call")
         synchronized(lock) { created?.countDown() }
     }
 
@@ -98,7 +106,7 @@ internal object PhoneAudioCall {
         val current = synchronized(lock) { connection.also { connection = null } } ?: return
         current.setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
         current.destroy()
-        Log.i(TAG, "Telecom call ended")
+        info("Telecom call ended")
     }
 }
 

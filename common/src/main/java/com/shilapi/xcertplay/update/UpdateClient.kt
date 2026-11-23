@@ -43,9 +43,14 @@ internal object UpdateClient {
         }
     }
 
-    internal fun download(url: String, destination: File, onProgress: (Long, Long?) -> Unit) {
+    internal fun download(
+        url: String,
+        destination: File,
+        openConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
+        onProgress: (Long, Long?) -> Unit,
+    ) {
         destination.parentFile?.mkdirs()
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = openConnection(URL(url))
         try {
             connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
             connection.readTimeout = READ_TIMEOUT_MILLIS
@@ -60,7 +65,7 @@ internal object UpdateClient {
                     val buffer = ByteArray(BUFFER_BYTES)
                     while (true) {
                         val read = input.read(buffer)
-                        if (read < 0) break
+                        if (read <= 0) break
                         output.write(buffer, 0, read)
                         written += read
                         if (written > MAXIMUM_DOWNLOAD_BYTES) throw IOException("Download from $url is too large")
@@ -83,7 +88,7 @@ internal object UpdateClient {
         var total = 0
         while (true) {
             val read = stream.read(buffer)
-            if (read < 0) break
+            if (read <= 0) break
             total += read
             if (total > MAXIMUM_TEXT_BYTES) throw IOException("Response from $url is too large")
             output.write(buffer, 0, read)

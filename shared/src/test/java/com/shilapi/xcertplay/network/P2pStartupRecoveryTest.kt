@@ -63,15 +63,48 @@ class P2pStartupRecoveryTest {
             P2pCreateRejected(WifiP2pManager.NO_PERMISSION, "permission"),
             P2pCreateRejected(WifiP2pManager.P2P_UNSUPPORTED, "unsupported"))) {
             var calls = 0
-            assertSame(failure, assertThrows(IOException::class.java) {
+            assertSame(failure, unnamed(assertThrows(IOException::class.java) {
                 P2pStartupRecovery.create(null, { fail("Unsafe retry") }, preferredChannel = 149) {
                     calls++
                     throw failure
                 }
-            })
+            }))
             assertEquals(1, calls)
         }
     }
+
+    // #1256: the framework answers P2P_UNSUPPORTED when it has no Wi-Fi Direct (Android 7 keeps a manager then).
+    @Test fun aFrameworkWithoutWifiDirectIsNamedAndNotRetried() {
+        val rejection = P2pCreateRejected(WifiP2pManager.P2P_UNSUPPORTED, "Wi-Fi P2P createGroup failed: Wi-Fi P2P is unsupported (code=1)")
+        for (channel in listOf(WifiP2pChannels.AUTO, 149)) {
+            var calls = 0
+            val failure = assertThrows(WirelessStartupException::class.java) {
+                P2pStartupRecovery.create(5180, { fail("Unsafe retry") }, preferredChannel = channel) { calls++; throw rejection }
+            }
+            assertEquals(1, calls)
+            assertEquals(WirelessStartupFailure.HOTSPOT_CONFIGURATION, failure.reason)
+            assertFalse(failure.reason.retryable)
+            assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, failure.knownCause)
+            assertSame(rejection, failure.cause)
+        }
+        // The same answer to the compatibility default request.
+        val failure = assertThrows(WirelessStartupException::class.java) {
+            P2pStartupRecovery.create(5180, {}) {
+                if (it.mode == P2pCreationMode.SYSTEM_DEFAULT) throw rejection
+                throw P2pConfigBuildCompatibilityFailure(NoSuchMethodError())
+            }
+        }
+        assertEquals(ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED, failure.knownCause)
+        // Other rejections keep their own type.
+        val permission = P2pCreateRejected(WifiP2pManager.NO_PERMISSION, "permission")
+        assertSame(permission, assertThrows(IOException::class.java) {
+            P2pStartupRecovery.create(5180, { fail("Unsafe retry") }) { throw permission }
+        })
+    }
+
+    /** The original rejection, also when it was named as [WifiDirectSupport.unsupported]. */
+    private fun unnamed(failure: Throwable): Throwable =
+        if ((failure as? WirelessStartupException)?.knownCause == ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED) failure.cause!! else failure
 
     @Test fun confirmedFrequencyGoesFirstWithoutBeingRetriedLater() {
         val preferred = P2pCreationRequest(P2pCreationMode.FIXED_2_GHZ, 2437)
@@ -235,7 +268,7 @@ class P2pStartupRecoveryTest {
             try {
                 P2pStartupRecovery.create(5180, { fail("Unsafe retry") }) { calls++; throw failure }
                 fail("Expected error")
-            } catch (actual: IOException) { assertSame(failure, actual) }
+            } catch (actual: IOException) { assertSame(failure, unnamed(actual)) }
             assertEquals(1, calls)
         }
     }
@@ -282,7 +315,7 @@ class P2pStartupRecoveryTest {
                     throw P2pConfigBuildCompatibilityFailure(NoSuchMethodError())
                 }
                 fail("Expected original default failure")
-            } catch (actual: IOException) { assertSame(terminal, actual) }
+            } catch (actual: IOException) { assertSame(terminal, unnamed(actual)) }
             assertEquals(listOf(5180, null), attempts.map { it.frequencyMHz })
             assertEquals(1, guards)
         }

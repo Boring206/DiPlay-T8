@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">Vista</string>
+    <string name="settings_cluster_player_map">Mappa</string>
+    <string name="settings_cluster_player">Lettore (sperimentale)</string>
+    <string name="settings_cluster_player_description">Passa subito tra mappa e lettore rispettando il formato salvato. Il lettore sospende la mappa e le copie centrali; le indicazioni di svolta nel quadro non sono disponibili. Gli indicatori originali restano gestiti dall’auto.</string>
+    <string name="settings_cluster_player_speed">Mostra velocità nel lettore</string>
+    <string name="settings_cluster_player_speed_description">Velocità del veicolo in km/h senza riquadro. Richiede lettura tramite ADB; senza dati recenti appare —.</string>
+    <string name="settings_cluster_player_idle">Nessuna riproduzione</string>
+    <string name="settings_cluster_player_vehicle">Mostra i dati del veicolo nel lettore</string>
+    <string name="settings_cluster_player_vehicle_description">Marcia, percentuale della batteria e autonomia elettrica tramite ADB. I dati mancanti o non aggiornati mostrano —. Spie e avvisi originali restano necessari.</string>
+    <string name="cluster_player_vehicle_readout">Marcia %1$s   ·   Batteria %2$s   ·   Autonomia %3$s</string>
+    <string name="settings_cluster_player_fit_visible">Adatta il lettore tra le fasce originali</string>
+    <string name="settings_cluster_player_fit_visible_description">Disposizione temporanea per quadri con fasce del veicolo in alto e in basso. Copertina, brano, velocità e avanzamento restano visibili; lo sfondo riempie la proiezione. Si applica subito e non nasconde gli indicatori originali.</string>
+</resources>

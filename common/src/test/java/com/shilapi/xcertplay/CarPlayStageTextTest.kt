@@ -118,6 +118,10 @@ class CarPlayStageTextTest {
             CarPlayStatus.Failed("The car could not start its hotspot. Open the car hotspot settings and connect again.",
                 startupFailure = WirelessStartupFailure.HOTSPOT_NOT_READY,
                 knownCause = ConnectionFailureCause.CAR_HOTSPOT_START_FAILED))
+        assertStage(R.string.this_head_unit_does_not_support_wi_fi_direct,
+            CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: This head unit does not support Wi-Fi Direct.",
+                startupFailure = WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+                knownCause = ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED))
     }
 
     private fun assertStage(expected: Int, status: CarPlayStatus) {

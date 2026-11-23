@@ -54,6 +54,7 @@ class CarPlayVpnService : VpnService() {
         val media: AirPlayMediaHandler,
         val additionalAddresses: List<InetAddress> = emptyList(),
         val listenerIdentity: AirPlayListenerIdentity? = null,
+        val servedAddresses: List<InetAddress> = emptyList(),
     )
 
     private val binder = LocalBinder()
@@ -181,6 +182,12 @@ class CarPlayVpnService : VpnService() {
     /** Port the AirPlay listener actually bound, which may differ from the configured port. */
     fun boundPort(): Int? = attachment?.config?.port
 
+    /**
+     * The requested addresses that have a listener, in request order. An address the kernel
+     * refused is missing, and the caller must not publish it.
+     */
+    fun servedAddresses(): List<InetAddress> = attachment?.servedAddresses.orEmpty()
+
     override fun onDestroy() {
         detach()
         super.onDestroy()
@@ -219,18 +226,30 @@ class CarPlayVpnService : VpnService() {
         generation: Int,
         replacement: AirPlayAttachment,
     ) {
-        val servers = if (replacement.additionalAddresses.isEmpty()) {
-            listOf(AirPlayPortSelector.bind(replacement.address, replacement.config.port) { busy, bound ->
-                Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
-            })
+        val listeners = if (replacement.additionalAddresses.isEmpty()) {
+            AirPlayPortSelector.BoundListeners(
+                listOf(AirPlayPortSelector.bind(replacement.address, replacement.config.port) { busy, bound ->
+                    Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
+                }),
+                listOf(replacement.address),
+                emptyList(),
+            )
         } else {
             AirPlayPortSelector.bindAll(listOf(replacement.address) + replacement.additionalAddresses,
                 replacement.config.port) { busy, bound ->
                 Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
             }
         }
+        listeners.dropped.forEach { failure ->
+            Log.w(TAG, "AirPlay listener not served: ${failure.message}")
+            runCatching { replacement.listener.onDebugLog("airplay listener dropped ${failure.message}") }
+        }
+        val servers = listeners.servers
         val server = servers.first()
-        attachment = replacement.copy(config = replacement.config.copy(port = server.localPort))
+        attachment = replacement.copy(
+            config = replacement.config.copy(port = server.localPort),
+            servedAddresses = listeners.addresses,
+        )
         serverSocket = server
         additionalServers = servers.drop(1)
         servers.forEach { bound ->
@@ -420,7 +439,10 @@ class CarPlayVpnService : VpnService() {
             }
             val origin = error.stackTrace.firstOrNull()
                 ?.let { " at ${it.className.substringAfterLast('.')}.${it.methodName}" }.orEmpty()
-            return chain + origin
+            // A multi-address bind names each family's own failure (#1356).
+            val addresses = error.suppressed.filterIsInstance<AirPlayPortSelector.AddressBindFailure>()
+                .joinToString("; ") { it.message.orEmpty() }
+            return chain + origin + if (addresses.isEmpty()) "" else " [$addresses]"
         }
     }
 }

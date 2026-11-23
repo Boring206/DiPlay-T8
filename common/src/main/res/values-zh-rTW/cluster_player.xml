@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_player_mode">檢視</string>
+    <string name="settings_cluster_player_map">地圖</string>
+    <string name="settings_cluster_player">播放器（實驗性）</string>
+    <string name="settings_cluster_player_description">依已儲存的投影形式即時切換地圖與播放器。播放器暫停地圖及中央螢幕副本；此時儀表板不顯示轉向指引。原車指示燈仍由車輛控制。</string>
+    <string name="settings_cluster_player_speed">在播放器中顯示車速</string>
+    <string name="settings_cluster_player_speed_description">以 km/h 顯示無邊框車速。需要透過 ADB 讀取車輛資料；無最新資料時顯示 —。</string>
+    <string name="settings_cluster_player_idle">尚未播放</string>
+    <string name="settings_cluster_player_vehicle">在播放器中顯示車輛資訊</string>
+    <string name="settings_cluster_player_vehicle_description">透過 ADB 讀取檔位、電池百分比和純電續航。資料不可用或過期時顯示 —。仍需保留原車警示燈和警報。</string>
+    <string name="cluster_player_vehicle_readout">檔位 %1$s   ·   電池 %2$s   ·   續航 %3$s</string>
+    <string name="settings_cluster_player_fit_visible">將播放器放在原車上下欄之間</string>
+    <string name="settings_cluster_player_fit_visible_description">適用於上下有車輛資訊欄的儀表的暫時配置。封面、歌曲、速度和進度均放在可見區域內，背景仍填滿投影。立即生效，不隱藏原車指示燈。</string>
+</resources>

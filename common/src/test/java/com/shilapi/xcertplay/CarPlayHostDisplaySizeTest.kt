@@ -707,6 +707,7 @@ class CarPlayHostDisplaySizeTest {
     }
 
     @Test fun adoptingBackgroundClusterRestoresNativeAdbFlagButRejectsTheVirtualFallback() {
+        installBydCarSettings(activity)
         AirPlayPersistence.saveAdbClusterEnabled(activity, true)
         val sink = AndroidMediaSink()
         val display = CarPlaySessionDisplay(1920, 990, Surface.ROTATION_0, true, true, 1920, 990)
