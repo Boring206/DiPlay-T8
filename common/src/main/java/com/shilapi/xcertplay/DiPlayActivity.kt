@@ -60,6 +60,7 @@ import com.shilapi.xcertplay.backup.SettingsBackupServer
 import com.shilapi.xcertplay.backup.SettingsQrCode
 import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -1971,6 +1972,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCarPlaySameTask(this, enabled)
                 CarPlayScreen.closeIfElsewhere(this)
             }
+            toggle(card, getString(R.string.settings_declare_automatic_appearance),
+                getString(R.string.settings_declare_automatic_appearance_description),
+                AirPlayPersistence.loadDeclareAutomaticAppearance(this)) {
+                AirPlayPersistence.saveDeclareAutomaticAppearance(this, it)
+                markReconnectNeeded()
+            }
             toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
                 SplitScreenSettings.enabled(this)) {
                 SplitScreenSettings.setEnabled(this, it)
@@ -2106,6 +2113,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.loadCarBluetoothAudio(this)) {
                 AirPlayPersistence.saveCarBluetoothAudio(this, it)
                 reconnectIfRunning()
+            }
+            toggle(card, getString(R.string.settings_car_music_link_drop), getString(R.string.settings_car_music_link_drop_description),
+                AirPlayPersistence.loadCarMusicLinkDrop(this)) {
+                AirPlayPersistence.saveCarMusicLinkDrop(this, it)
+                markReconnectNeeded()
             }
         }
         filteredSection(content, SettingsSection.CAR_BUTTON,

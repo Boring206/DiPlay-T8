@@ -13,6 +13,8 @@ import android.hardware.usb.UsbManager
 import android.os.Looper
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.iap2.session.Iap2Session
+import com.shilapi.xcertplay.network.ManualHotspotManager
 import com.shilapi.xcertplay.orchestration.*
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
 import com.shilapi.xcertplay.transport.UsbDeviceId
@@ -29,6 +31,9 @@ import org.robolectric.util.ReflectionHelpers
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], manifest = Config.NONE)
@@ -40,6 +45,79 @@ class CarPlayControllerUsbServiceTest {
     @After fun tearDown() {
         controllers.forEach { it.close(); assertTrue(it.awaitClosed(2_000)) }
         BydNavigationOutputs.endNow()
+    }
+
+    @Test fun wiredCloseDoesNotReportCompletionWhileUsbWorkerIsStillRunning() {
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
+        val worker = ReflectionHelpers.getField<ExecutorService>(controller, "executor")
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        worker.execute {
+            entered.countDown()
+            while (true) {
+                try { release.await(); break } catch (_: InterruptedException) { /* emulate a blocking USB call */ }
+            }
+        }
+        try {
+            assertTrue(entered.await(2, TimeUnit.SECONDS))
+            controller.close()
+            assertFalse("close cannot finish while USB work remains", controller.awaitClosed(2_300))
+        } finally {
+            release.countDown()
+        }
+        assertTrue(controller.awaitClosed(3_000))
+    }
+
+    @Test fun wiredCloseTimeoutDoesNotTreatRunningWorkerAsSafe() {
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
+        ReflectionHelpers.setField(controller, "wiredCloseTimeoutMillis", 50L)
+        val worker = ReflectionHelpers.getField<ExecutorService>(controller, "executor")
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        worker.execute {
+            entered.countDown()
+            while (true) {
+                try { release.await(); break } catch (_: InterruptedException) { }
+            }
+        }
+        try {
+            assertTrue(entered.await(2, TimeUnit.SECONDS))
+            controller.close()
+            assertFalse(controller.awaitClosed(1_000))
+            assertFalse(controller.awaitClosed(0))
+        } finally {
+            release.countDown()
+        }
+        assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS))
+        assertTrue(controller.awaitClosed(0))
+    }
+
+    @Test fun wiredCloseExceptionIsLoggedAndDoesNotBlockRestart() {
+        val logs = mutableListOf<String>()
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
+        val csm = org.mockito.Mockito.mock(Iap2Session::class.java)
+        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(csm).close()
+        ReflectionHelpers.setField(controller, "csm", csm)
+        controller.close()
+        assertTrue(controller.awaitClosed(2_000))
+        assertTrue(logs.any { it.contains("teardown resource=CSM completed=false") })
+    }
+
+    @Test fun wiredCloseSetupExceptionDoesNotSkipRemainingCleanup() {
+        val context = UsbContext(true)
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>() // start() logs from its own threads too
+        val controller = controller(context, CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
+        controller.start()
+        assertEquals(3, context.receivers.size)
+        val hotspot = org.mockito.Mockito.mock(ManualHotspotManager::class.java)
+        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(hotspot).close()
+        ReflectionHelpers.setField(controller, "hotspot", hotspot)
+
+        controller.close()
+
+        assertTrue(controller.awaitClosed(2_000))
+        assertEquals(0, context.receivers.size)
+        assertTrue(logs.any { it.contains("teardown resource=manual hotspot completed=false") })
     }
 
     @Test fun wirelessLocalCanBeCreatedAndReachMfiWithoutAUsbService() {

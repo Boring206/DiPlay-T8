@@ -12,6 +12,9 @@ import java.nio.ByteBuffer
 import java.util.ArrayDeque
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * A blocking NCM data pipe that moves Ethernet frames as NTB16 blocks over bulk endpoints.
@@ -33,7 +36,8 @@ class NcmUsbBridge internal constructor(
     val hostMac: ByteArray? get() = descriptorMac?.copyOf()
     private val stateLock = Any()
     private val readLock = Any()
-    private val writeLock = Any()
+    private val writeLock = ReentrantLock()
+    private val directAdvertisements = AtomicInteger()
     private var closed = false
     private var failure: IphoneUsbException? = null
     private var sequence = 0
@@ -74,8 +78,25 @@ class NcmUsbBridge internal constructor(
         }
     }
 
-    /** Wraps one Ethernet frame in one NTB16 block and writes it to bulk OUT. */
-    fun send(frame: ByteArray, timeoutMillis: Int) = synchronized(writeLock) {
+    /** Writes one Ethernet frame; false means the phone did not accept it before the timeout. */
+    fun send(frame: ByteArray, timeoutMillis: Int): Boolean = writeLock.withLock {
+        sendLocked(frame, timeoutMillis)
+    }
+
+    /** Do not let a busy outbound writer hold up inbound audio or video. */
+    internal fun trySendAdvertisement(frame: ByteArray, timeoutMillis: Int): Boolean {
+        require(timeoutMillis > 0) { "timeoutMillis must be positive" }
+        if (!writeLock.tryLock()) return false
+        return try {
+            val sent = sendLocked(frame, timeoutMillis)
+            if (sent && directAdvertisements.incrementAndGet() == 1) {
+                runCatching { onDiagnostic("NCM answered first USB neighbor solicitation directly") }
+            }
+            sent
+        } finally { writeLock.unlock() }
+    }
+
+    private fun sendLocked(frame: ByteArray, timeoutMillis: Int): Boolean {
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         val sequence = synchronized(stateLock) {
@@ -103,7 +124,7 @@ class NcmUsbBridge internal constructor(
                 loggedWriteTimeout = true
                 Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out not ready; retaining bridge for retry")
             }
-            return@synchronized
+            return false
         }
         if (!bulkOutAccepted) {
             bulkOutAccepted = true
@@ -119,6 +140,7 @@ class NcmUsbBridge internal constructor(
             loggedWriteTimeout = false
             Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out became ready")
         }
+        return true
     }
 
     /** Frames to and from the iPhone so far, for a report line; see [NcmTrafficCounter]. */
@@ -156,32 +178,38 @@ class NcmUsbBridge internal constructor(
     }
 
     override fun close() {
-        statusRunning.set(false)
-        val requestToClose = synchronized(stateLock) {
-            if (closed) return
-            closed = true
-            readRequest
-        }
-        // Wakes a reader blocked in requestWait(); it then observes the closed state.
-        runCatching { requestToClose?.cancel() }
-        statusThread?.let { thread ->
-            thread.interrupt()
-            try {
-                thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
+        // On one MT6580 unit a teardown near an in-flight transfer preceded a musb panic.
+        // Serialize close with writers; queued reads are still cancelled below.
+        writeLock.withLock {
+            statusRunning.set(false)
+            val requestToClose = synchronized(stateLock) {
+                if (closed) return
+                closed = true
+                readRequest
             }
-        }
-        for (usbInterface in claimedInterfaces.asReversed()) {
-            try {
-                connection.releaseInterface(usbInterface)
-            } catch (_: RuntimeException) {
-                // Best-effort release; the connection close below is authoritative.
+            // Wakes a reader blocked in requestWait(); it then observes the closed state.
+            runCatching { requestToClose?.cancel() }
+            statusThread?.let { thread ->
+                thread.interrupt()
+                try {
+                    thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
             }
+            for (usbInterface in claimedInterfaces.asReversed()) {
+                try {
+                    connection.releaseInterface(usbInterface)
+                } catch (_: RuntimeException) {
+                    // Best-effort release; the connection close below is authoritative.
+                }
+            }
+            readRequests.close()
+            connection.close()
+            runCatching { requestToClose?.close() }
+            val answered = directAdvertisements.get()
+            if (answered > 0) runCatching { onDiagnostic("NCM directly answered USB neighbor solicitations=$answered") }
         }
-        readRequests.close()
-        connection.close()
-        runCatching { requestToClose?.close() }
     }
 
     private fun drainStatus(endpoint: UsbEndpoint) {

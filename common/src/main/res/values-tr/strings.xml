@@ -587,6 +587,9 @@
     <string name="video_play">Oynat</string>
     <string name="video_pause">Duraklat</string>
     <string name="video_cannot_play">Bu video araç ekranında oynatılamıyor. Apple TV+ gibi korumalı videolar lisanslı bir alıcı gerektirir.</string>
+    <string name="video_cannot_load">Videonun yüklenmesi durdu. Bağlantıyı kontrol edip yeniden deneyin.</string>
+    <string name="video_cannot_play_here">Bu video araç ekranında oynatılamıyor: ana ünite biçimini okuyamıyor veya çözemiyor.</string>
+    <string name="video_cannot_play_on_car">Bu video araç ekranında oynatılamıyor.</string>
     <string name="navigation_widget_label">CarPlay navigasyonu</string>
     <string name="navigation_widget_description">CarPlay\'den sonraki dönüş, mesafe, varış ve parça</string>
     <string name="widget_not_connected">CarPlay bağlı değil</string>
@@ -753,6 +756,8 @@
     <string name="main_buffered_audio_description">Apple Music gibi destekleyen uygulamalar yaklaşık iki dakikaya kadar müziği önceden gönderir, böylece kısa süreli Wi-Fi kopmaları duyulmaz. Diğer uygulamalar normal akışı sürdürür. CarPlay\'i yeniden bağlar.</string>
     <string name="settings_car_bluetooth_audio">Aracın Bluetooth\'u üzerinden CarPlay sesi (deneysel)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay, iPhone\'a CarPlay sesi sunmaz; böylece müzik, navigasyon ve aramalar iPhone\'un araçla olan Bluetooth bağlantısı üzerinden gider. iPhone\'u araçla eşleştirilmiş halde tutun ve aracın ses kaynağı olarak Bluetooth\'u seçin. Ses bunun yerine iPhone\'da çalarsa bunu kapatın. CarPlay\'i yeniden bağlar.</string>
+    <string name="settings_car_music_link_drop">CarPlay sırasında aracın Bluetooth müziğini kes (deneysel)</string>
+    <string name="settings_car_music_link_drop_description">Bazı ana ünitelerde aracın iPhone ile kendi Bluetooth müzik bağlantısı, CarPlay müziğini başlar başlamaz duraklatır. Bu açıkken DiPlay, CarPlay çalışırken yalnızca bu oturumdaki iPhone ile olan müzik bağlantısını keser ve CarPlay bitince yeniden bağlamayı dener; bazı ana ünitelerde bu mümkün değildir ve CarPlay bittikten sonra aracın Bluetooth müziği kapalı kalabilir. Aracın Bluetooth\'u üzerinden aramalar ve eşleştirme korunur. CarPlay sesi aracın Bluetooth\'u üzerinden çalıyorsa hiçbir şey yapmaz. Kabloyla bağlanırken DiPlay\'de seçilen iPhone kullanılır. Bir sonraki bağlantıda geçerli olur.</string>
     <string name="call_echo_cancellation">Arama yankı engelleme (deneysel)</string>
     <string name="call_echo_cancellation_description">CarPlay aramaları sırasında karşı tarafa gönderilen hoparlör yankısını azaltmaya çalışır. Sonuçlar ana üniteye bağlıdır. Bir sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="call_voice_filter">Daha net arama sesleri (deneysel)</string>
@@ -768,7 +773,7 @@
     <string name="settings_direct_video_output">Doğrudan video çıkışı (deneysel)</string>
     <string name="settings_direct_video_output_description">CarPlay resmini DiPlay penceresinin içine çizmek yerine doğrudan ana ünitenin kompozitörüne gönderir. Gecikmeyi yaklaşık bir ekran yenilemesi kadar azaltabilir. Görüntü ayarlamaları geçerli değildir. CarPlay\'i yeniden bağlar.</string>
     <string name="settings_low_latency_decoder">Düşük gecikmeli kod çözme (deneysel)</string>
-    <string name="settings_low_latency_decoder_description">Qualcomm video kod çözücülerinden sonraki kareleri tutmak yerine her kareyi kodu çözülür çözülmez çıkarmasını ister ve kodu çözülen her kareyi bir sonrakinin gelmesini beklemeden özel bir iş parçacığından gösterir. Gecikmeyi onlarca milisaniye azaltabilir. Resimde bozulmalar varsa veya donuyorsa kapatın. Sonraki bağlantıda uygulanır.</string>
+    <string name="settings_low_latency_decoder_description">Video kod çözücülerinden sonraki kareleri tutmak yerine her kareyi kodu çözülür çözülmez çıkarmasını ister ve kodu çözülen her kareyi bir sonrakinin gelmesini beklemeden özel bir iş parçacığından gösterir. Düşük gecikme isteğinin kendisi yalnızca Qualcomm kod çözücüler için geçerlidir; Spreadtrum dahil diğer kod çözücülerde bu ayar yine de özel çıkış iş parçacığını etkinleştirir. Gecikmeyi onlarca milisaniye azaltabilir. Resimde bozulmalar varsa veya donuyorsa kapatın. Sonraki bağlantıda uygulanır.</string>
     <string name="settings_fps_counter">FPS sayacı</string>
     <string name="settings_fps_counter_description">CarPlay\'in sağ üst köşesinde bir sayaç gösterir: saniye başına gösterilen kareler (50\'den itibaren yeşil, 30\'dan itibaren sarı, altında kırmızı), iPhone\'dan saniyede alınan kareler ve kod çözme süresi. Hareketsiz bir ekran az sayıda kare gösterir çünkü iPhone hiç kare göndermez.</string>
     <string name="car_button_in_carplay">CarPlay\'de araç düğmesi</string>
@@ -911,8 +916,8 @@
     <string name="settings_gesture_disabled_action">Hızlı menü · kaydırma devre dışı (değiştirmek için dokunun)</string>
     <string name="bt_suspend_delay">Bluetooth duraklatma gecikmesi</string>
     <string name="bt_suspend_delay_option">Bağlandıktan sonra %1$d sn</string>
-    <string name="bt_suspend_during_carplay">CarPlay sırasında araç Bluetooth\'unu duraklat · ADB gerektirir</string>
-    <string name="bt_suspend_during_carplay_description">Telefon araçla olan eller serbest bağlantısını korur, bu nedenle bir arama hem araç Bluetooth telefonunda hem de CarPlay\'de çalar. CarPlay çalışırken, aramaların yalnızca CarPlay\'de çalması için ADB üzerinden araç Bluetooth\'unu duraklatın; Bluetooth kapalıyken CarPlay aramaları telefon SCO yerine kabin hoparlörü ve mikrofonunda çalar. Bluetooth, CarPlay bittiğinde ve bir sonraki kablosuz el sıkışmasından önce tekrar açılır. Eşleştirmeye asla dokunulmaz. Değişiklikler bir sonraki bağlantıda geçerli olur.</string>
+    <string name="bt_suspend_during_carplay">CarPlay sırasında araç Bluetooth\'unu duraklat</string>
+    <string name="bt_suspend_during_carplay_description">Telefon araçla olan eller serbest bağlantısını korur, bu nedenle bir arama hem araç Bluetooth telefonunda hem de CarPlay\'de çalar. CarPlay çalışırken, aramaların yalnızca CarPlay\'de çalması için araç Bluetooth\'unu duraklatın; Bluetooth kapalıyken CarPlay aramaları telefon SCO yerine kabin hoparlörü ve mikrofonunda çalar. Bluetooth, CarPlay bittiğinde ve bir sonraki kablosuz el sıkışmasından önce tekrar açılır. Eşleştirmeye asla dokunulmaz. Değişiklikler bir sonraki bağlantıda geçerli olur. Android 13 ve daha yenisinde ADB gerekir.</string>
     <string name="cluster_small_window_card_theme">Küçük pencere dönüş kartı teması</string>
     <string name="cluster_small_window_card_theme_follow">Dönüş kartı temasını takip et</string>
     <string name="cluster_small_window_card_size">Küçük pencere dönüş kartı · boyut</string>
@@ -1050,6 +1055,8 @@
     <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Yalnızca USB kablosu: Wi-Fi üzerinden iPhone bu durumda tüm CarPlay sesini kendinde tutuyordu, bu yüzden kablosuz bağlantı olağan biçimleri sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
     <string name="settings_wheel_long_press_seek">Sonraki/önceki uzun basışla ileri-geri sar (deneysel)</string>
     <string name="settings_wheel_long_press_seek_description">Direksiyonu sonraki ve önceki için kendi uzun basış tuşlarını gönderen ana ünitelerde (BYD DiLink 3), uzun basış hiçbir şey yapmamak yerine yaklaşık 2,5 saniye ileri veya geri sarar. Henüz bir iPhone ile denenmedi. Bir sonraki bağlantıda geçerli olur.</string>
+    <string name="settings_declare_automatic_appearance">iPhone\'a CarPlay görünümünün otomatik olduğunu bildir (deneysel)</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone bağlandığında ona CarPlay\'in ve haritasının açık veya koyu görünümü otomatik seçtiğini bildirir; DiPlay 0.2.16\'dan beri böyle yapıyor. CarPlay, CarPlay gündüz/gece modu ayarını takip etmiyorsa bu ayarı kapatın. Sonraki bağlantıda geçerli olur.</string>
     <string name="settings_carplay_same_task">CarPlay\'i başlatıcı kartında tut (deneysel)</string>
     <string name="settings_carplay_same_task_description">BYD\'nin DiYou masaüstü gibi DiPlay\'i bir kartta veya pencere içinde pencere görünümünde gösteren başlatıcılar içindir. CarPlay, ayrı bir tam ekran pencere yerine 0.2.11 ve önceki sürümlerdeki gibi DiPlay\'in kendi penceresinde açılır. Bağlantıyı kesmeden, CarPlay\'in bir sonraki açılışında geçerli olur.</string>
     <string name="settings_cluster_speedometer_album_color">Hız göstergesi arka planı için albüm rengini kullan</string>
@@ -1070,4 +1077,5 @@
     <string name="settings_safe_area_fitted_summary">Güvenli alan: çentiğe ve köşelere uyarlandı, %5$d x %6$d içinde (%3$d, %4$d) konumunda %1$d x %2$d</string>
     <string name="settings_wifi_direct_unavailable">Kullanılamıyor</string>
     <string name="settings_wifi_direct_unsupported_help">Bağlantı kurulumunda Aracın dahili erişim noktası veya Mevcut Wi-Fi / Aynı Yerel Ağ seçeneğini seçin, ardından tekrar deneyin.</string>
+    <string name="wired_teardown_pending">USB temizliği hâlâ sürüyor. iPhone bağlantısını kesin, bekleyin ve “%1$s” seçeneğine dokunun.</string>
 </resources>

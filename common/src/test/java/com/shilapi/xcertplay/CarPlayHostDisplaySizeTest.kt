@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.graphics.Matrix
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
@@ -22,6 +23,8 @@ import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
 import java.time.Duration
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
 import org.junit.Assert.*
@@ -36,7 +39,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.util.concurrent.PausedExecutorService
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadows.ShadowDisplayManager
 import org.robolectric.shadows.ShadowLog
+import org.robolectric.shadows.ShadowProcess
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -64,6 +69,11 @@ class CarPlayHostDisplaySizeTest {
     }
 
     @After fun tearDown() {
+        CarPlayVideo.playerOnScreen = false
+        VideoInCar.allowed = false
+        for (name in listOf("appContext", "controller", "streamId")) {
+            CarPlayVideo::class.java.getDeclaredField(name).apply { isAccessible = true }.set(CarPlayVideo, null)
+        }
         (getField("shuttingDown") as AtomicBoolean).set(true)
         (getField("mainHandler") as Handler).removeCallbacksAndMessages(null)
         AirPlayPersistence.overlaySettingsListener = null
@@ -101,10 +111,63 @@ class CarPlayHostDisplaySizeTest {
 
     @Test fun aNarrowWindowWithAdaptPipResolutionTriggersReconnect() {
         AirPlayPersistence.saveAdaptPipResolution(activity, true)
-        val display = startSession()
+        startSession()
+        shadowOf(activity).setInMultiWindowMode(true)
         applySize(700, 990)
         assertEquals(1, getField("restartGeneration"))
         assertNull(getField("sessionDisplay"))
+        assertTrue(restartLog(), restartLog().contains("multi-window aspect 1.94 -> 0.71"))
+    }
+
+    // #1219, DiLink 2.0: the system bars come back about 200 ms before DiPlay stops as another app opens
+    // (1920x1080 -> 1920x952). "Adapt multi-window resolution" refits multi-window, launcher cards and
+    // launcher PiP, not a full-screen window on the main display, so this keeps the session instead of
+    // reconnecting twice.
+    @Test fun barsReturningAsAnotherAppOpensKeepTheSessionWithAdaptMultiWindowResolution() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession(windowHeight = 1080)
+        applySize(1920, 952)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(1, keepLogs())
+        applySize(1920, 1080)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    @Test fun aNarrowFullScreenWindowWithAdaptPipResolutionKeepsTheSession() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession()
+        applySize(700, 990)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    // A launcher card or launcher PiP (#406, #1003, #1052) shows DiPlay on another display, where Android
+    // reports no multi-window. That is what "Adapt multi-window resolution" was written for: it still refits.
+    @Test fun aLauncherCardOnAnotherDisplayStillAdaptsItsShape() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        startSession()
+        val card = ShadowDisplayManager.addDisplay("w700dp-h990dp")
+        hostVideoView(700, 990, displayManager().getDisplay(card))
+
+        applySize(700, 990)
+
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+        assertTrue(restartLog(), restartLog().contains("display $card aspect 1.94 -> 0.71"))
+    }
+
+    @Test fun theSameShapeOnTheMainDisplayOutsideMultiWindowKeepsTheCanvas() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession()
+        hostVideoView(700, 990, displayManager().getDisplay(android.view.Display.DEFAULT_DISPLAY))
+
+        applySize(700, 990)
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(1, keepLogs())
     }
 
     @Test fun resumingASquareCanvasInTheSameWindowDoesNotReconnect() {
@@ -128,6 +191,7 @@ class CarPlayHostDisplaySizeTest {
         AirPlayPersistence.saveAdaptPipResolution(activity, true)
         startSession(windowHeight = 1080, canvasHeight = 1920)
 
+        shadowOf(activity).setInMultiWindowMode(true)
         applySize(700, 1080)
 
         assertEquals(1, getField("restartGeneration"))
@@ -172,6 +236,7 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, getField("restartGeneration"))
         assertTrue(getField("handshakeResetInProgress") as Boolean)
         assertNull(getField("sessionDisplay"))
+        assertTrue(restartLog(), restartLog().contains("(rotation 1 -> 0)"))
     }
 
     @Test fun rotationIsHandledEvenIfTheViewSizeIsUnchanged() {
@@ -186,6 +251,199 @@ class CarPlayHostDisplaySizeTest {
         setField("hideTopBar", false)
         applySize(1920, 942)
         assertEquals(1, getField("restartGeneration"))
+        assertTrue(restartLog(), restartLog().contains("(saved bars hideTop=true -> false hideBottom=true -> true)"))
+    }
+
+    @Test fun growingBeyondTheSessionWindowNamesTheReason() {
+        startSession(windowHeight = 942)
+        applySize(1920, 990)
+        assertTrue(restartLog(), restartLog().contains("1920x942 -> 1920x990 (larger than the session window 1920x942)"))
+    }
+
+    // #1176: on a 16:10 screen a side-by-side split window (1270x1500) is taller than wide. Leaving it is
+    // not a turn: CarPlay goes back to the full-screen area instead of drawing the split layout stretched.
+    @Test @Config(qualifiers = "w2560dp-h1600dp-land-mdpi")
+    fun leavingATallSplitWindowOnA16By10ScreenSendsTheFullScreenArea() {
+        val areas = CarPlayViewAreas.build(2560, 1600, CarPlayDock.AUTOMATIC, 1270f / 2560 to 1500f / 1600)!!
+        val full = areas.current
+        val split = areas.index(CarPlayViewAreas.Kind.SPLIT_SCREEN, false, null)!!
+        assertEquals(1270, areas.areas[split].width)
+        assertEquals(1500, areas.areas[split].height)
+        val controller = org.mockito.Mockito.mock(CarPlayController::class.java)
+        org.mockito.Mockito.`when`(controller.showViewArea(org.mockito.ArgumentMatchers.anyInt())).thenReturn(true)
+        setField("controller", controller)
+        val display = CarPlaySessionDisplay(2560, 1600, invoke("displayRotation") as Int, true, true, 2560, 1600, areas)
+        setField("activeDisplaySize", size(2560, 1600))
+        setField("sessionDisplay", display)
+
+        shadowOf(activity).setInMultiWindowMode(true)
+        applySize(1270, 1500)
+        org.mockito.Mockito.verify(controller).showViewArea(split)
+        assertEquals(split, areas.current)
+
+        shadowOf(activity).setInMultiWindowMode(false)
+        applySize(2560, 1600)
+
+        org.mockito.Mockito.verify(controller).showViewArea(full)
+        assertEquals(full, areas.current)
+        assertEquals(size(2560, 1600), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(0, keepLogs())
+    }
+
+    // #1180, DiLink 4.0 with the navigation bar shown: DiPlay's own video player hides the system bars and
+    // the CarPlay window behind it grew from 1920x990 to 1920x1032 just after the video stream's SETUP,
+    // which reconnected CarPlay and stopped the video. The bars come back about 0.5 s after DiPlay does.
+    @Test fun theVideoPlayerHidingTheBarsKeepsTheCanvasUntilDiPlayIsBack() {
+        val display = startSession()
+        val video = hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+
+        applySize(1920, 1032)
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(1, ShadowLog.getLogsForTag("xcertplay-usb").count { it.msg.contains("video player is open") })
+
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertEquals(0, getField("restartGeneration"))
+        video.layout(0, 0, 1920, 990)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_500))
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    @Test fun aWindowThatStaysLargerAfterTheVideoPlayerClosesIsCheckedAgain() {
+        startSession()
+        hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+        applySize(1920, 1032)
+        assertEquals(0, getField("restartGeneration"))
+
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_100))
+
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
+    @Test fun aStaleVideoPlayerFlagDoesNotHoldAResumedHost() {
+        startSession()
+        CarPlayVideo.playerOnScreen = true
+        setField("hostAppearanceResumed", true)
+        applySize(1920, 1032)
+        assertEquals(1, getField("restartGeneration"))
+    }
+
+    // Report 8 of #1180 ran on a square turning canvas (1920x990 window, 1920x1920 stream), where a size
+    // change applies at once instead of after the 500 ms debounce.
+    @Test fun theVideoPlayerHidingTheBarsKeepsATurningSquareCanvasUntilDiPlayIsBack() {
+        val (landscape, portrait) = CarPlayRotation.turningAreas(1920, 1920, 990, 1920, 1080)
+        val areas = CarPlayViewAreas.build(1920, 1920, listOf(
+            CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
+            CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
+        ), CarPlayDock.AUTOMATIC, splitWindow = { null }, startPortrait = false)!!
+        assertTrue(areas.turnsWithScreen)
+        val full = areas.current
+        val controller = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", controller)
+        val display = CarPlaySessionDisplay(1920, 1920, invoke("displayRotation") as Int, true, true, 1920, 990, areas)
+        setField("activeDisplaySize", size(1920, 990))
+        setField("sessionDisplay", display)
+        val video = hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+
+        scheduleSize(1920, 1032)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(1, ShadowLog.getLogsForTag("xcertplay-usb").count { it.msg.contains("video player is open") })
+
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertEquals(0, getField("restartGeneration"))
+        video.layout(0, 0, 1920, 990)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_500))
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(full, areas.current)
+        org.mockito.Mockito.verify(controller, org.mockito.Mockito.never()).showViewArea(org.mockito.ArgumentMatchers.anyInt())
+    }
+
+    // On a non-turning canvas the change waits 500 ms. A player that fails or is closed within that time
+    // must still have DiPlay wait for the bars to come back, or the pending change reconnects (#1180).
+    @Test fun aPlayerClosedBeforeTheDebouncedChangeAppliesStillWaitsForTheBars() {
+        val display = startSession()
+        val video = hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+
+        scheduleSize(1920, 1032)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        video.layout(0, 0, 1920, 990)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_500))
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    // Android can refuse to start the player from the background. When the item then stops, the flag set
+    // for the opening player must not keep holding the CarPlay screen's size changes.
+    @Test fun aPlayerThatNeverOpenedStopsHoldingWhenTheVideoSessionEnds() {
+        CarPlayVideo.attach(activity, org.mockito.Mockito.mock(CarPlayController::class.java))
+        VideoInCar.allowed = true
+        CarPlayVideo.onVideoMessage(7L, mapOf("type" to "insertPlayQueueItem",
+            "item" to mapOf("Content-Location" to "https://example.com/video.m3u8")))
+        CarPlayVideo.onVideoMessage(7L, mapOf("type" to "setRate", "rate" to 1.0))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(CarPlayVideo.playerOnScreen)
+        assertNull(CarPlayVideo.activity)
+
+        CarPlayVideo.onVideoSessionEnded()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(CarPlayVideo.playerOnScreen)
+
+        startSession()
+        applySize(1920, 1032)
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
+    @Test fun closingTheCarPlayScreenCancelsTheCheckAfterTheVideoPlayer() {
+        val display = startSession()
+        hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+        applySize(1920, 1032)
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        // The screen is closed after the resume's own check, while the window still has the player's size.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertNull(getField("pendingDisplaySize"))
+
+        invoke("onDestroy")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_500))
+
+        assertNull(getField("pendingDisplaySize"))
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertFalse(getField("videoPlayerSettling") as Boolean)
+        assertFalse(getField("videoPlayerHeldSize") as Boolean)
     }
 
     @Test fun resumingReadsSavedBarsAndRebuildsEvenWhenTheWindowSizeIsUnchanged() {
@@ -437,6 +695,207 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, getField("restartGeneration"))
     }
 
+    @Test @Config(sdk = [30]) fun wiredRestartTimesOutButDoesNotStartUntilOldOwnerCloses() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", old)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.diagnosticAttempt).thenReturn(17)
+        val diagnosticLog = SessionLogFile(java.io.File(activity.cacheDir, "wired-guard.log"))
+        diagnosticLog.reset("test")
+        setField("sessionLog", diagnosticLog)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        try {
+            activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+                .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+            finishTeardown()
+            assertFalse(getField("handshakeResetInProgress") as Boolean)
+            assertTrue(getField("startupRetryStopped") as Boolean)
+            assertNull("timed-out owner must block a new controller", getField("controller"))
+            invoke("maybeStartCarPlay")
+            assertNull("retry must remain blocked while owner is active", getField("controller"))
+            org.mockito.Mockito.verify(old).awaitClosed(20_000L)
+            assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
+            val diagnostic = diagnosticLog.file.readText()
+            assertTrue(diagnostic.contains("restart blocked wiredTeardown=PENDING controllerAttempts=17"))
+            assertTrue(diagnostic.contains("start blocked wiredTeardown=PENDING controllerAttempts=17"))
+            closed = true
+            invoke("maybeStartCarPlay")
+            assertNotNull("a retry may start when the old owner closes", getField("controller"))
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+            diagnosticLog.close()
+            setField("sessionLog", null)
+        }
+    }
+
+    @Test @Config(sdk = [30]) fun blockedSynchronousCloseShowsRetryWithoutStartingAnotherController() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        var closed = false
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        org.mockito.Mockito.doAnswer {
+            started.countDown()
+            release.await(3, TimeUnit.SECONDS)
+            null
+        }.`when`(old).close()
+        setField("controller", old)
+        val retry = View(activity).apply { visibility = View.GONE }
+        val stage = android.widget.TextView(activity)
+        setField("startupRetryButton", retry)
+        setField("stageStatusView", stage)
+        try {
+            activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+                .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+            finishTeardown()
+            assertTrue("close started on a separate thread", started.await(2, TimeUnit.SECONDS))
+            assertEquals(View.VISIBLE, retry.visibility)
+            assertEquals(activity.getString(R.string.wired_teardown_pending, activity.getString(R.string.retry_carplay_connection)),
+                stage.text.toString())
+            assertFalse(getField("handshakeResetInProgress") as Boolean)
+            assertNull("blocked close must prevent replacement", getField("controller"))
+        } finally {
+            closed = true
+            release.countDown()
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    // A replug or a returning surface starts through maybeStartCarPlay, not through the Retry button.
+    @Test @Config(sdk = [30]) fun aStartAfterABlockedWiredStartCanReconnectAgain() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        val retry = View(activity).apply { visibility = View.GONE }
+        setField("startupRetryButton", retry)
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            assertNull(getField("controller"))
+            assertTrue(getField("startupRetryStopped") as Boolean)
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            closed = true
+            invoke("maybeStartCarPlay")
+
+            assertNotNull(getField("controller"))
+            assertFalse("the new session's end must reconnect", getField("startupRetryStopped") as Boolean)
+            assertEquals(View.GONE, retry.visibility)
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    // Disconnect clears the owner, so the screen a driver opens next is not the owner until its first start.
+    @Test @Config(sdk = [30]) fun retryStartsAWiredConnectionThatWasBlockedAfterADisconnect() {
+        activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+        invoke("buildContentView")
+        allowStartup()
+        startSession()
+        CarPlayBackgroundSession.clear()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            val retry = getField("startupRetryButton") as View
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            retry.performClick()
+            assertNull("the old owner still blocks a new controller", getField("controller"))
+            assertEquals("the button must come back", View.VISIBLE, retry.visibility)
+
+            closed = true
+            retry.performClick()
+            assertNotNull("retry must start the connection", getField("controller"))
+            assertEquals(View.GONE, retry.visibility)
+            assertTrue(CarPlayBackgroundSession.isOwner(activity))
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    @Test @Config(sdk = [30]) fun wiredRestartContinuesAfterTheSinkReleaseWaitTimesOut() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val oldSink = org.mockito.Mockito.mock(AndroidMediaSink::class.java)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true)
+        setField("controller", old)
+        setField("sink", oldSink)
+        setField("sinkReleaseWaitMillis", 50L)
+
+        activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+            .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+        finishTeardown()
+
+        org.mockito.Mockito.verify(oldSink).close()
+        org.mockito.Mockito.verify(oldSink).awaitVideoReleased(50L)
+        assertNotNull("decoder release must not gate USB ownership", getField("controller"))
+    }
+
+    @Test @Config(sdk = [30]) fun wirelessRestartClosesTheControllerOnTheTeardownExecutor() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", old)
+        val closeThreads = java.util.concurrent.LinkedBlockingQueue<Thread>()
+        val waitThreads = java.util.concurrent.LinkedBlockingQueue<Thread>()
+        org.mockito.Mockito.doAnswer { closeThreads.add(Thread.currentThread()); null }.`when`(old).close()
+        org.mockito.Mockito.`when`(old.awaitClosed(4_000L)).thenAnswer {
+            waitThreads.add(Thread.currentThread())
+            true
+        }
+
+        activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+            .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+        finishTeardown()
+
+        val closeThread = closeThreads.poll(2, TimeUnit.SECONDS)
+        assertNotNull(closeThread)
+        assertSame(closeThread, waitThreads.poll(2, TimeUnit.SECONDS))
+    }
+
+    @Test @Config(sdk = [30]) fun exitAfterWiredSessionStopsVpnAndEndsProcessEvenIfTeardownTimesOut() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val oldSink = org.mockito.Mockito.mock(AndroidMediaSink::class.java)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        setField("controller", old)
+        setField("sink", oldSink)
+        setField("sinkReleaseWaitMillis", 50L)
+        ShadowProcess.clearKilledProcesses()
+        try {
+            invoke("exitApplication")
+            finishTeardown()
+
+            org.mockito.Mockito.verify(oldSink).close()
+            org.mockito.Mockito.verify(oldSink).awaitVideoReleased(50L)
+            val stoppedServices = generateSequence { shadowOf(activity.application).nextStoppedService }
+            assertTrue(stoppedServices.any { it.component?.className ==
+                com.shilapi.xcertplay.network.CarPlayVpnService::class.java.name })
+            assertTrue(ShadowProcess.wasKilled(Process.myPid()))
+        } finally {
+            org.mockito.Mockito.`when`(old.awaitClosed(0)).thenReturn(true)
+            WiredTeardownGuard.pendingControllerAttempts()
+            ShadowProcess.clearKilledProcesses()
+        }
+    }
+
     @Test @Config(sdk = [30]) fun teardownRechecksStartupPrerequisites() {
         allowStartup()
         startSession()
@@ -618,6 +1077,20 @@ class CarPlayHostDisplaySizeTest {
     private fun keepLogs(): Int = ShadowLog.getLogsForTag("xcertplay-usb").count {
         it.msg.contains("keeping CarPlay session")
     }
+
+    private fun restartLog(): String = ShadowLog.getLogsForTag("xcertplay-usb")
+        .filter { it.msg.contains("rebuilding stack") }.joinToString("\n") { it.msg }
+
+    // The test window is not attached, so the post after a layout runs on the main queue, and the view is on
+    // [display] only when a test says so.
+    private fun hostVideoView(width: Int, height: Int, display: android.view.Display? = null): TextureView =
+        object : TextureView(activity) {
+            override fun post(action: Runnable): Boolean = Handler(Looper.getMainLooper()).post(action)
+            override fun getDisplay(): android.view.Display? = display
+        }.apply { layout(0, 0, width, height) }.also { setField("videoView", it) }
+
+    private fun displayManager(): android.hardware.display.DisplayManager =
+        activity.getSystemService(android.hardware.display.DisplayManager::class.java)
 
     private fun allowStartup() {
         setField("airPlayIdentity", AirPlayIdentity.generate())

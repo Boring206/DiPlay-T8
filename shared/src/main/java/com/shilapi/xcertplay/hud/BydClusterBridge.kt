@@ -34,7 +34,9 @@ internal object BydClusterBridge {
     private var broadcastFailing = false
 
     private var guidanceActive = false
-    private var mapShown = false
+    /** Whether the host's map window is on the cluster; written under [lock], readable from any thread. */
+    @Volatile internal var mapShown = false
+        private set
 
     fun initialize(appContext: Context) = synchronized(lock) {
         if (context != null) return@synchronized

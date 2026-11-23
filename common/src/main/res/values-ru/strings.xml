@@ -534,6 +534,9 @@
     <string name="video_play">Воспроизвести</string>
     <string name="video_pause">Пауза</string>
     <string name="video_cannot_play">Это видео нельзя воспроизвести на экране машины. Защищённому видео, например Apple TV+, нужен лицензированный приёмник.</string>
+    <string name="video_cannot_load">Видео перестало загружаться. Проверьте подключение и попробуйте снова.</string>
+    <string name="video_cannot_play_here">Это видео нельзя воспроизвести на экране машины: головное устройство не может прочитать или декодировать его формат.</string>
+    <string name="video_cannot_play_on_car">Это видео нельзя воспроизвести на экране машины.</string>
     <string name="safe_area_mapping_summary">Безопасная область: %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
     <string name="navigation_widget_label">Навигация CarPlay</string>
     <string name="navigation_widget_description">Следующий поворот, расстояние, прибытие и песня из CarPlay</string>
@@ -690,6 +693,8 @@
     <string name="main_buffered_audio_description">Приложения, которые это поддерживают (например, Apple Music), присылают музыку примерно на две минуты вперёд, поэтому короткие провалы Wi-Fi не слышны. Остальные приложения работают как раньше. Переподключает CarPlay.</string>
     <string name="settings_car_bluetooth_audio">Звук CarPlay через Bluetooth автомобиля (экспериментально)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay не предлагает iPhone звук CarPlay, поэтому музыка, навигация и звонки должны идти через Bluetooth-подключение iPhone к автомобилю. Оставьте iPhone сопряжённым с автомобилем и выберите Bluetooth источником звука в автомобиле. Если звук идёт из iPhone, выключите этот параметр. Переподключает CarPlay.</string>
+    <string name="settings_car_music_link_drop">Отключать Bluetooth-музыку автомобиля при CarPlay (экспериментально)</string>
+    <string name="settings_car_music_link_drop_description">На некоторых головных устройствах собственная Bluetooth-музыка автомобиля ставит музыку CarPlay на паузу, как только та начинает играть. Когда параметр включён, DiPlay на время CarPlay отключает только музыкальное соединение с iPhone этой сессии и пытается подключить его снова, когда CarPlay завершится; на некоторых головных устройствах это невозможно, и Bluetooth-музыка автомобиля может остаться выключенной после завершения CarPlay. Звонки через Bluetooth автомобиля и сопряжение остаются. Ничего не делает, если звук CarPlay идёт через Bluetooth автомобиля. При подключении кабелем используется iPhone, выбранный в DiPlay. Применяется при следующем подключении.</string>
     <string name="call_echo_cancellation">Подавление эха в звонках (экспериментально)</string>
     <string name="call_echo_cancellation_description">Пытается уменьшить эхо динамиков, которое слышит собеседник при звонках CarPlay. Результат зависит от головного устройства. Применяется при следующем подключении CarPlay.</string>
     <string name="call_voice_filter">Более чёткие голоса в звонках (экспериментально)</string>
@@ -705,7 +710,7 @@
     <string name="settings_direct_video_output">Прямой вывод видео (экспериментально)</string>
     <string name="settings_direct_video_output_description">Передаёт изображение CarPlay напрямую системному компоновщику головного устройства, а не рисует его внутри окна DiPlay. Может уменьшить задержку примерно на одно обновление экрана. Настройки изображения не применяются. Переподключает CarPlay.</string>
     <string name="settings_low_latency_decoder">Декодирование с низкой задержкой (экспериментально)</string>
-    <string name="settings_low_latency_decoder_description">Просит видеодекодеры Qualcomm выдавать каждый кадр сразу после декодирования, не удерживая следующие, и показывает каждый декодированный кадр из отдельного потока, не дожидаясь прихода следующего. Может уменьшить задержку на десятки миллисекунд. Отключите, если на изображении появляются артефакты или оно зависает. Применяется при следующем подключении.</string>
+    <string name="settings_low_latency_decoder_description">Просит видеодекодеры выдавать каждый кадр сразу после декодирования, не удерживая следующие, и показывает каждый декодированный кадр из отдельного потока, не дожидаясь прихода следующего. Сам запрос низкой задержки действует только для декодеров Qualcomm; на других декодерах, включая Spreadtrum, переключатель всё равно включает отдельный поток вывода. Может уменьшить задержку на десятки миллисекунд. Отключите, если на изображении появляются артефакты или оно зависает. Применяется при следующем подключении.</string>
     <string name="settings_fps_counter">Счётчик FPS</string>
     <string name="settings_fps_counter_description">Показывает счётчик в правом верхнем углу CarPlay: кадры на экране в секунду (зелёный от 50, жёлтый от 30, красный ниже), кадры от iPhone в секунду и время декодирования. На неподвижном экране кадров мало, потому что iPhone их не отправляет.</string>
     <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
@@ -788,8 +793,8 @@
     <string name="settings_gesture_disabled_action">Быстрое меню · свайп отключён (нажмите для смены)</string>
     <string name="bt_suspend_delay">Задержка паузы Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d с после подключения</string>
-    <string name="bt_suspend_during_carplay">Приостановить Bluetooth автомобиля при CarPlay · нужен ADB</string>
-    <string name="bt_suspend_during_carplay_description">Телефон держит hands-free связь с автомобилем, поэтому входящий звонок звонит и в телефоне автомобиля, и в CarPlay. При включении: Bluetooth автомобиля приостанавливается через ADB на время сеанса CarPlay — звонки идут только в CarPlay; пока Bluetooth выключен, звонки CarPlay идут через динамик и микрофон автомобиля. Включается обратно после сеанса и перед следующим беспроводным соединением. Сопряжение не затрагивается. Применится при следующем подключении.</string>
+    <string name="bt_suspend_during_carplay">Приостановить Bluetooth автомобиля при CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Телефон держит hands-free связь с автомобилем, поэтому входящий звонок звонит и в телефоне автомобиля, и в CarPlay. При включении: Bluetooth автомобиля приостанавливается на время сеанса CarPlay — звонки идут только в CarPlay; пока Bluetooth выключен, звонки CarPlay идут через динамик и микрофон автомобиля. Включается обратно после сеанса и перед следующим беспроводным соединением. Сопряжение не затрагивается. Применится при следующем подключении. На Android 13 и новее нужен ADB.</string>
     <string name="cluster_small_window_card_theme">Тема карточки в малом окне</string>
     <string name="cluster_small_window_card_theme_follow">Следовать теме карточки</string>
     <string name="cluster_small_window_card_size">Карточка в малом окне · размер</string>
@@ -884,6 +889,8 @@
     <string name="settings_call_at_call_rate_description">Предлагает звонки как PCM на собственной частоте звонка (8, 16, 24 или 32 кГц) вместо Opus 48 кГц, как штатный приёмник CarPlay. Только для USB-кабеля: без проводов iPhone тогда оставлял весь звук CarPlay у себя, поэтому беспроводное подключение предлагает обычные форматы. Применяется при следующем подключении. Если во время звонка нет звука, отключите.</string>
     <string name="settings_wheel_long_press_seek">Долгое нажатие «далее/назад» для перемотки (экспериментально)</string>
     <string name="settings_wheel_long_press_seek_description">На головных устройствах, где руль отправляет отдельные клавиши долгого нажатия «далее» и «назад» (BYD DiLink 3), долгое нажатие перематывает вперёд или назад примерно 2,5 секунды, а не ничего не делает. С iPhone ещё не проверено. Применяется при следующем подключении.</string>
+    <string name="settings_declare_automatic_appearance">Сообщать iPhone, что оформление CarPlay автоматическое (экспериментально)</string>
+    <string name="settings_declare_automatic_appearance_description">При подключении iPhone DiPlay сообщает ему, что CarPlay и его карта выбирают светлое или тёмное оформление автоматически, как это делается начиная с DiPlay 0.2.16. Если CarPlay не следует настройке «Дневной/ночной режим CarPlay», выключите этот параметр. Применяется со следующего подключения.</string>
     <string name="bluetooth_connections_not_real">Bluetooth Android на этом головном устройстве сообщает о подключении, но до iPhone ничего не доходит: «успешно» подключается даже несуществующая служба. Bluetooth здесь обслуживает собственный модуль производителя, недоступный приложениям, поэтому беспроводной CarPlay на этом головном устройстве работать не может. Попробуйте подключение по USB.</string>
     <string name="bluetooth_cannot_open_connections">Bluetooth Android на этом головном устройстве не может открывать соединения для приложений: в прошивке нет части, через которую подключаются приложения. Звонки и музыка по Bluetooth автомобиля работают как обычно, но беспроводной CarPlay на этом головном устройстве работать не может. Попробуйте подключение по USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">Если Bluetooth там не остаётся включённым, это головное устройство оставляет Bluetooth только для собственных звонков и музыки, и приложениям он недоступен. В таком случае беспроводной CarPlay работать не может: используйте USB-кабель.</string>
@@ -982,4 +989,5 @@
     <string name="settings_safe_area_fitted_summary">Безопасная область: по вырезу и углам, %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">Недоступно</string>
     <string name="settings_wifi_direct_unsupported_help">В разделе «Настройка подключения» выберите «Встроенная точка доступа автомобиля» или «Существующая Wi-Fi / Одна LAN» и повторите попытку.</string>
+    <string name="wired_teardown_pending">Завершение работы USB ещё выполняется. Отключите iPhone, подождите и нажмите «%1$s».</string>
 </resources>

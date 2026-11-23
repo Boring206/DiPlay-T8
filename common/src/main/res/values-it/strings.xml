@@ -599,6 +599,9 @@
     <string name="video_play">Riproduci</string>
     <string name="video_pause">Pausa</string>
     <string name="video_cannot_play">Questo video non può essere riprodotto sullo schermo dell’auto. I video protetti, come Apple TV+, richiedono un ricevitore con licenza.</string>
+    <string name="video_cannot_load">Il video ha smesso di caricarsi. Controlla la connessione e riprova.</string>
+    <string name="video_cannot_play_here">Questo video non può essere riprodotto sullo schermo dell’auto: la head unit non riesce a leggerne o decodificarne il formato.</string>
+    <string name="video_cannot_play_on_car">Questo video non può essere riprodotto sullo schermo dell’auto.</string>
     <string name="navigation_widget_label">Navigazione CarPlay</string>
     <string name="navigation_widget_description">Prossima svolta, distanza, arrivo e brano da CarPlay</string>
     <string name="widget_not_connected">CarPlay non è connesso</string>
@@ -767,6 +770,8 @@
     <string name="main_buffered_audio_description">Le app che lo supportano, come Apple Music, inviano fino a circa due minuti di musica in anticipo, così brevi interruzioni del Wi-Fi non si sentono. Le altre app mantengono lo stream normale. Riconnette CarPlay.</string>
     <string name="settings_car_bluetooth_audio">Audio di CarPlay tramite il Bluetooth dell’auto (sperimentale)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay non offre all’iPhone alcun audio CarPlay, così musica, navigazione e chiamate dovrebbero passare dalla connessione Bluetooth dell’iPhone con l’auto. Tieni l’iPhone associato all’auto e scegli Bluetooth come sorgente audio dell’auto. Se il suono viene riprodotto invece sull’iPhone, disattiva questa opzione. Riconnette CarPlay.</string>
+    <string name="settings_car_music_link_drop">Scollega la musica Bluetooth dell’auto durante CarPlay (sperimentale)</string>
+    <string name="settings_car_music_link_drop_description">Su alcune unità il collegamento musicale Bluetooth dell’auto con l’iPhone mette in pausa la musica di CarPlay appena parte. Con questa opzione, DiPlay scollega solo quel collegamento musicale con l’iPhone di questa sessione mentre CarPlay è attivo e prova a ricollegarlo quando CarPlay termina; su alcune unità non è possibile, e la musica Bluetooth dell’auto può restare scollegata dopo la fine di CarPlay. Le chiamate tramite il Bluetooth dell’auto e l’abbinamento restano. Non fa nulla se l’audio di CarPlay passa dal Bluetooth dell’auto. Via cavo usa l’iPhone scelto in DiPlay. Ha effetto alla prossima connessione.</string>
     <string name="call_echo_cancellation">Cancellazione dell’eco nelle chiamate (sperimentale)</string>
     <string name="call_echo_cancellation_description">Cerca di ridurre l’eco dell’altoparlante inviato all’interlocutore durante le chiamate CarPlay. I risultati dipendono dalla head unit. Si applica alla prossima connessione CarPlay.</string>
     <string name="call_voice_filter">Voci più chiare nelle chiamate (sperimentale)</string>
@@ -782,7 +787,7 @@
     <string name="settings_direct_video_output">Uscita video diretta (sperimentale)</string>
     <string name="settings_direct_video_output_description">Invia l’immagine di CarPlay direttamente al compositor della head unit invece di disegnarla dentro la finestra di DiPlay. Può ridurre il ritardo di circa un aggiornamento dello schermo. Le regolazioni dell’immagine non si applicano. Riconnette CarPlay.</string>
     <string name="settings_low_latency_decoder">Decodifica a bassa latenza (sperimentale)</string>
-    <string name="settings_low_latency_decoder_description">Chiede ai decoder video Qualcomm di emettere ogni fotogramma appena decodificato invece di trattenere i successivi, e mostra ogni fotogramma decodificato da un thread dedicato senza attendere l’arrivo del successivo. Può ridurre il ritardo di decine di millisecondi. Disattivalo se l’immagine mostra artefatti o si blocca. Si applica alla prossima connessione.</string>
+    <string name="settings_low_latency_decoder_description">Chiede ai decoder video di emettere ogni fotogramma appena decodificato invece di trattenere i successivi, e mostra ogni fotogramma decodificato da un thread dedicato senza attendere l’arrivo del successivo. La richiesta di bassa latenza in sé vale solo per i decoder Qualcomm; sugli altri decoder, incluso Spreadtrum, l’opzione attiva comunque il thread dedicato. Può ridurre il ritardo di decine di millisecondi. Disattivalo se l’immagine mostra artefatti o si blocca. Si applica alla prossima connessione.</string>
     <string name="settings_fps_counter">Contatore FPS</string>
     <string name="settings_fps_counter_description">Mostra un contatore nell’angolo in alto a destra di CarPlay: fotogrammi mostrati al secondo (verde da 50, giallo da 30, rosso sotto), fotogrammi ricevuti dall’iPhone al secondo e tempo di decodifica. Uno schermo fermo mostra pochi fotogrammi perché l’iPhone non ne invia.</string>
     <string name="car_button_in_carplay">Pulsante dell’auto in CarPlay</string>
@@ -928,8 +933,8 @@
     <string name="settings_gesture_disabled_action">Menu rapido · scorrimento disattivato (tocca per cambiare)</string>
     <string name="bt_suspend_delay">Ritardo della pausa del Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d s dopo la connessione</string>
-    <string name="bt_suspend_during_carplay">Metti in pausa il Bluetooth dell’auto durante CarPlay · richiede ADB</string>
-    <string name="bt_suspend_during_carplay_description">Il telefono mantiene il collegamento viva voce con l’auto, quindi una chiamata squilla sia sul telefono Bluetooth dell’auto sia su CarPlay. Mentre CarPlay è in funzione, metti in pausa il Bluetooth dell’auto tramite ADB così le chiamate squillano solo su CarPlay; con il Bluetooth spento, le chiamate CarPlay passano dall’altoparlante e dal microfono dell’abitacolo invece che dallo SCO del telefono. Il Bluetooth si riattiva quando CarPlay termina e prima del successivo handshake wireless. L’associazione non viene mai toccata. Le modifiche si applicano alla prossima connessione.</string>
+    <string name="bt_suspend_during_carplay">Metti in pausa il Bluetooth dell’auto durante CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Il telefono mantiene il collegamento viva voce con l’auto, quindi una chiamata squilla sia sul telefono Bluetooth dell’auto sia su CarPlay. Mentre CarPlay è in funzione, metti in pausa il Bluetooth dell’auto così le chiamate squillano solo su CarPlay; con il Bluetooth spento, le chiamate CarPlay passano dall’altoparlante e dal microfono dell’abitacolo invece che dallo SCO del telefono. Il Bluetooth si riattiva quando CarPlay termina e prima del successivo handshake wireless. L’associazione non viene mai toccata. Le modifiche si applicano alla prossima connessione. Su Android 13 e versioni successive è necessario ADB.</string>
     <string name="cluster_small_window_card_theme">Tema della scheda svolta in finestra piccola</string>
     <string name="cluster_small_window_card_theme_follow">Segui il tema della scheda svolta</string>
     <string name="cluster_small_window_card_size">Scheda svolta in finestra piccola · dimensione</string>
@@ -961,6 +966,8 @@
     <string name="settings_call_at_call_rate_description">Offre le chiamate come PCM alla frequenza propria della chiamata (8, 16, 24 o 32 kHz) invece di Opus a 48 kHz, come fa il ricevitore CarPlay originale. Solo con cavo USB: via Wi-Fi l\'iPhone teneva allora per sé tutto l\'audio di CarPlay, quindi la connessione wireless offre i formati abituali. Ha effetto alla prossima connessione. Se una chiamata non ha audio, disattiva questa opzione.</string>
     <string name="settings_wheel_long_press_seek">Pressione lunga su successivo/precedente per avanzare o riavvolgere (sperimentale)</string>
     <string name="settings_wheel_long_press_seek_description">Sulle unità principali il cui volante invia tasti propri per la pressione lunga di successivo e precedente (BYD DiLink 3), una pressione lunga fa avanzare o riavvolgere velocemente per circa 2,5 secondi invece di non fare nulla. Non ancora provato con un iPhone. Si applica alla connessione successiva.</string>
+    <string name="settings_declare_automatic_appearance">Comunica all’iPhone che l’aspetto di CarPlay è automatico (sperimentale)</string>
+    <string name="settings_declare_automatic_appearance_description">Quando l’iPhone si connette, gli comunica che CarPlay e la sua mappa scelgono chiaro o scuro automaticamente, come fa DiPlay dalla 0.2.16. Se CarPlay non segue l’impostazione Modalità giorno/notte di CarPlay, disattiva questa opzione. Si applica alla prossima connessione.</string>
     <string name="bluetooth_connections_not_real">Il Bluetooth Android di questa head unit segnala una connessione, ma nulla arriva all’iPhone: perfino la connessione a un servizio inesistente riesce. Qui il Bluetooth è gestito dal modulo del produttore, che le app non possono usare, quindi CarPlay wireless non può funzionare su questa head unit. Prova una connessione USB.</string>
     <string name="bluetooth_cannot_open_connections">Il Bluetooth Android di questa head unit non può aprire connessioni per le app: il suo firmware omette la parte attraverso cui le app si connettono. Chiamate e musica tramite il Bluetooth dell’auto non sono interessate, ma CarPlay wireless non può funzionare su questa head unit. Prova una connessione USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">Se il Bluetooth non resta attivo, questa head unit tiene il Bluetooth per le proprie chiamate e la propria musica, e le app non possono usarlo. In tal caso CarPlay wireless non può funzionare: usa un cavo USB.</string>
@@ -1072,4 +1079,5 @@
     <string name="settings_safe_area_fitted_summary">Area sicura: adattata a notch e angoli, %1$d x %2$d a (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">Non disponibile</string>
     <string name="settings_wifi_direct_unsupported_help">In Configurazione connessione scegli Hotspot integrato dell’auto o Wi-Fi esistente / Stessa LAN, poi riprova.</string>
+    <string name="wired_teardown_pending">La pulizia USB è ancora in corso. Scollega l’iPhone, attendi e tocca «%1$s».</string>
 </resources>

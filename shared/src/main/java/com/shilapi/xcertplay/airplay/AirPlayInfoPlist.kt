@@ -30,9 +30,11 @@ object AirPlayInfoPlist {
 
     fun build(config: AirPlayConfig): Map<String, Any?> {
         val displays = arrayListOf<Any?>(
-            displayEntry(config.main, STREAM_TYPE_MAIN_SCREEN, MAIN_UUID),
+            displayEntry(config.main, STREAM_TYPE_MAIN_SCREEN, MAIN_UUID, config.declareAutomaticAppearance),
         )
-        config.cluster?.let { displays.add(displayEntry(it, STREAM_TYPE_ALT_SCREEN, ALT_UUID)) }
+        config.cluster?.let {
+            displays.add(displayEntry(it, STREAM_TYPE_ALT_SCREEN, ALT_UUID, config.declareAutomaticAppearance))
+        }
 
         val info = linkedMapOf<String, Any?>(
             "sourceVersion" to config.sourceVersion,
@@ -193,7 +195,16 @@ object AirPlayInfoPlist {
         ),
     )
 
-    private fun displayEntry(display: AirPlayDisplayConfig, type: Int, uuid: String): Map<String, Any?> {
+    /** The appearance keys [AirPlayConfig.declareAutomaticAppearance] adds to each display; 0 means automatic. */
+    private val AUTOMATIC_APPEARANCE_KEYS =
+        listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")
+
+    private fun displayEntry(
+        display: AirPlayDisplayConfig,
+        type: Int,
+        uuid: String,
+        declareAutomaticAppearance: Boolean,
+    ): Map<String, Any?> {
         val widthPhysical = AirPlayDisplaySettings.sanitizeReportedPhysicalMm(
             display.widthPhysicalMm ?: AirPlayDisplaySettings.DEFAULT_WIDTH_PHYSICAL_MM,
         )
@@ -215,12 +226,10 @@ object AirPlayInfoPlist {
             "heightPhysical" to heightPhysical,
             "features" to (display.features ?: (DISPLAY_FEATURE_HIGH_FIDELITY_TOUCH or DISPLAY_FEATURE_KNOBS)),
             "primaryInputDevice" to display.primaryInputDevice,
-            // Declare automatic UI/map appearance before runtime setNightMode commands.
-            "uiAppearanceMode" to 0,
-            "uiAppearanceSetting" to 0,
-            "mapAppearanceMode" to 0,
-            "mapAppearanceSetting" to 0,
         )
+        // On by default since #346; a driver can turn it off for cars where CarPlay ignores setNightMode while they
+        // are declared (#1159).
+        if (declareAutomaticAppearance) AUTOMATIC_APPEARANCE_KEYS.forEach { entry[it] = 0 }
 
         // Several areas let the car move CarPlay between them (another dock edge, the head unit's split
         // screen) with updateViewArea, without reconnecting.

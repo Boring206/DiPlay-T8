@@ -609,6 +609,9 @@
     <string name="video_play">Play</string>
     <string name="video_pause">Pause</string>
     <string name="video_cannot_play">This video can\'t play on the car screen. Protected video, such as Apple TV+, needs a licensed receiver.</string>
+    <string name="video_cannot_load">The video stopped loading. Check the connection and try again.</string>
+    <string name="video_cannot_play_here">This video can\'t play on the car screen: the head unit can\'t read or decode its format.</string>
+    <string name="video_cannot_play_on_car">This video can\'t play on the car screen.</string>
     <string name="navigation_widget_label">CarPlay navigation</string>
     <string name="navigation_widget_description">Next turn, distance, arrival and song from CarPlay</string>
     <string name="widget_not_connected">CarPlay is not connected</string>
@@ -789,6 +792,8 @@
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
     <string name="settings_car_bluetooth_audio">CarPlay audio over the car\'s Bluetooth (experimental)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay offers the iPhone no CarPlay audio, so music, navigation and calls should go over the iPhone\'s Bluetooth connection with the car. Keep the iPhone paired with the car and choose Bluetooth as the car\'s audio source. If the sound plays on the iPhone instead, turn this off. Reconnects CarPlay.</string>
+    <string name="settings_car_music_link_drop">Drop the car\'s Bluetooth music during CarPlay (experimental)</string>
+    <string name="settings_car_music_link_drop_description">On some head units the car\'s own Bluetooth music link with the iPhone pauses CarPlay music as soon as it starts. With this on, DiPlay drops only that music link to this session\'s iPhone while CarPlay runs and tries to connect it again when CarPlay ends; on some head units that isn\'t possible, and the car\'s Bluetooth music can stay off after CarPlay ends. Calls over the car\'s Bluetooth and the pairing stay. Does nothing when CarPlay audio plays over the car\'s Bluetooth. Over a cable it uses the iPhone chosen in DiPlay. Applies at the next connection.</string>
     <string name="call_echo_cancellation">Call echo cancellation (experimental)</string>
     <string name="call_echo_cancellation_description">Tries to reduce speaker echo sent to the other person during CarPlay calls. Results depend on the head unit. Applies at the next CarPlay connection.</string>
     <string name="call_voice_filter">Clearer call voices (experimental)</string>
@@ -804,7 +809,7 @@
     <string name="settings_direct_video_output">Direct video output (experimental)</string>
     <string name="settings_direct_video_output_description">Sends the CarPlay picture straight to the head unit\'s compositor instead of drawing it inside the DiPlay window. Can lower the delay by about one screen refresh. Picture adjustments do not apply. Reconnects CarPlay.</string>
     <string name="settings_low_latency_decoder">Low-latency decoding (experimental)</string>
-    <string name="settings_low_latency_decoder_description">Asks Qualcomm video decoders to output each frame as soon as it is decoded instead of holding the next ones, and shows each decoded frame from a dedicated thread without waiting for the next one to arrive. Can lower the delay by tens of milliseconds. Turn it off if the picture shows artifacts or freezes. Applies at the next connection.</string>
+    <string name="settings_low_latency_decoder_description">Asks video decoders to output each frame as soon as it is decoded instead of holding the next ones, and shows each decoded frame from a dedicated thread without waiting for the next one to arrive. The low-latency request itself applies to Qualcomm decoders; on other decoders, including Spreadtrum, the toggle still enables the dedicated output thread. Can lower the delay by tens of milliseconds. Turn it off if the picture shows artifacts or freezes. Applies at the next connection.</string>
     <string name="settings_fps_counter">FPS counter</string>
     <string name="settings_fps_counter_description">Shows a counter in the top-right corner of CarPlay: frames shown per second (green from 50, yellow from 30, red below), frames received from the iPhone per second, and the decode time. A still screen shows few frames because the iPhone sends none.</string>
     <string name="fps_counter_text" translatable="false">%1$d FPS\nRX %2$d · %3$s</string>
@@ -954,8 +959,8 @@
     <string name="settings_gesture_disabled_action">Quick menu · swipe disabled (tap to change)</string>
     <string name="bt_suspend_delay">Bluetooth pause delay</string>
     <string name="bt_suspend_delay_option">%1$d s after connecting</string>
-    <string name="bt_suspend_during_carplay">Pause car Bluetooth during CarPlay · needs ADB</string>
-    <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth over ADB so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection.</string>
+    <string name="bt_suspend_during_carplay">Pause car Bluetooth during CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection. Android 13 and newer need ADB.</string>
     <string name="cluster_small_window_card_theme">Small-window turn card theme</string>
     <string name="cluster_small_window_card_theme_follow">Follow the turn card theme</string>
     <string name="cluster_small_window_card_size">Small-window turn card · size</string>
@@ -987,6 +992,8 @@
     <string name="settings_call_at_call_rate_description">Offer calls as PCM at the call\'s own rate (8, 16, 24 or 32 kHz) instead of 48 kHz Opus, as the stock CarPlay receiver does. USB cable only: over Wi-Fi the iPhone then kept all CarPlay sound on itself, so wireless sessions offer the usual formats. Takes effect at the next connection. If a call has no sound, turn this off.</string>
     <string name="settings_wheel_long_press_seek">Long-press next/previous to seek (experimental)</string>
     <string name="settings_wheel_long_press_seek_description">On head units whose steering wheel sends its own long-press keys for next and previous (BYD DiLink 3), a long press fast-forwards or rewinds for about 2.5 seconds instead of doing nothing. Not yet tested with an iPhone. Takes effect at the next connection.</string>
+    <string name="settings_declare_automatic_appearance">Tell the iPhone that CarPlay appearance is automatic (experimental)</string>
+    <string name="settings_declare_automatic_appearance_description">When the iPhone connects, tell it that CarPlay and its map choose light or dark automatically, as DiPlay has done since 0.2.16. If CarPlay does not follow the CarPlay day/night mode setting, turn this off. Applies at the next connection.</string>
     <string name="bluetooth_connections_not_real">This head unit’s Android Bluetooth reports a connection, but nothing reaches the iPhone: even a connection to a service that does not exist succeeds. Bluetooth here is handled by the maker’s own module, which apps cannot use, so wireless CarPlay cannot work on this head unit. Try a USB connection.</string>
     <string name="bluetooth_cannot_open_connections">This head unit’s Android Bluetooth cannot open connections for apps: its firmware leaves out the part that apps connect through. Calls and music over the car’s own Bluetooth are not affected, but wireless CarPlay cannot work on this head unit. Try a USB connection.</string>
     <string name="bluetooth_will_not_stay_on_hint">If Bluetooth will not stay on there, this head unit keeps Bluetooth for its own calls and music, and apps cannot use it. Wireless CarPlay cannot work in that case: use a USB cable.</string>
@@ -1085,4 +1092,5 @@
     <string name="settings_safe_area_fitted_summary">Safe area: fitted to the notch and corners, %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">Not available</string>
     <string name="settings_wifi_direct_unsupported_help">Choose Built-in car hotspot or Existing Wi-Fi / Same LAN in Connection setup, then retry.</string>
+    <string name="wired_teardown_pending">USB cleanup is still running. Unplug the iPhone, wait, then tap %1$s.</string>
 </resources>

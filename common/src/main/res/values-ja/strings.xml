@@ -607,6 +607,9 @@
     <string name="video_play">再生</string>
     <string name="video_pause">一時停止</string>
     <string name="video_cannot_play">この動画は車の画面で再生できません。Apple TV+などの保護された動画には認可されたレシーバーが必要です。</string>
+    <string name="video_cannot_load">動画の読み込みが止まりました。接続を確認して、もう一度お試しください。</string>
+    <string name="video_cannot_play_here">この動画は車の画面で再生できません。車載端末がこの形式を読み込めないか、デコードできません。</string>
+    <string name="video_cannot_play_on_car">この動画は車の画面で再生できません。</string>
     <string name="navigation_widget_label">CarPlayナビ</string>
     <string name="navigation_widget_description">次の曲がり角、距離、到着時刻、CarPlayの再生曲</string>
     <string name="widget_not_connected">CarPlayに接続していません</string>
@@ -790,6 +793,8 @@
     <string name="main_buffered_audio_description">Apple Musicなど対応アプリでは音楽を最大約2分先まで受信し、短時間のWi-Fi途切れでも音声が止まらないようにします。非対応アプリでは通常どおり動作します。CarPlayを再接続します。</string>
     <string name="settings_car_bluetooth_audio">車のBluetoothでCarPlay音声を再生（実験的機能）</string>
     <string name="settings_car_bluetooth_audio_description">DiPlayがiPhoneにCarPlay音声の出力先を提供しないことで、音楽・ナビ・通話を車とiPhoneのBluetooth接続で再生します。iPhoneを車とペアリングしたまま、車の音声入力をBluetoothにしてください。音がiPhone本体から出る場合はオフにしてください。CarPlayを再接続します。</string>
+    <string name="settings_car_music_link_drop">CarPlay中は車のBluetoothミュージックを切断（実験的機能）</string>
+    <string name="settings_car_music_link_drop_description">一部のヘッドユニットでは、車自身のiPhoneとのBluetoothミュージック接続が、CarPlayの音楽を再生直後に一時停止させます。オンにすると、CarPlayの動作中はこのセッションのiPhoneとのミュージック接続だけをDiPlayが切断し、CarPlayの終了時に再接続を試みます。一部のヘッドユニットではそれができず、CarPlayの終了後も車のBluetoothミュージックが切断されたままになることがあります。車のBluetoothでの通話とペアリングはそのままです。CarPlayの音声を車のBluetoothで再生している場合は何もしません。ケーブル接続ではDiPlayで選んだiPhoneを使います。次回の接続から有効になります。</string>
     <string name="call_echo_cancellation">通話のエコーキャンセル（実験的機能）</string>
     <string name="call_echo_cancellation_description">CarPlay通話時に相手へ届くスピーカーの反響音を軽減します。効果は車載端末によって異なります。次回接続から有効です。</string>
     <string name="call_voice_filter">通話音声を聞き取りやすくする（実験的機能）</string>
@@ -805,7 +810,7 @@
     <string name="settings_direct_video_output">映像の直接出力（実験的機能）</string>
     <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。CarPlayを再接続します。</string>
     <string name="settings_low_latency_decoder">低遅延デコード（実験的機能）</string>
-    <string name="settings_low_latency_decoder_description">Qualcomm製の映像デコーダーに対し、フレームを保持せずデコード直後に出力するよう要求します。専用スレッドで次のフレームの到着を待たずに表示し、数十ミリ秒の遅延を減らせる場合があります。映像が乱れたり停止したりする場合はオフにしてください。次回の接続から反映されます。</string>
+    <string name="settings_low_latency_decoder_description">映像デコーダーに対し、フレームを保持せずデコード直後に出力するよう要求します。低遅延の要求自体はQualcomm製デコーダーにのみ適用されます。Spreadtrumを含む他のデコーダーでは、この設定でも専用スレッドが有効になります。専用スレッドで次のフレームの到着を待たずに表示し、数十ミリ秒の遅延を減らせる場合があります。映像が乱れたり停止したりする場合はオフにしてください。次回の接続から反映されます。</string>
     <string name="settings_fps_counter">FPSカウンター</string>
     <string name="settings_fps_counter_description">CarPlay右上に表示FPS（50以上は緑、30以上は黄、それ未満は赤）、iPhoneからの受信FPS、デコード時間を表示します。静止画面ではiPhoneが送るフレームが少ないため数値も小さくなります。</string>
     <string name="fps_counter_text">%1$d FPS\n受信 %2$d · %3$s</string>
@@ -953,8 +958,8 @@
     <string name="settings_gesture_disabled_action">クイックメニュー · スワイプ無効（タップして変更）</string>
     <string name="bt_suspend_delay">Bluetoothの一時停止までの時間</string>
     <string name="bt_suspend_delay_option">接続後%1$d秒</string>
-    <string name="bt_suspend_during_carplay">CarPlay中は車のBluetoothを一時停止 · ADBが必要</string>
-    <string name="bt_suspend_during_carplay_description">iPhoneのハンズフリー接続が残っていると、着信が車のBluetooth電話とCarPlayの両方で鳴る場合があります。CarPlay中はADB経由で車のBluetoothを一時停止し、CarPlayだけで着信させます。停止中のCarPlay通話はiPhoneのBluetooth音声経路ではなく、車内のスピーカーとマイクを使います。BluetoothはCarPlay終了時と次のワイヤレス接続の前に再びオンになります。ペアリング情報は変更しません。次回の接続から反映されます。</string>
+    <string name="bt_suspend_during_carplay">CarPlay中は車のBluetoothを一時停止</string>
+    <string name="bt_suspend_during_carplay_description">iPhoneのハンズフリー接続が残っていると、着信が車のBluetooth電話とCarPlayの両方で鳴る場合があります。CarPlay中は車のBluetoothを一時停止し、CarPlayだけで着信させます。停止中のCarPlay通話はiPhoneのBluetooth音声経路ではなく、車内のスピーカーとマイクを使います。BluetoothはCarPlay終了時と次のワイヤレス接続の前に再びオンになります。ペアリング情報は変更しません。次回の接続から反映されます。Android 13以降ではADBが必要です。</string>
     <string name="cluster_small_window_card_theme">小画面の案内カードテーマ</string>
     <string name="cluster_small_window_card_theme_follow">案内カードのテーマに合わせる</string>
     <string name="cluster_small_window_card_size">小画面の案内カード · サイズ</string>
@@ -986,6 +991,8 @@
     <string name="settings_call_at_call_rate_description">通話を48 kHzのOpusではなく、通話本来のレート（8・16・24・32 kHz）のPCMとして提示します。純正のCarPlayレシーバーと同じ方式です。USBケーブル接続のみ：Wi-Fi経由ではiPhoneがCarPlayの音声をすべて自分で再生してしまったため、ワイヤレス接続では通常の形式を提示します。次回の接続から有効になります。通話に音が出ない場合はオフにしてください。</string>
     <string name="settings_wheel_long_press_seek">次へ／前へを長押しで早送り・巻き戻し（実験的機能）</string>
     <string name="settings_wheel_long_press_seek_description">ハンドルが次へ・前への長押しに専用のキーを送るヘッドユニット（BYD DiLink 3）では、長押しすると何も起きない代わりに約2.5秒間早送りまたは巻き戻しします。iPhoneではまだテストされていません。次回の接続から有効になります。</string>
+    <string name="settings_declare_automatic_appearance">CarPlayの外観モードを「自動」とiPhoneに通知（実験的機能）</string>
+    <string name="settings_declare_automatic_appearance_description">iPhoneの接続時に、CarPlayとその地図がライト／ダークを自動で選ぶことを通知します。DiPlay 0.2.16以降と同じ動作です。CarPlayが「CarPlayの昼／夜モード」の設定に従わない場合は、オフにしてください。次回の接続から反映されます。</string>
     <string name="bluetooth_connections_not_real">この車載端末のAndroid Bluetoothは接続中と報告しますが、iPhoneには実際の通信が届きません。存在しないサービスへの接続さえ成功と表示されます。メーカー独自のBluetoothモジュールをアプリが利用できないため、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>
     <string name="bluetooth_cannot_open_connections">この車載端末のAndroid Bluetoothはアプリからの接続を開始できません。アプリが接続に使う部分がファームウェアにありません。車載Bluetoothの通話と音楽には影響しませんが、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>
     <string name="bluetooth_will_not_stay_on_hint">そこでBluetoothをオンのままにできない場合、この車載端末のBluetoothは端末自身の通話と音楽専用で、アプリからは利用できません。その場合ワイヤレスCarPlayは使用できないため、USBケーブルで接続してください。</string>
@@ -1084,4 +1091,5 @@
     <string name="settings_safe_area_fitted_summary">セーフエリア：ノッチと角に合わせて調整、%5$d×%6$d内の(%3$d, %4$d)に%1$d×%2$d</string>
     <string name="settings_wifi_direct_unavailable">利用不可</string>
     <string name="settings_wifi_direct_unsupported_help">「接続設定」で「車載ホットスポット」または「既存のWi-Fi／同一LAN」を選んでから再試行してください。</string>
+    <string name="wired_teardown_pending">USBの終了処理が続いています。iPhoneを外して待ち、「%1$s」をタップしてください。</string>
 </resources>

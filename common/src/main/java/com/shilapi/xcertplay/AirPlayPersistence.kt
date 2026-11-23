@@ -81,7 +81,10 @@ object AirPlayPersistence {
     private const val KEY_SPEECH_WITHOUT_8_16_KHZ = "speech_without_8_16_khz"
     private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
     private const val KEY_WHEEL_LONG_PRESS_SEEK = "wheel_long_press_seek"
+    private const val KEY_DECLARE_AUTOMATIC_APPEARANCE = "declare_automatic_appearance"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
+    /** Read by CarPlayController under the same name. */
+    private const val KEY_CAR_MUSIC_LINK_DROP = "car_music_link_drop"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
     private const val KEY_CALL_SPEAKERPHONE = "call_speakerphone"
@@ -781,12 +784,33 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_WHEEL_LONG_PRESS_SEEK, enabled).apply()
     }
 
+    /**
+     * Declare automatic UI and map appearance on every display in /info. On by default, as every release since
+     * 0.2.16 did for all cars (#346); a driver can turn it off where CarPlay does not follow the day/night mode
+     * (#1159). Experimental, applies at reconnect.
+     */
+    fun loadDeclareAutomaticAppearance(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, true)
+
+    fun saveDeclareAutomaticAppearance(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, enabled).apply()
+    }
+
     /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */
     fun loadCarBluetoothAudio(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CAR_BLUETOOTH_AUDIO, false)
 
     fun saveCarBluetoothAudio(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CAR_BLUETOOTH_AUDIO, enabled).apply()
+    }
+
+    /** Drop the car's own Bluetooth music link to the session's iPhone while CarPlay runs (#1343); applies at reconnect. */
+    fun loadCarMusicLinkDrop(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CAR_MUSIC_LINK_DROP, false)
+
+    fun saveCarMusicLinkDrop(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CAR_MUSIC_LINK_DROP, enabled).apply()
     }
 
     fun loadSmoothVideo(context: Context): Boolean =

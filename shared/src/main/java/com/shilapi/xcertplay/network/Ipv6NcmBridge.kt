@@ -4,10 +4,13 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.shilapi.xcertplay.transport.EthernetIpv6Codec
 import com.shilapi.xcertplay.transport.NcmUsbBridge
+import com.shilapi.xcertplay.transport.UsbNeighborDiscovery
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.LockSupport
@@ -16,17 +19,53 @@ import java.util.concurrent.locks.LockSupport
  * Moves IPv6 packets between an Android VpnService tun and the iPhone NCM Ethernet link.
  *
  * NCM carries Ethernet frames while the tun is a layer-3 device, so this bridge strips and
- * restores the Ethernet II header. Link-local neighbor discovery stays in the Android kernel,
- * mirroring LIVI's reliance on the host kernel for NDP on its TAP interface.
+ * restores the Ethernet II header. Solicitations for our USB address are answered on the
+ * Ethernet side. On one MT6580/Android 8.1 unit, multicast routing through Wi-Fi coincided
+ * with failed USB neighbor discovery.
  */
-class Ipv6NcmBridge(
-    private val ncm: NcmUsbBridge,
-    private val tun: ParcelFileDescriptor,
+internal interface Ipv6NcmTransport : Closeable {
+    fun recv(timeoutMillis: Long): ByteArray?
+    fun send(frame: ByteArray, timeoutMillis: Int): Boolean
+    fun trySendAdvertisement(frame: ByteArray, timeoutMillis: Int): Boolean
+}
+
+private class UsbIpv6NcmTransport(private val bridge: NcmUsbBridge) : Ipv6NcmTransport {
+    override fun recv(timeoutMillis: Long) = bridge.recv(timeoutMillis)
+    override fun send(frame: ByteArray, timeoutMillis: Int) = bridge.send(frame, timeoutMillis)
+    override fun trySendAdvertisement(frame: ByteArray, timeoutMillis: Int) =
+        bridge.trySendAdvertisement(frame, timeoutMillis)
+    override fun close() = bridge.close()
+}
+
+internal interface Ipv6Tun : Closeable {
+    fun input(): InputStream
+    fun output(): OutputStream
+}
+
+private class DescriptorIpv6Tun(private val descriptor: ParcelFileDescriptor) : Ipv6Tun {
+    override fun input(): InputStream = FileInputStream(descriptor.fileDescriptor)
+    override fun output(): OutputStream = FileOutputStream(descriptor.fileDescriptor)
+    override fun close() = descriptor.close()
+}
+
+internal class Ipv6NcmBridge(
+    private val ncm: Ipv6NcmTransport,
+    private val tun: Ipv6Tun,
     private val hostMac: ByteArray,
+    private val hostAddress: ByteArray,
     private val onError: (Throwable) -> Unit,
 ) : Closeable {
+    constructor(
+        ncm: NcmUsbBridge,
+        tun: ParcelFileDescriptor,
+        hostMac: ByteArray,
+        hostAddress: ByteArray,
+        onError: (Throwable) -> Unit,
+    ) : this(UsbIpv6NcmTransport(ncm), DescriptorIpv6Tun(tun), hostMac, hostAddress, onError)
+
     init {
         require(hostMac.size == EthernetIpv6Codec.MAC_BYTES) { "hostMac must be 6 bytes" }
+        require(hostAddress.size == 16) { "hostAddress must be IPv6" }
     }
 
     @Volatile
@@ -54,14 +93,22 @@ class Ipv6NcmBridge(
 
     override fun close() {
         if (!running.compareAndSet(true, false)) return
-        ncm.close()
-        tun.close()
-        join(ncmToTunThread)
-        join(tunToNcmThread)
+        // Stop TUN writes before closing NCM. One MT6580 unit panicked during USB teardown;
+        // the capture suggests a race but does not establish its complete cause.
+        try {
+            tun.close()
+        } finally {
+            join(tunToNcmThread)
+            try {
+                ncm.close()
+            } finally {
+                join(ncmToTunThread)
+            }
+        }
     }
 
     private fun runNcmToTun() {
-        val output = FileOutputStream(tun.fileDescriptor)
+        val output = tun.output()
         try {
             while (running.get()) {
                 val frame = ncm.recv(READ_TIMEOUT_MILLIS) ?: continue
@@ -79,6 +126,24 @@ class Ipv6NcmBridge(
                     inboundLogBudget--
                     Log.i(TAG, "ncm inbound ${frame.summary(ipv6.payloadOffset)}")
                 }
+                // Avoid allocating an extra packet copy for video/audio/TCP traffic.
+                val advertisement = if (ipv6.payloadLength >= 64 &&
+                    frame[ipv6.payloadOffset + 6].toInt() == 58 &&
+                    (frame[ipv6.payloadOffset + 40].toInt() and 0xff) == 135
+                ) {
+                    UsbNeighborDiscovery.advertisement(
+                        frame.copyOfRange(ipv6.payloadOffset, ipv6.payloadOffset + ipv6.payloadLength),
+                        hostAddress,
+                        hostMac,
+                    )
+                } else null
+                if (advertisement != null && ncm.trySendAdvertisement(
+                        EthernetIpv6Codec.build(hostMac, ipv6.sourceMac, advertisement), ADVERTISEMENT_WRITE_TIMEOUT_MILLIS,
+                    )
+                ) {
+                    Log.i(TAG, "ncm answered USB neighbor solicitation directly")
+                    continue
+                }
                 output.write(frame, ipv6.payloadOffset, ipv6.payloadLength)
             }
         } catch (error: IOException) {
@@ -89,7 +154,7 @@ class Ipv6NcmBridge(
     }
 
     private fun runTunToNcm() {
-        val input = FileInputStream(tun.fileDescriptor)
+        val input = tun.input()
         val buffer = ByteArray(TUN_READ_BYTES)
         try {
             while (running.get()) {
@@ -174,6 +239,7 @@ class Ipv6NcmBridge(
         const val TAG = "xcertplay-usb"
         const val READ_TIMEOUT_MILLIS = 1_000L
         const val WRITE_TIMEOUT_MILLIS = 2_000
+        const val ADVERTISEMENT_WRITE_TIMEOUT_MILLIS = 50
         const val TUN_READ_BYTES = 4_096
         const val ZERO_READ_BACKOFF_NANOS = 1_000_000L
         const val JOIN_TIMEOUT_MILLIS = 2_000L

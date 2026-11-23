@@ -604,6 +604,9 @@
     <string name="video_play">재생</string>
     <string name="video_pause">일시 정지</string>
     <string name="video_cannot_play">이 동영상은 차량 화면에서 재생할 수 없습니다. Apple TV+처럼 보호된 동영상은 인증된 수신기가 필요합니다.</string>
+    <string name="video_cannot_load">동영상 불러오기가 중단되었습니다. 연결을 확인한 뒤 다시 시도하세요.</string>
+    <string name="video_cannot_play_here">이 동영상은 차량 화면에서 재생할 수 없습니다. 헤드 유닛이 이 형식을 읽거나 디코딩할 수 없습니다.</string>
+    <string name="video_cannot_play_on_car">이 동영상은 차량 화면에서 재생할 수 없습니다.</string>
     <string name="navigation_widget_label">CarPlay 내비게이션</string>
     <string name="navigation_widget_description">CarPlay의 다음 회전 안내, 거리, 도착 정보 및 노래</string>
     <string name="widget_not_connected">CarPlay가 연결되지 않음</string>
@@ -784,6 +787,8 @@
     <string name="main_buffered_audio_description">Apple Music처럼 지원하는 앱은 음악을 최대 약 2분 앞서 전송하므로 짧은 Wi-Fi 끊김이 들리지 않습니다. 다른 앱은 일반 스트림을 사용합니다. CarPlay를 다시 연결합니다.</string>
     <string name="settings_car_bluetooth_audio">차량 Bluetooth로 CarPlay 오디오 재생 (실험 기능)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay는 iPhone에 CarPlay 오디오를 제공하지 않으므로 음악, 내비게이션 및 통화는 iPhone과 차량 간 Bluetooth 연결을 통해 재생되어야 합니다. iPhone을 차량과 페어링된 상태로 두고 차량의 오디오 소스로 Bluetooth를 선택하세요. 소리가 iPhone에서 재생되면 이 기능을 끄세요. CarPlay를 다시 연결합니다.</string>
+    <string name="settings_car_music_link_drop">CarPlay 중 차량 Bluetooth 음악 연결 끊기 (실험 기능)</string>
+    <string name="settings_car_music_link_drop_description">일부 헤드 유닛에서는 차량 자체의 iPhone Bluetooth 음악 연결이 CarPlay 음악이 시작되자마자 일시 정지시킵니다. 켜면 CarPlay가 실행되는 동안 DiPlay가 이 세션의 iPhone과의 음악 연결만 끊고, CarPlay가 끝나면 다시 연결을 시도합니다. 일부 헤드 유닛에서는 이것이 불가능하며, CarPlay가 끝난 뒤에도 차량 Bluetooth 음악이 꺼진 채로 남을 수 있습니다. 차량 Bluetooth 통화와 페어링은 유지됩니다. CarPlay 오디오가 차량 Bluetooth로 재생될 때는 아무것도 하지 않습니다. 케이블 연결에서는 DiPlay에서 선택한 iPhone을 사용합니다. 다음 연결부터 적용됩니다.</string>
     <string name="call_echo_cancellation">통화 에코 제거 (실험 기능)</string>
     <string name="call_echo_cancellation_description">CarPlay 통화 중 상대방에게 전달되는 스피커 에코를 줄입니다. 결과는 헤드 유닛에 따라 다릅니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="call_voice_filter">더 선명한 통화 음성 (실험 기능)</string>
@@ -799,7 +804,7 @@
     <string name="settings_direct_video_output">직접 영상 출력 (실험 기능)</string>
     <string name="settings_direct_video_output_description">CarPlay 화면을 DiPlay 창 안에 그리는 대신 헤드 유닛의 컴포지터로 바로 보냅니다. 화면 새로고침 주기 약 한 번만큼 지연이 줄어들 수 있습니다. 화면 보정은 적용되지 않습니다. CarPlay를 다시 연결합니다.</string>
     <string name="settings_low_latency_decoder">저지연 디코딩 (실험 기능)</string>
-    <string name="settings_low_latency_decoder_description">Qualcomm 동영상 디코더가 다음 프레임을 보류하지 않고 각 프레임을 디코딩하는 즉시 출력하도록 요청하고, 전용 스레드에서 다음 프레임을 기다리지 않고 디코딩된 프레임을 표시합니다. 지연이 수십 밀리초 줄어들 수 있습니다. 화면에 깨짐이 나타나거나 멈추면 끄세요. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_low_latency_decoder_description">동영상 디코더가 다음 프레임을 보류하지 않고 각 프레임을 디코딩하는 즉시 출력하도록 요청하고, 전용 스레드에서 다음 프레임을 기다리지 않고 디코딩된 프레임을 표시합니다. 저지연 요청 자체는 Qualcomm 디코더에만 적용되며, Spreadtrum을 포함한 다른 디코더에서는 이 설정이 전용 출력 스레드를 활성화합니다. 지연이 수십 밀리초 줄어들 수 있습니다. 화면에 깨짐이 나타나거나 멈추면 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="settings_fps_counter">FPS 표시기</string>
     <string name="settings_fps_counter_description">CarPlay 오른쪽 위에 초당 표시 프레임 수(50 이상은 녹색, 30 이상은 노란색, 그 미만은 빨간색), iPhone에서 초당 수신한 프레임 수, 디코딩 시간을 표시합니다. 정지 화면에서는 iPhone이 프레임을 보내지 않으므로 표시되는 프레임 수가 적습니다.</string>
     <string name="car_button_in_carplay">CarPlay의 차량 버튼</string>
@@ -943,8 +948,8 @@
     <string name="settings_gesture_disabled_action">빠른 메뉴 · 스와이프 꺼짐(탭하여 변경)</string>
     <string name="bt_suspend_delay">Bluetooth 일시중지 지연</string>
     <string name="bt_suspend_delay_option">연결 후 %1$d초</string>
-    <string name="bt_suspend_during_carplay">CarPlay 중 차량 Bluetooth 일시중지 · ADB 필요</string>
-    <string name="bt_suspend_during_carplay_description">휴대전화는 차량과 핸즈프리 연결을 유지하므로 차량 Bluetooth 전화와 CarPlay 양쪽에서 통화 벨이 울립니다. CarPlay 실행 중 ADB를 통해 차량 Bluetooth를 일시중지하면 CarPlay에서만 벨이 울립니다. Bluetooth가 꺼져 있으면 CarPlay 통화는 휴대전화 SCO 대신 차량 실내 스피커와 마이크로 재생됩니다. CarPlay가 종료될 때와 다음 무선 핸드셰이크 전에 Bluetooth가 다시 켜집니다. 페어링은 변경되지 않습니다. 다음 연결부터 적용됩니다.</string>
+    <string name="bt_suspend_during_carplay">CarPlay 중 차량 Bluetooth 일시중지</string>
+    <string name="bt_suspend_during_carplay_description">휴대전화는 차량과 핸즈프리 연결을 유지하므로 차량 Bluetooth 전화와 CarPlay 양쪽에서 통화 벨이 울립니다. CarPlay 실행 중 차량 Bluetooth를 일시중지하면 CarPlay에서만 벨이 울립니다. Bluetooth가 꺼져 있으면 CarPlay 통화는 휴대전화 SCO 대신 차량 실내 스피커와 마이크로 재생됩니다. CarPlay가 종료될 때와 다음 무선 핸드셰이크 전에 Bluetooth가 다시 켜집니다. 페어링은 변경되지 않습니다. 다음 연결부터 적용됩니다. Android 13 이상에서는 ADB가 필요합니다.</string>
     <string name="cluster_small_window_card_theme">소형 창 회전 안내 카드 테마</string>
     <string name="cluster_small_window_card_theme_follow">회전 안내 카드 테마 따르기</string>
     <string name="cluster_small_window_card_size">소형 창 회전 안내 카드 · 크기</string>
@@ -1055,6 +1060,8 @@
     <string name="settings_call_at_call_rate_description">기본 CarPlay 수신기처럼 통화 오디오를 48 kHz Opus 대신 통화의 원래 샘플링 레이트(8, 16, 24 또는 32 kHz)의 PCM으로 제공합니다. USB 케이블 전용: Wi-Fi에서는 iPhone이 CarPlay 소리를 모두 자체에서 재생했기 때문에 무선 연결은 일반 형식을 제공합니다. 다음 연결부터 적용됩니다. 통화 소리가 들리지 않으면 끄세요.</string>
     <string name="settings_wheel_long_press_seek">다음/이전 길게 눌러 빨리 감기·되감기 (실험 기능)</string>
     <string name="settings_wheel_long_press_seek_description">스티어링 휠이 다음·이전 길게 누르기에 별도의 키를 보내는 헤드 유닛(BYD DiLink 3)에서 길게 누르면 아무 동작도 하지 않는 대신 약 2.5초 동안 빨리 감거나 되감습니다. 아직 iPhone에서 테스트되지 않았습니다. 다음 연결부터 적용됩니다.</string>
+    <string name="settings_declare_automatic_appearance">CarPlay 모양이 자동임을 iPhone에 알리기 (실험 기능)</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone이 연결될 때 CarPlay와 CarPlay 지도가 라이트 또는 다크를 자동으로 선택한다고 알립니다. DiPlay 0.2.16부터의 동작과 같습니다. CarPlay가 CarPlay 주간/야간 모드 설정을 따르지 않으면 이 설정을 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="chosen_iphone_not_paired">DiPlay에서 선택한 iPhone이 더 이상 차량과 페어링되어 있지 않습니다</string>
     <string name="connection_help_chosen_iphone_not_paired">iPhone을 차량의 Bluetooth와 다시 페어링하거나, DiPlay로 돌아가 iPhone 선택을 눌러 다른 기기를 선택하세요. 그런 다음 다시 시도하세요.</string>
     <string name="connection_help_choose_iphone">여러 기기가 차량과 페어링되어 있습니다. DiPlay로 돌아가 iPhone 선택을 누르고 사용할 iPhone을 선택한 뒤 다시 시도하세요.</string>
@@ -1078,4 +1085,5 @@
     <string name="settings_safe_area_fitted_summary">안전 영역: 노치와 모서리에 맞춤, %1$d x %2$d, (%3$d, %4$d) 위치, 전체 크기 %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">사용할 수 없음</string>
     <string name="settings_wifi_direct_unsupported_help">연결 설정에서 차량 내장 핫스팟 또는 기존 Wi-Fi / 동일 LAN을 선택한 뒤 다시 시도하세요.</string>
+    <string name="wired_teardown_pending">USB 정리가 아직 진행 중입니다. iPhone을 분리하고 기다린 후 ‘%1$s’ 버튼을 누르세요.</string>
 </resources>
