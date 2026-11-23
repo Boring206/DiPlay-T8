@@ -1423,7 +1423,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         presentation.setOnDismissListener {
             if (clusterPresentation === presentation) {
                 clusterPresentation = null
-                com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+                com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
                 updateClusterMapShown()
             }
         }
@@ -1554,7 +1554,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
         clusterSurface = null
         presentations.forEach { runCatching { it.dismiss() } }
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
         controller?.setDashboardMapOutputVisible(false)
     }
 
@@ -1956,8 +1956,15 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
-            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && (!MapMirrors.any || playerMode()))
+        val outputs = com.shilapi.xcertplay.hud.BydNavigationOutputs
+        val signal = outputs.clusterMapSignal(
+            presentation = clusterPresentation != null,
+            confirmedRoute = ClusterActivityOutput.hasConfirmedRoute(),
+            clusterSurface = clusterSurface != null,
+            mirrors = MapMirrors.any,
+            player = playerMode(),
+        )
+        outputs.setClusterMapShown(signal.shown, signal.mirrored)
         // Wheel zoom needs a physical map; centre-screen copies must not suppress that eligibility.
         val surface = clusterSurface?.takeIf { it.isValid }
         val presentation = clusterPresentation
