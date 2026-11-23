@@ -59,7 +59,7 @@ object SettingsBackupCodec {
         "navigation_prompt_audio_focus", "disable_media_key_audio_focus",
         "wireless_enabled", "wifi_direct_scan_pause", "main_buffered_audio",
         "speech_without_8_16_khz", "car_bluetooth_audio", "call_echo_cancellation",
-        "call_voice_filter", "call_speakerphone",
+        "call_voice_filter", "call_speakerphone", "call_media_output",
         "smooth_video", "direct_video_output", "low_latency_decoder", "mtk_decoder_tuning", "fps_counter",
         "adb_cluster_activity_enabled", "platform21_cluster_enabled",
         "center_map_overlay", "center_map_auto_hide", "center_map_follows_dashboard",

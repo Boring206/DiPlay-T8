@@ -300,6 +300,23 @@ class SettingsBackupCodecTest {
     }
 
     @Test
+    fun aFreshInstallTakesCallMediaOutputOnlyAsABoolean() {
+        fun import(value: String) = SettingsBackupCodec.import(context,
+            """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"call_media_output": $value}}}""".toByteArray())
+        for (wrong in listOf("\"yes\"", "1", "1.5")) {
+            prefs("xcertplay_airplay").edit().clear().commit()
+            val outcome = import(wrong)
+            assertEquals(wrong, 0, outcome.applied)
+            assertEquals(wrong, 1, outcome.skipped)
+            // A wrong type must never be stored: getBoolean would throw ClassCastException at the next call.
+            assertFalse(wrong, prefs("xcertplay_airplay").contains("call_media_output"))
+            assertFalse(wrong, AirPlayPersistence.loadCallMediaOutput(context))
+        }
+        assertEquals(1, import("true").applied)
+        assertTrue(AirPlayPersistence.loadCallMediaOutput(context))
+    }
+
+    @Test
     fun aStoredDeclaredKeyStillRejectsAWrongType() {
         AirPlayPersistence.saveHevcEnabled(context, false)
         AirPlayPersistence.saveFps(context, 30)
