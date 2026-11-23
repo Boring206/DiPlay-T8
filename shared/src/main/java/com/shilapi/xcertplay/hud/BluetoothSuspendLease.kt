@@ -181,7 +181,7 @@ object BluetoothPauseEvidence {
     }
 
     /** What the app API did when svc gave no ADB reply; null when the shell answered. */
-    fun appApiLine(path: BluetoothRadioRequest.Path?): String? = when (path) {
+    internal fun appApiLine(path: BluetoothRadioRequest.Path?): String? = when (path) {
         BluetoothRadioRequest.Path.ADAPTER_SENT -> "$PREFIX app API sent the Bluetooth disable"
         BluetoothRadioRequest.Path.ADAPTER_REFUSED -> "$PREFIX app API refused the Bluetooth disable"
         BluetoothRadioRequest.Path.ADAPTER_NOT_ALLOWED -> "$PREFIX app API cannot send the Bluetooth disable on this Android"
