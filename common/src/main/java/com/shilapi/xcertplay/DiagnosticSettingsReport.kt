@@ -21,6 +21,7 @@ internal object DiagnosticSettingsReport {
         "Call settings: call_echo_cancellation=${AirPlayPersistence.loadCallEchoCancellation(context)} " +
             "phone_audio_route=${BydOutputSettings.phoneAudioRoute(context)} " +
             "call_speakerphone=${AirPlayPersistence.loadCallSpeakerphone(context)} " +
+            "call_media_output=${AirPlayPersistence.loadCallMediaOutput(context)} " +
             "hide_byd_call_popup=${AirPlayPersistence.loadHideBydCallPopup(context)} " +
             "bt_suspend_during_carplay=${AirPlayPersistence.loadBtSuspendDuringCarplay(context)} " +
             "bt_suspend_delay_s=${AirPlayPersistence.loadBtSuspendDelaySeconds(context)}; " +

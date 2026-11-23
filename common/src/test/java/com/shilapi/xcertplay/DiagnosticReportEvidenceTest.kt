@@ -50,6 +50,7 @@ class DiagnosticReportEvidenceTest {
         AirPlayPersistence.saveCallEchoCancellation(context, true)
         BydOutputSettings.setPhoneAudioRoute(context, false)
         AirPlayPersistence.saveCallSpeakerphone(context, true)
+        AirPlayPersistence.saveCallMediaOutput(context, true)
         AirPlayPersistence.saveHideBydCallPopup(context, true)
         AirPlayPersistence.saveBtSuspendDuringCarplay(context, true)
         AirPlayPersistence.saveBtSuspendDelaySeconds(context, 15)
@@ -61,7 +62,7 @@ class DiagnosticReportEvidenceTest {
         val lines = DiagnosticSettingsReport.lines(context)
         assertEquals(
             "Call settings: call_echo_cancellation=true phone_audio_route=false call_speakerphone=true " +
-                "hide_byd_call_popup=true bt_suspend_during_carplay=true bt_suspend_delay_s=15; " +
+                "call_media_output=true hide_byd_call_popup=true bt_suspend_during_carplay=true bt_suspend_delay_s=15; " +
                 "since app start: callPopupStatus=${BydCallPopupGuard.status}",
             lines[0],
         )
