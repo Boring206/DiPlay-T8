@@ -514,6 +514,65 @@ class CarPlayHostDisplaySizeTest {
         }
     }
 
+    // A replug or a returning surface starts through maybeStartCarPlay, not through the Retry button.
+    @Test @Config(sdk = [30]) fun aStartAfterABlockedWiredStartCanReconnectAgain() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        val retry = View(activity).apply { visibility = View.GONE }
+        setField("startupRetryButton", retry)
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            assertNull(getField("controller"))
+            assertTrue(getField("startupRetryStopped") as Boolean)
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            closed = true
+            invoke("maybeStartCarPlay")
+
+            assertNotNull(getField("controller"))
+            assertFalse("the new session's end must reconnect", getField("startupRetryStopped") as Boolean)
+            assertEquals(View.GONE, retry.visibility)
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    // Disconnect clears the owner, so the screen a driver opens next is not the owner until its first start.
+    @Test @Config(sdk = [30]) fun retryStartsAWiredConnectionThatWasBlockedAfterADisconnect() {
+        activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+        invoke("buildContentView")
+        allowStartup()
+        startSession()
+        CarPlayBackgroundSession.clear()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            val retry = getField("startupRetryButton") as View
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            retry.performClick()
+            assertNull("the old owner still blocks a new controller", getField("controller"))
+            assertEquals("the button must come back", View.VISIBLE, retry.visibility)
+
+            closed = true
+            retry.performClick()
+            assertNotNull("retry must start the connection", getField("controller"))
+            assertEquals(View.GONE, retry.visibility)
+            assertTrue(CarPlayBackgroundSession.isOwner(activity))
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
     @Test @Config(sdk = [30]) fun wiredRestartContinuesAfterTheSinkReleaseWaitTimesOut() {
         allowStartup()
         startSession()

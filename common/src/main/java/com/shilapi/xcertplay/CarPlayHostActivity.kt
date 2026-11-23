@@ -2125,8 +2125,18 @@ open class CarPlayHostActivity : ComponentActivity() {
             text = getString(R.string.retry_carplay_connection)
             visibility = View.GONE
             setOnClickListener {
-                if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
-                    shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
+                if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
+                // A wired start blocked after a disconnect has no session and no owner yet.
+                if (controller == null && !CarPlayBackgroundSession.hasSession()) {
+                    startupRetryBudget.manualRetry()
+                    startupRetryStopped = false
+                    reconnectAttempts = 0
+                    visibility = View.GONE
+                    setConnectionStage(R.string.connecting_to_your_iphone)
+                    maybeStartCarPlay()
+                    return@setOnClickListener
+                }
+                if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity)) return@setOnClickListener
                 startupRetryBudget.manualRetry()
                 startupRetryStopped = false
                 reconnectAttempts = 0
@@ -5700,6 +5710,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         if (CarPlayBackgroundSession.hasSession() && !CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
         if (!wirelessEnabled && showPendingWiredTeardown("start")) return
+        // This is a new attempt: a stop left by a blocked start must not hide its failure or its end.
+        startupRetryStopped = false
+        startupRetryButton?.visibility = View.GONE
         val controllerGeneration = restartGeneration
         // Settings → Connection can change the target while this screen stays open (#696).
         mfiTarget = AirPlayPersistence.loadMfiTarget(this)
