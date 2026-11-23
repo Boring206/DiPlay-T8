@@ -953,8 +953,8 @@
     <string name="settings_gesture_disabled_action">クイックメニュー · スワイプ無効（タップして変更）</string>
     <string name="bt_suspend_delay">Bluetoothの一時停止までの時間</string>
     <string name="bt_suspend_delay_option">接続後%1$d秒</string>
-    <string name="bt_suspend_during_carplay">CarPlay中は車のBluetoothを一時停止 · ADBが必要</string>
-    <string name="bt_suspend_during_carplay_description">iPhoneのハンズフリー接続が残っていると、着信が車のBluetooth電話とCarPlayの両方で鳴る場合があります。CarPlay中はADB経由で車のBluetoothを一時停止し、CarPlayだけで着信させます。停止中のCarPlay通話はiPhoneのBluetooth音声経路ではなく、車内のスピーカーとマイクを使います。BluetoothはCarPlay終了時と次のワイヤレス接続の前に再びオンになります。ペアリング情報は変更しません。次回の接続から反映されます。</string>
+    <string name="bt_suspend_during_carplay">CarPlay中は車のBluetoothを一時停止</string>
+    <string name="bt_suspend_during_carplay_description">iPhoneのハンズフリー接続が残っていると、着信が車のBluetooth電話とCarPlayの両方で鳴る場合があります。CarPlay中は車のBluetoothを一時停止し、CarPlayだけで着信させます。停止中のCarPlay通話はiPhoneのBluetooth音声経路ではなく、車内のスピーカーとマイクを使います。BluetoothはCarPlay終了時と次のワイヤレス接続の前に再びオンになります。ペアリング情報は変更しません。次回の接続から反映されます。Android 13以降ではADBが必要です。</string>
     <string name="cluster_small_window_card_theme">小画面の案内カードテーマ</string>
     <string name="cluster_small_window_card_theme_follow">案内カードのテーマに合わせる</string>
     <string name="cluster_small_window_card_size">小画面の案内カード · サイズ</string>

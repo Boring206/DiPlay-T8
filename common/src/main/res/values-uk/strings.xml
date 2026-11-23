@@ -800,8 +800,8 @@
     <string name="settings_gesture_disabled_action">Швидке меню · свайп вимкнено (торкніться, щоб змінити)</string>
     <string name="bt_suspend_delay">Затримка паузи Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d с після підключення</string>
-    <string name="bt_suspend_during_carplay">Призупинити Bluetooth авто під час CarPlay · потрібен ADB</string>
-    <string name="bt_suspend_during_carplay_description">Телефон тримає hands-free звʼязок з авто, тому вхідний дзвінок звучить і в телефоні авто, і в CarPlay. Після ввімкнення: Bluetooth авто призупиняється через ADB на час сеансу CarPlay — дзвінки йдуть лише в CarPlay; поки Bluetooth вимкнено, дзвінки CarPlay йдуть через динамік і мікрофон авто. Вмикається назад після сеансу і перед наступним бездротовим зʼєднанням. Пара не змінюється. Застосується з наступного підключення.</string>
+    <string name="bt_suspend_during_carplay">Призупинити Bluetooth авто під час CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Телефон тримає hands-free звʼязок з авто, тому вхідний дзвінок звучить і в телефоні авто, і в CarPlay. Після ввімкнення: Bluetooth авто призупиняється на час сеансу CarPlay — дзвінки йдуть лише в CarPlay; поки Bluetooth вимкнено, дзвінки CarPlay йдуть через динамік і мікрофон авто. Вмикається назад після сеансу і перед наступним бездротовим зʼєднанням. Пара не змінюється. Застосується з наступного підключення. На Android 13 і новіших потрібен ADB.</string>
     <string name="cluster_small_window_card_theme">Тема картки в малому вікні</string>
     <string name="cluster_small_window_card_theme_follow">Слідувати темі картки</string>
     <string name="cluster_small_window_card_size">Картка в малому вікні · розмір</string>

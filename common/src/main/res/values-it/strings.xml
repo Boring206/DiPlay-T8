@@ -928,8 +928,8 @@
     <string name="settings_gesture_disabled_action">Menu rapido · scorrimento disattivato (tocca per cambiare)</string>
     <string name="bt_suspend_delay">Ritardo della pausa del Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d s dopo la connessione</string>
-    <string name="bt_suspend_during_carplay">Metti in pausa il Bluetooth dell’auto durante CarPlay · richiede ADB</string>
-    <string name="bt_suspend_during_carplay_description">Il telefono mantiene il collegamento viva voce con l’auto, quindi una chiamata squilla sia sul telefono Bluetooth dell’auto sia su CarPlay. Mentre CarPlay è in funzione, metti in pausa il Bluetooth dell’auto tramite ADB così le chiamate squillano solo su CarPlay; con il Bluetooth spento, le chiamate CarPlay passano dall’altoparlante e dal microfono dell’abitacolo invece che dallo SCO del telefono. Il Bluetooth si riattiva quando CarPlay termina e prima del successivo handshake wireless. L’associazione non viene mai toccata. Le modifiche si applicano alla prossima connessione.</string>
+    <string name="bt_suspend_during_carplay">Metti in pausa il Bluetooth dell’auto durante CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Il telefono mantiene il collegamento viva voce con l’auto, quindi una chiamata squilla sia sul telefono Bluetooth dell’auto sia su CarPlay. Mentre CarPlay è in funzione, metti in pausa il Bluetooth dell’auto così le chiamate squillano solo su CarPlay; con il Bluetooth spento, le chiamate CarPlay passano dall’altoparlante e dal microfono dell’abitacolo invece che dallo SCO del telefono. Il Bluetooth si riattiva quando CarPlay termina e prima del successivo handshake wireless. L’associazione non viene mai toccata. Le modifiche si applicano alla prossima connessione. Su Android 13 e versioni successive è necessario ADB.</string>
     <string name="cluster_small_window_card_theme">Tema della scheda svolta in finestra piccola</string>
     <string name="cluster_small_window_card_theme_follow">Segui il tema della scheda svolta</string>
     <string name="cluster_small_window_card_size">Scheda svolta in finestra piccola · dimensione</string>

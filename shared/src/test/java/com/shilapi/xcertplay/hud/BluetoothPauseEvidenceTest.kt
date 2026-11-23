@@ -53,9 +53,13 @@ class BluetoothPauseEvidenceTest {
     @Test fun aFailedPauseIsExactlyTheOutcomeThatSaysFailed() {
         for (paused in listOf(true, false)) for (before in listOf(true, false, null)) for (current in listOf(true, false)) {
             for (access in listOf(null, "READY", "NOT_APPROVED")) {
-                val outcome = BluetoothPauseOutcome.describe(paused, before, paused || current, access)
-                assertEquals(outcome, outcome.startsWith("car Bluetooth pause failed"),
-                    BluetoothPauseOutcome.failed(paused, before, paused || current))
+                for (path in listOf(null, BluetoothRadioRequest.Path.SHELL,
+                    BluetoothRadioRequest.Path.ADAPTER_SENT, BluetoothRadioRequest.Path.ADAPTER_REFUSED,
+                    BluetoothRadioRequest.Path.ADAPTER_NOT_ALLOWED)) {
+                    val outcome = BluetoothPauseOutcome.describe(paused, before, paused || current, access, path)
+                    assertEquals(outcome, outcome.startsWith("car Bluetooth pause failed"),
+                        BluetoothPauseOutcome.failed(paused, before, paused || current))
+                }
             }
         }
     }
