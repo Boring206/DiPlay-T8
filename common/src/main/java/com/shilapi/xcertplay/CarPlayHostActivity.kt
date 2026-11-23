@@ -2156,8 +2156,18 @@ open class CarPlayHostActivity : ComponentActivity() {
             text = getString(R.string.retry_carplay_connection)
             visibility = View.GONE
             setOnClickListener {
-                if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
-                    shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
+                if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
+                // A wired start blocked after a disconnect has no session and no owner yet.
+                if (controller == null && !CarPlayBackgroundSession.hasSession()) {
+                    startupRetryBudget.manualRetry()
+                    startupRetryStopped = false
+                    reconnectAttempts = 0
+                    visibility = View.GONE
+                    setConnectionStage(R.string.connecting_to_your_iphone)
+                    maybeStartCarPlay()
+                    return@setOnClickListener
+                }
+                if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity)) return@setOnClickListener
                 startupRetryBudget.manualRetry()
                 startupRetryStopped = false
                 reconnectAttempts = 0
@@ -5732,6 +5742,10 @@ open class CarPlayHostActivity : ComponentActivity() {
     private fun startCarPlay(size: DisplaySize) {
         if (CarPlayBackgroundSession.hasSession() && !CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
+        if (!wirelessEnabled && showPendingWiredTeardown("start")) return
+        // This is a new attempt: a stop left by a blocked start must not hide its failure or its end.
+        startupRetryStopped = false
+        startupRetryButton?.visibility = View.GONE
         val controllerGeneration = restartGeneration
         // Settings → Connection can change the target while this screen stays open (#696).
         mfiTarget = AirPlayPersistence.loadMfiTarget(this)
@@ -6313,6 +6327,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         updateCallPopupGuard()
         val oldController = controller
         val oldSink = sink
+        if (oldController?.isWiredTransport == true) WiredTeardownGuard.hold(oldController)
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController, keepOwner = true)
         controller = null
@@ -6324,8 +6339,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         val diagnosticLog = sessionLog
         teardownExecutor.execute {
             val started = System.nanoTime()
-            oldController?.close()
-            val completed = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
+            closeRetiringController(oldController)
+            val completed = oldController?.awaitClosed(
+                if (oldController.isWiredTransport) WIRED_RESTART_CLOSE_TIMEOUT_MILLIS else CONTROLLER_CLOSE_TIMEOUT_MILLIS,
+            ) ?: true
             AsyncDiagnosticLog.append(
                 diagnosticLog,
                 "${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} generation=$generation " +
@@ -6338,9 +6355,39 @@ open class CarPlayHostActivity : ComponentActivity() {
                     handshakeResetInProgress = false
                     // The display can rotate again while the old stack is closing. Use the
                     // latest accepted size, and wait for any pending resize to settle first.
-                    maybeStartCarPlay()
+                    if (wirelessEnabled || !showPendingWiredTeardown("restart")) maybeStartCarPlay()
                 }
             }
+        }
+    }
+
+    private fun showPendingWiredTeardown(operation: String): Boolean {
+        val attempts = WiredTeardownGuard.pendingControllerAttempts()
+        if (attempts.isEmpty()) return false
+        AsyncDiagnosticLog.append(
+            sessionLog,
+            "${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} generation=$restartGeneration " +
+                "$operation blocked wiredTeardown=PENDING controllerAttempts=${attempts.joinToString(",")}",
+        )
+        startupRetryStopped = true
+        startupRetryButton?.visibility = View.VISIBLE
+        setConnectionStage(wiredTeardownPendingMessage())
+        return true
+    }
+
+    private fun wiredTeardownPendingMessage() =
+        getString(R.string.wired_teardown_pending, getString(R.string.retry_carplay_connection))
+
+    /** A wired close can block before its teardown thread starts. Keep that work inside the wait bound. */
+    private fun closeRetiringController(owner: CarPlayController?) {
+        if (owner == null) return
+        if (owner.isWiredTransport) {
+            Thread(owner::close, "diplay-retiring-controller").apply {
+                isDaemon = true
+                start()
+            }
+        } else {
+            owner.close()
         }
     }
 
@@ -6522,6 +6569,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
         val oldSink = sink
+        if (oldController?.isWiredTransport == true) WiredTeardownGuard.hold(oldController)
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController)
         controller = null
@@ -6531,7 +6579,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         discardLastPicture()
         Log.i(TAG, "shutdown reason=$reason terminateProcess=$terminateProcess")
         teardownExecutor.execute {
-            oldController?.close()
+            closeRetiringController(oldController)
             val clean = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
             oldSink?.let(::closeRetiringSink)
             airPlayCommandExecutor.shutdown()
@@ -6967,6 +7015,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         message == getString(R.string.could_not_start_carplay_return_to_diplay_and_check_app_per) -> message
         message == getString(R.string.waiting_for_mfi_coprocessor) ||
             message == getString(R.string.requesting_mfi_usb_permission) -> message
+        message == wiredTeardownPendingMessage() -> message
         // A startup failure that names its cause, and a line saying the retries stopped, are shown as they are.
         // "Getting CarPlay ready…" or "Retrying…" in their place said DiPlay was still connecting (#809).
         message == getString(R.string.hotspot_network_not_ready) || message == getString(R.string.first_tcp_timeout) ||
@@ -7168,6 +7217,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         const val RECONNECT_DELAY_MILLIS = 2_000L
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L
         const val CONTROLLER_CLOSE_TIMEOUT_MILLIS = 4_000L
+        const val WIRED_RESTART_CLOSE_TIMEOUT_MILLIS = 20_000L
         const val AUDIO_CAPTURE_MARKER = "audio-capture.enabled"
         const val AUDIO_CAPTURE_DIRECTORY = "audio-captures"
         const val PROTOCOL_TRACE_PREFIX = "TRACE "

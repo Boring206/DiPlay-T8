@@ -1090,4 +1090,5 @@
     <string name="settings_safe_area_fitted_summary">Safe area: fitted to the notch and corners, %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">Not available</string>
     <string name="settings_wifi_direct_unsupported_help">Choose Built-in car hotspot or Existing Wi-Fi / Same LAN in Connection setup, then retry.</string>
+    <string name="wired_teardown_pending">USB cleanup is still running. Unplug the iPhone, wait, then tap %1$s.</string>
 </resources>

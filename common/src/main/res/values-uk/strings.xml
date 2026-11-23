@@ -999,4 +999,5 @@
     <string name="settings_safe_area_fitted_summary">Безпечна область: за вирізом і кутами, %1$d x %2$d у точці (%3$d, %4$d) на екрані %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">Недоступно</string>
     <string name="settings_wifi_direct_unsupported_help">У розділі «Налаштування підключення» виберіть «Вбудована точка доступу автомобіля» або «Наявна Wi-Fi / Одна LAN» і повторіть спробу.</string>
+    <string name="wired_teardown_pending">Завершення роботи USB ще триває. Від’єднайте iPhone, зачекайте та натисніть «%1$s».</string>
 </resources>

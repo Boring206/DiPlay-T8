@@ -987,4 +987,5 @@
     <string name="settings_safe_area_fitted_summary">Zona segura: ajustada a la muesca y las esquinas, %1$d x %2$d en (%3$d, %4$d) dentro de %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">No disponible</string>
     <string name="settings_wifi_direct_unsupported_help">En «Configuración de conexión», elige «Punto de acceso integrado del coche» o «Wi-Fi existente / Misma LAN» y reintenta.</string>
+    <string name="wired_teardown_pending">La limpieza USB sigue en curso. Desconecta el iPhone, espera y pulsa «%1$s».</string>
 </resources>

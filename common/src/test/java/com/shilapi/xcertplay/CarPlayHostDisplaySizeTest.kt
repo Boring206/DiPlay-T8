@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.graphics.Matrix
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
@@ -22,6 +23,8 @@ import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
 import java.time.Duration
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
 import org.junit.Assert.*
@@ -38,6 +41,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.shadows.ShadowDisplayManager
 import org.robolectric.shadows.ShadowLog
+import org.robolectric.shadows.ShadowProcess
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -689,6 +693,207 @@ class CarPlayHostDisplaySizeTest {
         assertSessionSize(1920, 990)
         assertNull(getField("pendingDisplaySize"))
         assertEquals(1, getField("restartGeneration"))
+    }
+
+    @Test @Config(sdk = [30]) fun wiredRestartTimesOutButDoesNotStartUntilOldOwnerCloses() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", old)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.diagnosticAttempt).thenReturn(17)
+        val diagnosticLog = SessionLogFile(java.io.File(activity.cacheDir, "wired-guard.log"))
+        diagnosticLog.reset("test")
+        setField("sessionLog", diagnosticLog)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        try {
+            activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+                .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+            finishTeardown()
+            assertFalse(getField("handshakeResetInProgress") as Boolean)
+            assertTrue(getField("startupRetryStopped") as Boolean)
+            assertNull("timed-out owner must block a new controller", getField("controller"))
+            invoke("maybeStartCarPlay")
+            assertNull("retry must remain blocked while owner is active", getField("controller"))
+            org.mockito.Mockito.verify(old).awaitClosed(20_000L)
+            assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
+            val diagnostic = diagnosticLog.file.readText()
+            assertTrue(diagnostic.contains("restart blocked wiredTeardown=PENDING controllerAttempts=17"))
+            assertTrue(diagnostic.contains("start blocked wiredTeardown=PENDING controllerAttempts=17"))
+            closed = true
+            invoke("maybeStartCarPlay")
+            assertNotNull("a retry may start when the old owner closes", getField("controller"))
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+            diagnosticLog.close()
+            setField("sessionLog", null)
+        }
+    }
+
+    @Test @Config(sdk = [30]) fun blockedSynchronousCloseShowsRetryWithoutStartingAnotherController() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        var closed = false
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        org.mockito.Mockito.doAnswer {
+            started.countDown()
+            release.await(3, TimeUnit.SECONDS)
+            null
+        }.`when`(old).close()
+        setField("controller", old)
+        val retry = View(activity).apply { visibility = View.GONE }
+        val stage = android.widget.TextView(activity)
+        setField("startupRetryButton", retry)
+        setField("stageStatusView", stage)
+        try {
+            activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+                .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+            finishTeardown()
+            assertTrue("close started on a separate thread", started.await(2, TimeUnit.SECONDS))
+            assertEquals(View.VISIBLE, retry.visibility)
+            assertEquals(activity.getString(R.string.wired_teardown_pending, activity.getString(R.string.retry_carplay_connection)),
+                stage.text.toString())
+            assertFalse(getField("handshakeResetInProgress") as Boolean)
+            assertNull("blocked close must prevent replacement", getField("controller"))
+        } finally {
+            closed = true
+            release.countDown()
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    // A replug or a returning surface starts through maybeStartCarPlay, not through the Retry button.
+    @Test @Config(sdk = [30]) fun aStartAfterABlockedWiredStartCanReconnectAgain() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        val retry = View(activity).apply { visibility = View.GONE }
+        setField("startupRetryButton", retry)
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            assertNull(getField("controller"))
+            assertTrue(getField("startupRetryStopped") as Boolean)
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            closed = true
+            invoke("maybeStartCarPlay")
+
+            assertNotNull(getField("controller"))
+            assertFalse("the new session's end must reconnect", getField("startupRetryStopped") as Boolean)
+            assertEquals(View.GONE, retry.visibility)
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    // Disconnect clears the owner, so the screen a driver opens next is not the owner until its first start.
+    @Test @Config(sdk = [30]) fun retryStartsAWiredConnectionThatWasBlockedAfterADisconnect() {
+        activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+        invoke("buildContentView")
+        allowStartup()
+        startSession()
+        CarPlayBackgroundSession.clear()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        var closed = false
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer { closed }
+        WiredTeardownGuard.hold(old)
+        try {
+            invoke("maybeStartCarPlay")
+            val retry = getField("startupRetryButton") as View
+            assertEquals(View.VISIBLE, retry.visibility)
+
+            retry.performClick()
+            assertNull("the old owner still blocks a new controller", getField("controller"))
+            assertEquals("the button must come back", View.VISIBLE, retry.visibility)
+
+            closed = true
+            retry.performClick()
+            assertNotNull("retry must start the connection", getField("controller"))
+            assertEquals(View.GONE, retry.visibility)
+            assertTrue(CarPlayBackgroundSession.isOwner(activity))
+        } finally {
+            closed = true
+            WiredTeardownGuard.pendingControllerAttempts()
+        }
+    }
+
+    @Test @Config(sdk = [30]) fun wiredRestartContinuesAfterTheSinkReleaseWaitTimesOut() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val oldSink = org.mockito.Mockito.mock(AndroidMediaSink::class.java)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true)
+        setField("controller", old)
+        setField("sink", oldSink)
+        setField("sinkReleaseWaitMillis", 50L)
+
+        activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+            .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+        finishTeardown()
+
+        org.mockito.Mockito.verify(oldSink).close()
+        org.mockito.Mockito.verify(oldSink).awaitVideoReleased(50L)
+        assertNotNull("decoder release must not gate USB ownership", getField("controller"))
+    }
+
+    @Test @Config(sdk = [30]) fun wirelessRestartClosesTheControllerOnTheTeardownExecutor() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", old)
+        val closeThreads = java.util.concurrent.LinkedBlockingQueue<Thread>()
+        val waitThreads = java.util.concurrent.LinkedBlockingQueue<Thread>()
+        org.mockito.Mockito.doAnswer { closeThreads.add(Thread.currentThread()); null }.`when`(old).close()
+        org.mockito.Mockito.`when`(old.awaitClosed(4_000L)).thenAnswer {
+            waitThreads.add(Thread.currentThread())
+            true
+        }
+
+        activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+            .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+        finishTeardown()
+
+        val closeThread = closeThreads.poll(2, TimeUnit.SECONDS)
+        assertNotNull(closeThread)
+        assertSame(closeThread, waitThreads.poll(2, TimeUnit.SECONDS))
+    }
+
+    @Test @Config(sdk = [30]) fun exitAfterWiredSessionStopsVpnAndEndsProcessEvenIfTeardownTimesOut() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        val oldSink = org.mockito.Mockito.mock(AndroidMediaSink::class.java)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        setField("controller", old)
+        setField("sink", oldSink)
+        setField("sinkReleaseWaitMillis", 50L)
+        ShadowProcess.clearKilledProcesses()
+        try {
+            invoke("exitApplication")
+            finishTeardown()
+
+            org.mockito.Mockito.verify(oldSink).close()
+            org.mockito.Mockito.verify(oldSink).awaitVideoReleased(50L)
+            val stoppedServices = generateSequence { shadowOf(activity.application).nextStoppedService }
+            assertTrue(stoppedServices.any { it.component?.className ==
+                com.shilapi.xcertplay.network.CarPlayVpnService::class.java.name })
+            assertTrue(ShadowProcess.wasKilled(Process.myPid()))
+        } finally {
+            org.mockito.Mockito.`when`(old.awaitClosed(0)).thenReturn(true)
+            WiredTeardownGuard.pendingControllerAttempts()
+            ShadowProcess.clearKilledProcesses()
+        }
     }
 
     @Test @Config(sdk = [30]) fun teardownRechecksStartupPrerequisites() {

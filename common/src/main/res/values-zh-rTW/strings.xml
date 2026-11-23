@@ -1047,4 +1047,5 @@
     <string name="settings_safe_area_fitted_summary">安全區域：已避開瀏海和圓角，%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">無法使用</string>
     <string name="settings_wifi_direct_unsupported_help">請在「連線設定」選擇「車載熱點」或「現有 Wi-Fi / 同一區域網路」，再重試。</string>
+    <string name="wired_teardown_pending">USB 清理仍在進行中。請拔除 iPhone，稍候，然後點按「%1$s」。</string>
 </resources>

@@ -1075,4 +1075,5 @@
     <string name="settings_safe_area_fitted_summary">Güvenli alan: çentiğe ve köşelere uyarlandı, %5$d x %6$d içinde (%3$d, %4$d) konumunda %1$d x %2$d</string>
     <string name="settings_wifi_direct_unavailable">Kullanılamıyor</string>
     <string name="settings_wifi_direct_unsupported_help">Bağlantı kurulumunda Aracın dahili erişim noktası veya Mevcut Wi-Fi / Aynı Yerel Ağ seçeneğini seçin, ardından tekrar deneyin.</string>
+    <string name="wired_teardown_pending">USB temizliği hâlâ sürüyor. iPhone bağlantısını kesin, bekleyin ve “%1$s” seçeneğine dokunun.</string>
 </resources>

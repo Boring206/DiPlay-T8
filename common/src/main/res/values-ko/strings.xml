@@ -1083,4 +1083,5 @@
     <string name="settings_safe_area_fitted_summary">안전 영역: 노치와 모서리에 맞춤, %1$d x %2$d, (%3$d, %4$d) 위치, 전체 크기 %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">사용할 수 없음</string>
     <string name="settings_wifi_direct_unsupported_help">연결 설정에서 차량 내장 핫스팟 또는 기존 Wi-Fi / 동일 LAN을 선택한 뒤 다시 시도하세요.</string>
+    <string name="wired_teardown_pending">USB 정리가 아직 진행 중입니다. iPhone을 분리하고 기다린 후 ‘%1$s’ 버튼을 누르세요.</string>
 </resources>

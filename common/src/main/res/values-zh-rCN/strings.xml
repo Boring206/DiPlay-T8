@@ -1047,4 +1047,5 @@
     <string name="settings_safe_area_fitted_summary">安全区域：已避开刘海和圆角，%1$d x %2$d，位于 (%3$d, %4$d)，画面 %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">不可用</string>
     <string name="settings_wifi_direct_unsupported_help">请在“连接设置”中选择“车载热点”或“现有 Wi-Fi / 同一局域网”，然后重试。</string>
+    <string name="wired_teardown_pending">USB 清理仍在进行中。请断开 iPhone，稍候，然后点按“%1$s”。</string>
 </resources>
