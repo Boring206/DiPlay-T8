@@ -120,12 +120,23 @@ internal class BluetoothSuspendLease(
 
 /** One report line for each pause attempt, so a report shows why calls still ring on the car (#18). */
 internal object BluetoothPauseOutcome {
-    fun describe(paused: Boolean, radioBefore: Boolean?, stillCurrent: Boolean, adbAccess: String?): String = when {
+    fun describe(
+        paused: Boolean,
+        radioBefore: Boolean?,
+        stillCurrent: Boolean,
+        adbAccess: String?,
+        path: BluetoothRadioRequest.Path? = null,
+    ): String = when {
         paused -> "car Bluetooth paused: Android Bluetooth is off until CarPlay ends"
         !stillCurrent -> "car Bluetooth pause cancelled: CarPlay ended first"
         radioBefore == false -> "car Bluetooth pause skipped: Android Bluetooth was already off"
         radioBefore == null -> "car Bluetooth pause skipped: Android Bluetooth state unknown"
-        adbAccess != null && adbAccess != "READY" -> "car Bluetooth pause failed: ADB access $adbAccess"
+        path == BluetoothRadioRequest.Path.ADAPTER_NOT_ALLOWED ->
+            "car Bluetooth pause failed: ADB access ${adbAccess ?: "unknown"}; app API not available on this Android"
+        path == BluetoothRadioRequest.Path.ADAPTER_REFUSED ->
+            "car Bluetooth pause failed: ADB access ${adbAccess ?: "unknown"}; app API refused"
+        path == BluetoothRadioRequest.Path.ADAPTER_SENT ->
+            "car Bluetooth pause failed: Android Bluetooth stayed on (app API)"
         else -> "car Bluetooth pause failed: Android Bluetooth stayed on"
     }
 
@@ -167,6 +178,14 @@ object BluetoothPauseEvidence {
         if (dump == null) return "$PREFIX bluetooth_manager unavailable"
         return "$PREFIX bluetooth_manager after DiPlay's restore step enabled=${field(dump, "enabled") ?: "unknown"} " +
             "state=${field(dump, "state") ?: "unknown"}"
+    }
+
+    /** What the app API did when svc gave no ADB reply; null when the shell answered. */
+    internal fun appApiLine(path: BluetoothRadioRequest.Path?): String? = when (path) {
+        BluetoothRadioRequest.Path.ADAPTER_SENT -> "$PREFIX app API sent the Bluetooth disable"
+        BluetoothRadioRequest.Path.ADAPTER_REFUSED -> "$PREFIX app API refused the Bluetooth disable"
+        BluetoothRadioRequest.Path.ADAPTER_NOT_ALLOWED -> "$PREFIX app API cannot send the Bluetooth disable on this Android"
+        else -> null
     }
 
     private fun field(dump: String, key: String): String? = dump.lineSequence()

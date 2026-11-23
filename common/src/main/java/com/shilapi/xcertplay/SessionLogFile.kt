@@ -11,6 +11,7 @@ internal class SessionLogFile(val file: File) : Closeable {
     // Raw lines queue here; the writer thread redacts, rotates and writes them in order.
     private val writer: BoundedDiagnosticWriter<String> = BoundedDiagnosticWriter<String>(MAX_PENDING, ::drain)
     private var reportedDrops = 0L
+    private var lateLines = 0
 
     fun reset(header: String) = synchronized(lock) {
         if (!closed) {
@@ -39,6 +40,18 @@ internal class SessionLogFile(val file: File) : Closeable {
 
     /** Synchronous write for callers that are already off the hot path. */
     fun appendNow(line: String) = synchronized(lock) { if (!closed) write(line) }
+
+    /**
+     * Like [appendNow], but also after [close]: teardown evidence that arrives once the CarPlay screen is gone
+     * (a scan pause released, a link handed back after a delay) still lands in this file, so the next report shows it.
+     */
+    fun appendAfterClose(line: String) = synchronized(lock) {
+        if (!closed) return@synchronized write(line)
+        // A newer screen may already own this path: append only, never rotate or truncate here, and keep it short.
+        if (lateLines >= MAX_LATE_LINES) return@synchronized
+        val safe = DiagnosticRedactor.redact(line) ?: return@synchronized
+        if (runCatching { file.appendBytes((safe + "\n").toByteArray()) }.isSuccess) lateLines++
+    }
 
     private fun write(line: String) {
         val safe = DiagnosticRedactor.redact(line) ?: return
@@ -76,6 +89,8 @@ internal class SessionLogFile(val file: File) : Closeable {
         const val MAX_BYTES = 512 * 1024L
         private const val MAX_PENDING = 4096
         private const val CLOSE_FLUSH_MILLIS = 250L
+        /** Teardown evidence after close is a handful of lines; anything beyond this is noise. */
+        private const val MAX_LATE_LINES = 200
         private const val UNKNOWN_SIZE = -1L
         private val ARCHIVE_NAMES = listOf("previous.log") + (2..7).map { "previous-$it.log" }
         val REPORT_NAMES = ARCHIVE_NAMES.reversed() + "diplay.log"

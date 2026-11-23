@@ -111,6 +111,14 @@ class CarPlayHostResolutionTest {
         assertTrue(DisplayDiagnosticSnapshot.report(activity).contains("software_decoder"))
     }
 
+    @Test fun theAppearanceDeclarationFollowsItsSettingAndIsOnUntilTheDriverTurnsItOff() {
+        assertTrue(config(100).declareAutomaticAppearance)
+        AirPlayPersistence.saveDeclareAutomaticAppearance(activity, false)
+        assertFalse(config(100).declareAutomaticAppearance)
+        AirPlayPersistence.saveDeclareAutomaticAppearance(activity, true)
+        assertTrue(config(100).declareAutomaticAppearance)
+    }
+
     private fun config(percent: Int, uiPercent: Int = 100, width: Int = 1920, height: Int = 990): AirPlayConfig {
         set("displayScalePercent", percent)
         set("uiScalePercent", uiPercent)

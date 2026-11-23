@@ -37,6 +37,7 @@ import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.airplay.VideoInCar
 import com.shilapi.xcertplay.airplay.VideoPlaybackDelivery
 import com.shilapi.xcertplay.hud.BydBluetoothSuspend
+import com.shilapi.xcertplay.hud.CarMusicLinkDrop
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.mfi.Iap2MfiAuthenticationClient
@@ -270,6 +271,8 @@ class CarPlayController(
     @Volatile private var csm: Iap2Session? = null
     @Volatile private var activeSession: AirPlaySession? = null
     @Volatile private var requestedDashboardUrl: String? = airPlayConfig.cluster?.initialUrl
+    /** The iPhone this controller opened the wireless iAP2 link to, for [CarMusicLinkDrop]. */
+    @Volatile private var wirelessIphoneAddress: String? = null
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
     private var clusterUiShown = true
@@ -431,6 +434,17 @@ class CarPlayController(
                     !closed && activeSession === session && !session.isClosed
                 }
             }
+            // Wireless: the iPhone the iAP2 link was opened to, so no iPhone has to be chosen. Wired: the chosen one.
+            val sessionIphone = if (config.transport == CarPlayTransport.WIRELESS) {
+                wirelessIphoneAddress
+            } else {
+                config.wirelessBluetoothDeviceAddress
+            }
+            // Settings → Advanced → Video and audio (#1343).
+            CarMusicLinkDrop.start(appContext, this@CarPlayController,
+                enabled = btPrefs.getBoolean("car_music_link_drop", false),
+                carBluetoothAudio = airPlayConfig.disableAudioOutput, address = sessionIphone,
+                stillActive = { !closed && activeSession === session && !session.isClosed }) { debugLog(it) }
             if (replacement) restoreDashboardContent(session)
             debugLog(
                 "AirPlay session active controller=${session.controllerId ?: "unknown"} " +
@@ -447,6 +461,8 @@ class CarPlayController(
                 synchronized(albumReplayLock) { initialArtworkReplay = null }
                 BydNavigationOutputs.endNow(preserveTurnOverlay = !closed && config.transport == CarPlayTransport.WIRELESS)
                 BydBluetoothSuspend.resume(appContext, this@CarPlayController) { debugLog(it) }
+                // Marked as connection diagnostics: the restore lands after the session, and the report keeps those.
+                CarMusicLinkDrop.stop(appContext, this@CarPlayController) { connectionDiagnostic(it) }
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
                 videoListener?.onVideoSessionEnded()
                 synchronized(playbackStatus) {
@@ -815,6 +831,7 @@ class CarPlayController(
         closeSetupStep("wired startup watchdog") { wiredStartWatchdog?.terminate() }
         closeSetupStep("setup keep-alive") { cancelSetupKeepAlive() }
         closeSetupStep("BYD Bluetooth") { BydBluetoothSuspend.resume(appContext, this) { debugLog(it) } }
+        closeSetupStep("car music link") { CarMusicLinkDrop.stop(appContext, this) { connectionDiagnostic(it) } }
         closeSetupStep("startup timer") { startupTimer.shutdownNow() }
         closeSetupStep("manual hotspot") { (hotspot as? ManualHotspotManager)?.close() }
         val teardownStarted = System.nanoTime()
@@ -1551,6 +1568,7 @@ class CarPlayController(
             if (!adapter.isEnabled) throw IOException(BluetoothRadioCheck.RADIO_OFF)
             if (!bluetoothRecoveryComplete) throw IOException("Bluetooth recovery did not complete before the handshake")
             val device = selectWirelessBluetoothDevice(adapter)
+            wirelessIphoneAddress = device.address
             val hostBluetoothMac = accessoryBluetoothMac(adapter)
             debugLog(
                 "wireless selected Bluetooth target name=${device.name ?: "unknown"} " +
@@ -1958,6 +1976,7 @@ class CarPlayController(
                     it.close()
                 }
                 wirelessConnectionProof.activate(generation, session)
+                observeWirelessScreen(generation, session)
                 // Keep wirelessActiveReported false until maybeCompleteWirelessHandoff() closes
                 // the Bluetooth bootstrap after the tunneled iAP2 channel is ready.
                 sessionListener.onSessionActive(session)
@@ -2041,10 +2060,28 @@ class CarPlayController(
         }
     }
 
-    private fun keepBluetoothControlAlive(generation: Int): Boolean = synchronized(wirelessResourceLock) {
-        !closed && phase == Phase.WIRELESS && generation == wirelessGeneration.get() &&
-            !wirelessFailureReported.get() && activeSession != null &&
-            wirelessConnectionProof.hasRenderedFrame(generation)
+    private fun keepBluetoothControlAlive(generation: Int): Boolean {
+        // Asked before taking the lock: the media sink takes its own locks.
+        val screen = mainScreenOutput()
+        return synchronized(wirelessResourceLock) {
+            !closed && phase == Phase.WIRELESS && generation == wirelessGeneration.get() &&
+                !wirelessFailureReported.get() && wirelessSessionUsable(generation, screen)
+        }
+    }
+
+    /** Not under [wirelessResourceLock]: the media sink takes its own locks. */
+    private fun mainScreenOutput(): MainScreenOutput {
+        // Count first: an attach after it shows up as attached, or as a changed count next time.
+        val attachments = media.mainScreenOutputAttachments()
+        return MainScreenOutput(media.hasMainScreenOutput(), attachments)
+    }
+
+    /**
+     * Notes at [session]'s start whether CarPlay is on screen, so a screen attached and left again
+     * before the handoff watchdog fires still counts against audio-only proof (see [wirelessSessionUsable]).
+     */
+    private fun observeWirelessScreen(generation: Int, session: AirPlaySession) {
+        wirelessConnectionProof.observeScreen(generation, session, mainScreenOutput())
     }
 
     /**
@@ -2127,26 +2164,50 @@ class CarPlayController(
         )
     }
 
-    private fun handleWirelessHandoffTimeout(generation: Int) = synchronized(wirelessResourceLock) {
-        if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get() ||
-            !wirelessHandoffRequested.get() || wirelessActiveReported.get() || wirelessTunnelReady.get()) {
-            return@synchronized
+    private fun handleWirelessHandoffTimeout(generation: Int) {
+        // Asked before taking the lock: the media sink takes its own locks.
+        val screen = mainScreenOutput()
+        synchronized(wirelessResourceLock) {
+            if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get() ||
+                !wirelessHandoffRequested.get() || wirelessActiveReported.get() || wirelessTunnelReady.get()) {
+                return
+            }
+            // Session establishment alone also occurs on black-screen failures. A rendered frame
+            // proves that projection is usable when the optional tunneled control is absent; while
+            // CarPlay has been hidden all session no frame can render, and audio from the iPhone
+            // proves it (#1215).
+            if (wirelessSessionUsable(generation, screen)) {
+                if (!wirelessActiveReported.compareAndSet(false, true)) return
+                wirelessHandoffFellBack.set(true)
+                val proof = if (wirelessConnectionProof.hasRenderedFrame(generation)) {
+                    "rendered video"
+                } else {
+                    "iPhone audio while CarPlay is hidden"
+                }
+                // The Bluetooth link is the only iAP2 channel here. Closing it would stop NowPlaying,
+                // route guidance and call updates for the rest of the session, so keep it until the
+                // tunnel really takes over (see maybeCompleteWirelessHandoff).
+                debugLog("wireless handoff fallback after $proof; tunnel iAP2 unavailable; " +
+                    "preserving AirPlay and keeping the Bluetooth bootstrap for iAP2 control")
+                onStatus(CarPlayStatus.WirelessActiveFallback, generation)
+            } else {
+                val session = activeSession
+                debugLog(
+                    "wireless handoff found no working session: session=${session != null} " +
+                        "renderedFrame=${wirelessConnectionProof.hasRenderedFrame(generation)} " +
+                        "audio=${session?.hasReceivedAudio == true} screenAttached=${screen.attached} " +
+                        "screenAttachedDuringSession=${wirelessConnectionProof.screenShown(generation)}",
+                )
+                closeWirelessStack(generation = generation)
+                fail(IOException("Wireless CarPlay handoff timed out waiting for tunnel iAP2"), generation)
+            }
         }
-        // Session establishment alone also occurs on black-screen failures. Only a rendered
-        // frame proves that projection is usable when the optional tunneled control is absent.
-        if (activeSession != null && wirelessConnectionProof.hasRenderedFrame(generation)) {
-            if (!wirelessActiveReported.compareAndSet(false, true)) return@synchronized
-            wirelessHandoffFellBack.set(true)
-            // The Bluetooth link is the only iAP2 channel here. Closing it would stop NowPlaying,
-            // route guidance and call updates for the rest of the session, so keep it until the
-            // tunnel really takes over (see maybeCompleteWirelessHandoff).
-            debugLog("wireless handoff fallback after rendered video; tunnel iAP2 unavailable; " +
-                "preserving AirPlay and keeping the Bluetooth bootstrap for iAP2 control")
-            onStatus(CarPlayStatus.WirelessActiveFallback, generation)
-        } else {
-            closeWirelessStack(generation = generation)
-            fail(IOException("Wireless CarPlay handoff timed out waiting for tunnel iAP2"), generation)
-        }
+    }
+
+    /** See [WirelessConnectionProof.isUsable]. Call with [wirelessResourceLock] held. */
+    private fun wirelessSessionUsable(generation: Int, screen: MainScreenOutput): Boolean {
+        val session = activeSession ?: return false
+        return wirelessConnectionProof.isUsable(generation, session, session.hasReceivedAudio, screen)
     }
 
 
@@ -3315,7 +3376,7 @@ class CarPlayController(
         config.transport == CarPlayTransport.WIRED -> Iap2WiredControlClient.NO_TIMEOUT_MILLIS
         config.locationReportingEnabled -> LOCATION_CONTROL_LOOP_TIMEOUT_MILLIS
         // Identification/authentication remain bounded. The bootstrap loop can extend this
-        // deadline only once this generation has actually rendered a CarPlay frame.
+        // deadline only once this generation's session has shown it works (wirelessSessionUsable).
         else -> CONTROL_LOOP_TIMEOUT_MILLIS
     }
 
@@ -3463,17 +3524,28 @@ class CarPlayController(
     private fun debugLog(message: String) {
         Log.i(IphoneCarPlayConfiguration.TAG, message)
         try {
-            uiListener?.onDebugLog(message)
+            uiListener?.onDebugLog(afterClose(message))
         } catch (error: Exception) {
             Log.w(IphoneCarPlayConfiguration.TAG, "debug log callback failed", error)
         }
     }
 
+    /**
+     * Lines from work that finishes after [close] (a Wi-Fi scan pause or a car Bluetooth pause released on a
+     * worker, a teardown failure) go out as connection diagnostics, which the report keeps after the CarPlay
+     * screen has gone.
+     */
+    private fun afterClose(message: String): String =
+        if (!closed || message.startsWith("$CONNECTION_DIAGNOSTIC_PREFIX ")) message
+        else runCatching { "$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=${diagnosticPhaseName()} $message" }
+            .getOrDefault(message)
+
+    private fun diagnosticPhaseName(): String = if (phase == Phase.IPHONE) "USB_DISCOVERY" else phase.name
+
     private fun connectionDiagnostic(message: String) {
         try {
-            // The redactor reserves "PHONE " for private phone-side log captures.
-            val diagnosticPhase = if (phase == Phase.IPHONE) "USB_DISCOVERY" else phase.name
-            debugLog("$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=$diagnosticPhase $message")
+            // The redactor reserves "PHONE " for private phone-side log captures (see diagnosticPhaseName).
+            debugLog("$CONNECTION_DIAGNOSTIC_PREFIX attempt=$diagnosticAttempt run=${diagnosticRun.get()} phase=${diagnosticPhaseName()} $message")
         } catch (_: Exception) {
             // Optional diagnostics must not change transport or shutdown behavior.
         }
@@ -3488,7 +3560,7 @@ class CarPlayController(
     private fun debugLog(message: String, error: Throwable) {
         Log.w(IphoneCarPlayConfiguration.TAG, message, error)
         try {
-            uiListener?.onDebugLog("$message: ${describeThrowable(error)}")
+            uiListener?.onDebugLog(afterClose("$message: ${describeThrowable(error)}"))
         } catch (callbackError: Exception) {
             Log.w(IphoneCarPlayConfiguration.TAG, "debug log callback failed", callbackError)
         }
@@ -3553,7 +3625,7 @@ class CarPlayController(
         CarPlayStatus.WirelessActive ->
             "STEP handoff/complete: tunnel iAP2 ready; Bluetooth bootstrap released"
         CarPlayStatus.WirelessActiveFallback ->
-            "STEP handoff/fallback: rendered video preserved; tunnel iAP2 unavailable; Bluetooth bootstrap preserved"
+            "STEP handoff/fallback: working AirPlay session preserved; tunnel iAP2 unavailable; Bluetooth bootstrap preserved"
         CarPlayStatus.DiscoveringIphone ->
             "STEP usb/discover: searching for an iPhone USB device"
         CarPlayStatus.WaitingForIphone ->

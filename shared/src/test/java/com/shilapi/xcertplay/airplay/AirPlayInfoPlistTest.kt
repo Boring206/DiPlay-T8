@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.airplay
 
 import com.shilapi.xcertplay.media.OpusEncoderSupport
 import com.shilapi.xcertplay.media.SoftwareOpusEncoder
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -9,22 +10,75 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AirPlayInfoPlistTest {
+    private val appearanceKeys =
+        listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")
+
+    private fun twoDisplayConfig() = AirPlayConfig(
+        deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
+        sourceVersion = "366.0",
+        main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+        cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
+    )
+
+    /** What every release since 0.2.16 puts in /info for one display of [twoDisplayConfig], in wire order. */
+    private fun displaySince0216(uuid: String, type: Int, width: Int, height: Int, heightPhysical: Int) = linkedMapOf<String, Any?>(
+        "uuid" to uuid,
+        "type" to type,
+        "maxFPS" to 60,
+        "widthPixels" to width,
+        "heightPixels" to height,
+        "widthPhysical" to 200,
+        "heightPhysical" to heightPhysical,
+        "features" to 10,
+        "primaryInputDevice" to 1,
+        "uiAppearanceMode" to 0,
+        "uiAppearanceSetting" to 0,
+        "mapAppearanceMode" to 0,
+        "mapAppearanceSetting" to 0,
+        "viewAreas" to listOf(
+            linkedMapOf<String, Any?>(
+                "widthPixels" to width,
+                "heightPixels" to height,
+                "originXPixels" to 0,
+                "originYPixels" to 0,
+                "safeArea" to linkedMapOf<String, Any?>(
+                    "widthPixels" to width,
+                    "heightPixels" to height,
+                    "originXPixels" to 0,
+                    "originYPixels" to 0,
+                    "drawUIOutsideSafeArea" to true,
+                ),
+            ),
+        ),
+        "initialViewArea" to 0,
+    )
+
+    /** The setting must not change a byte for a driver who never touches it (#346, #1159). */
     @Test
-    fun bothDisplaysDeclareAutomaticAppearanceAtConnection() {
-        val config = AirPlayConfig(
-            deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
-            sourceVersion = "366.0",
-            main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
-            cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
+    fun byDefaultTheInfoReplyIsByteForByteTheOneSentSince0216() {
+        val info = AirPlayInfoPlist.build(twoDisplayConfig())
+        val since0216 = LinkedHashMap(info)
+        since0216["displays"] = listOf(
+            displaySince0216(AirPlayInfoPlist.MAIN_UUID, 110, 1280, 720, 113),
+            displaySince0216(AirPlayInfoPlist.ALT_UUID, 111, 960, 360, 75),
         )
-        val displays = AirPlayInfoPlist.build(config)["displays"] as List<*>
+        assertArrayEquals(BplistCodec.encode(since0216), BplistCodec.encode(info))
+    }
+
+    @Test
+    fun turnedOffNoDisplayDeclaresAppearanceAndNothingElseChanges() {
+        val on = AirPlayInfoPlist.build(twoDisplayConfig())
+        val off = AirPlayInfoPlist.build(twoDisplayConfig().copy(declareAutomaticAppearance = false))
+        val displays = off["displays"] as List<*>
         assertEquals(2, displays.size)
         for (display in displays) {
-            val fields = display as Map<*, *>
-            for (key in listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")) {
-                assertEquals(key, 0, fields[key])
-            }
+            for (key in appearanceKeys) assertFalse(key, (display as Map<*, *>).containsKey(key))
         }
+        val onWithoutAppearance = LinkedHashMap(on)
+        onWithoutAppearance["displays"] = (on["displays"] as List<*>).map { display ->
+            (display as Map<*, *>).filterKeys { it !in appearanceKeys }
+        }
+        assertArrayEquals(BplistCodec.encode(onWithoutAppearance), BplistCodec.encode(off))
     }
 
     @Test

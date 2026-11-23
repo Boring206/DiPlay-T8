@@ -11,6 +11,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -120,6 +121,25 @@ class BufferedAudioSessionTest {
                 }
             }
         } finally { old.close(); replacement.close() }
+    }
+
+    @Test
+    fun bufferedMusicShowsTheSessionReceivedAudio() {
+        val delivered = CountDownLatch(1)
+        val engine = CarPlayMediaEngine(object : MediaSink {
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) { delivered.countDown() }
+        })
+        val session = session(media = engine)
+        try {
+            val setup = engine.onBufferedAudio(session, validSetup())!!
+            Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
+                sendFrame(socket, 0, 1024)
+                assertFalse("Queued music is not yet played", session.hasReceivedAudio)
+                engine.onBufferedAudioControl(session, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
+                assertTrue(delivered.await(10, TimeUnit.SECONDS))
+                assertTrue(session.hasReceivedAudio)
+            }
+        } finally { session.close() }
     }
 
     @Test

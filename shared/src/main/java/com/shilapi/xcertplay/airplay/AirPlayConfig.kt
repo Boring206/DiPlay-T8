@@ -111,6 +111,14 @@ data class AirPlayConfig(
      * every earlier version sent. Experimental: whether the iPhone seeks on these usages is untested (#1190).
      */
     val mediaSeekKeys: Boolean = false,
+    /**
+     * Declare uiAppearanceMode, uiAppearanceSetting, mapAppearanceMode and mapAppearanceSetting (all 0, automatic)
+     * on every display in /info. A 2023 Tang (platform 21) needed them to follow the head unit's day/night theme
+     * (#346). While they were declared, CarPlay on a 2024 Yuan Plus (iOS 18) did not follow setNightMode, and on a
+     * Harman head unit (iOS 26) only the map followed it (#1159, #1021). On by default since 0.2.16; off, the
+     * display entries carry no appearance fields, as in 0.2.15.
+     */
+    val declareAutomaticAppearance: Boolean = true,
 )
 
 /** The offer, SETUP and controls must all honor the user's audio-output setting. */

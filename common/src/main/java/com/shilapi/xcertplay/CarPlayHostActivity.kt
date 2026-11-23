@@ -43,6 +43,7 @@ import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.PixelCopy
@@ -800,6 +801,19 @@ open class CarPlayHostActivity : ComponentActivity() {
         applyDisplaySize(size)
     }
 
+    // A size change waited for DiPlay's video player (#1180); checked again once the bars it hid are back.
+    private var videoPlayerHeldSize = false
+    private var videoPlayerSettling = false
+    private val recheckSizeAfterVideoPlayer = Runnable {
+        videoPlayerSettling = false
+        videoPlayerHeldSize = false
+        val view = videoView ?: return@Runnable
+        if (view.width > 0 && view.height > 0) {
+            appendLog("Video player closed; checking the window again at ${view.width}x${view.height}")
+            scheduleDisplaySize(view.width, view.height)
+        }
+    }
+
     private val textureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
             val existing = currentSurface
@@ -1318,6 +1332,13 @@ open class CarPlayHostActivity : ComponentActivity() {
         maybeStartCarPlay()
         applyFullscreenMode()
         if (systemBarsChanged) refreshDisplaySizeAfterLayout()
+        if (videoPlayerHeldSize) {
+            // The bars the video player hid come back about half a second after DiPlay does; until then the
+            // window still has the player's size. Check it once they are back.
+            videoPlayerSettling = true
+            mainHandler.removeCallbacks(recheckSizeAfterVideoPlayer)
+            mainHandler.postDelayed(recheckSizeAfterVideoPlayer, VIDEO_PLAYER_SETTLE_MILLIS)
+        }
         videoView?.post {
             val view = videoView ?: return@post
             if (view.width > 0 && view.height > 0) {
@@ -1423,7 +1444,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         presentation.setOnDismissListener {
             if (clusterPresentation === presentation) {
                 clusterPresentation = null
-                com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+                com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
                 updateClusterMapShown()
             }
         }
@@ -1554,7 +1575,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
         clusterSurface = null
         presentations.forEach { runCatching { it.dismiss() } }
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false, mirrored = false)
         controller?.setDashboardMapOutputVisible(false)
     }
 
@@ -1956,8 +1977,15 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
-            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && (!MapMirrors.any || playerMode()))
+        val outputs = com.shilapi.xcertplay.hud.BydNavigationOutputs
+        val signal = outputs.clusterMapSignal(
+            presentation = clusterPresentation != null,
+            confirmedRoute = ClusterActivityOutput.hasConfirmedRoute(),
+            clusterSurface = clusterSurface != null,
+            mirrors = MapMirrors.any,
+            player = playerMode(),
+        )
+        outputs.setClusterMapShown(signal.shown, signal.mirrored)
         // Wheel zoom needs a physical map; centre-screen copies must not suppress that eligibility.
         val surface = clusterSurface?.takeIf { it.isValid }
         val presentation = clusterPresentation
@@ -2037,6 +2065,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         stopPlayerSettings?.invoke(); stopPlayerSettings = null
         dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
+        mainHandler.removeCallbacks(recheckSizeAfterVideoPlayer)
+        videoPlayerSettling = false
+        videoPlayerHeldSize = false
         mainHandler.removeCallbacks(expireOldLogLines)
         mainHandler.removeCallbacks(pollConfiguration)
         videoSurfaceOwner.clear()
@@ -5172,6 +5203,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             mainBufferedAudio = AirPlayPersistence.loadMainBufferedAudio(this),
             speechWithout8And16Khz = AirPlayPersistence.loadSpeechWithout8And16Khz(this),
             callAtCallRate = AirPlayPersistence.loadCallAtCallRate(this),
+            declareAutomaticAppearance = AirPlayPersistence.loadDeclareAutomaticAppearance(this),
             disableAudioOutput = carBluetoothAudio,
             mediaSeekKeys = AirPlayPersistence.loadWheelLongPressSeek(this),
         )
@@ -5541,8 +5573,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             override fun onDebugLog(message: String) {
                 if (DiagnosticRedactor.redact(message) == null) return
                 if (message.startsWith(CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX + " ")) {
-                    // Retain old-controller teardown evidence without accepting its UI/session state.
-                    AsyncDiagnosticLog.append(diagnosticLog, message)
+                    // Retain old-controller teardown evidence without accepting its UI/session state, also once
+                    // this screen has closed its log.
+                    AsyncDiagnosticLog.append(diagnosticLog, message, afterClose = true)
                     return
                 }
                 runOnUiThread {
@@ -5903,6 +5936,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             maybeStartCarPlay()
             return
         }
+        // The player covering the host now may close before the debounced apply runs; still check the window
+        // again once the bars it hid are back, or that apply reconnects at the player's size (#1180).
+        if (sessionDisplay != null && videoPlayerCoversHost()) videoPlayerHeldSize = true
         pendingDisplaySize = size
         // With a turning screen's square canvas nothing reconnects, so the turn need not wait for the size to settle.
         mainHandler.postDelayed(applyDisplaySize,
@@ -5920,7 +5956,8 @@ open class CarPlayHostActivity : ComponentActivity() {
     private fun applyDisplaySize(size: DisplaySize) {
         val display = sessionDisplay
         if (display != null && applyViewArea(size, display)) return
-        val layoutChanged = displayLayoutChanged(size)
+        val layoutChange = layoutChange(size)
+        val layoutChanged = layoutChange != null
         if (shuttingDown.get()) return
         if (size == activeDisplaySize && !layoutChanged) {
             // Teardown may have removed the session that made this same-size rotation pending.
@@ -5928,6 +5965,18 @@ open class CarPlayHostActivity : ComponentActivity() {
             return
         }
         val previous = activeDisplaySize
+        if (display != null && previous != null && !menuOpen && !handshakeResetInProgress && videoPlayerOverHost()) {
+            // DiPlay's own video player hides the system bars, which grows this window behind it (#1180).
+            // The session size stays as it was, so the check after the player closes compares against it.
+            videoPlayerHeldSize = true
+            val message = "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height} " +
+                "while DiPlay's video player is open; keeping CarPlay session canvas=${display.width}x${display.height} " +
+                "until DiPlay is back" + (layoutChange?.let { " ($it)" } ?: "")
+            appendLog(message)
+            Log.i(TAG, message)
+            videoView?.let { updateVideoLayout(it.width, it.height) }
+            return
+        }
         activeDisplaySize = size
         recordDetectedMaximum(size)
         updateResolutionMenu()
@@ -5962,11 +6011,22 @@ open class CarPlayHostActivity : ComponentActivity() {
             Log.i(TAG, message)
             videoView?.let { updateVideoLayout(it.width, it.height) }
         } else {
+            val why = layoutChange ?: display?.let { "larger than the session window ${it.windowWidth}x${it.windowHeight}" }
             restartCarPlay(
-                "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}",
+                "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}" +
+                    (why?.let { " ($it)" } ?: ""),
             )
         }
     }
+
+    /**
+     * DiPlay's video player is open or opening over this screen, or DiPlay has just come back from it and the
+     * system bars the player hid have not returned yet. Size changes then wait instead of reconnecting (#1180).
+     */
+    private fun videoPlayerOverHost(): Boolean = videoPlayerSettling || videoPlayerCoversHost()
+
+    /** DiPlay's video player is open or opening, and this screen is not in front of it. */
+    private fun videoPlayerCoversHost(): Boolean = CarPlayVideo.playerOnScreen && !hostAppearanceResumed
 
     /**
      * Entering or leaving the head unit's split screen, or turning the screen with a square canvas, moves
@@ -5990,7 +6050,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             Log.i(TAG, "Screen turned before the window resized (${size.width}x${size.height}); waiting for its size")
             return true
         }
-        val turned = previous != null && !split && (previous.height > previous.width) != portrait
+        // Against the screen of the area in use, not the last window's shape: leaving a split window that was
+        // taller than wide on a landscape 16:10 screen is not a turn, and must go back to the full screen (#1176).
+        val turned = previous != null && !split && areas.currentPortrait != portrait
         if (turned && !areas.turnsWithScreen) return false
         if (split) {
             // Against the whole screen, which the system bars (shown in BYD's split screen) do not change.
@@ -6029,22 +6091,48 @@ open class CarPlayHostActivity : ComponentActivity() {
     @Suppress("DEPRECATION")
     private fun displayRotation(): Int = videoView?.display?.rotation ?: windowManager.defaultDisplay.rotation
 
-    private fun displayLayoutChanged(newSize: DisplaySize? = activeDisplaySize): Boolean {
-        val display = sessionDisplay ?: return false
-        if (display.rotation != displayRotation()) return true
-        if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) return true
+    private fun displayLayoutChanged(newSize: DisplaySize? = activeDisplaySize): Boolean = layoutChange(newSize) != null
+
+    /**
+     * Why the window no longer matches the session's layout, or null: the screen turned, the saved system
+     * bars changed, or (with "Adapt multi-window resolution") the window took another shape in multi-window
+     * or in a launcher card or launcher PiP on another display. A full-screen window on the main display
+     * changes shape only as the system bars come and go, for example as another app opens on DiLink 2.0,
+     * and must not reconnect (#1219).
+     */
+    private fun layoutChange(newSize: DisplaySize? = activeDisplaySize): String? {
+        val display = sessionDisplay ?: return null
+        val rotation = displayRotation()
+        if (display.rotation != rotation) return "rotation ${display.rotation} -> $rotation"
+        if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) {
+            return "saved bars hideTop=${display.hideTopBar} -> $hideTopBar hideBottom=${display.hideBottomBar} -> $hideBottomBar"
+        }
         if (newSize != null && newSize.width > 0 && newSize.height > 0 &&
             display.windowWidth > 0 && display.windowHeight > 0) {
+            val where = sharedWindowPlace() ?: return null
             // The negotiated canvas may be square to support screen rotation; compare the
             // actual startup window instead, or every return to a landscape window looks like PiP.
             val baseAspect = display.windowWidth.toDouble() / display.windowHeight
             val currentAspect = newSize.width.toDouble() / newSize.height
             val aspectDiff = kotlin.math.abs(currentAspect / baseAspect - 1.0)
             if (aspectDiff > 0.08 && AirPlayPersistence.loadAdaptPipResolution(this)) {
-                return true
+                return String.format(Locale.ROOT, "%s aspect %.2f -> %.2f, adapt multi-window resolution on",
+                    where, baseAspect, currentAspect)
             }
         }
-        return false
+        return null
+    }
+
+    /**
+     * Where DiPlay's window shares the screen, so "Adapt multi-window resolution" may refit the canvas to its
+     * shape: "multi-window" (split screen, freeform), "display N" when a launcher shows DiPlay on another
+     * display (a launcher card or launcher PiP, which is not Android picture-in-picture and does not report
+     * multi-window), or null for a window on the main display outside multi-window.
+     */
+    private fun sharedWindowPlace(): String? {
+        if (isMultiWindowActive()) return "multi-window"
+        val displayId = (videoView?.display ?: window?.peekDecorView()?.display)?.displayId ?: return null
+        return if (displayId != Display.DEFAULT_DISPLAY) "display $displayId" else null
     }
 
 
@@ -7123,6 +7211,8 @@ open class CarPlayHostActivity : ComponentActivity() {
         private const val NO_PICTURE_RECHECK_MILLIS = 250L
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L
+        /** After the video player closes, how long the bars it hid may take to come back (0.55 s in #1180). */
+        const val VIDEO_PLAYER_SETTLE_MILLIS = 1_500L
         const val CONFIGURATION_POLL_INTERVAL_MILLIS = 2_000L
         const val RECONNECT_DELAY_MILLIS = 2_000L
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L

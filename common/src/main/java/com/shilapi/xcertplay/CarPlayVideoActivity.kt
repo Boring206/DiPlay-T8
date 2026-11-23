@@ -78,6 +78,7 @@ class CarPlayVideoActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CarPlayVideo.playerOnScreen = true
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -100,13 +101,7 @@ class CarPlayVideoActivity : Activity() {
                 // Logcat keeps the cause messages (URLs masked); the report keeps their types only.
                 Log.w(TAG, "player error ${error.errorCodeName}: ${causes(error)}")
                 CarPlayVideo.note(VideoDiagnostics.playerError(error), logcat = false)
-                CarPlayVideo.onPlayerFailed(
-                    when (error.errorCode) {
-                        in 2000..2999 -> VideoInCar.ERROR_NETWORK // IO
-                        in 4000..4999 -> VideoInCar.ERROR_DECODER // decoding
-                        else -> VideoInCar.ERROR_INCOMPATIBLE_ASSET // parsing, DRM, unsupported
-                    },
-                )
+                CarPlayVideo.onPlayerFailed(error.errorCode)
             }
         })
         val view = PlayerView(this).apply {
@@ -332,11 +327,18 @@ class CarPlayVideoActivity : Activity() {
             "validated=${capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)}"
     }
 
+    // Finishing pauses this player before the CarPlay screen resumes, which then checks its window again.
+    override fun onPause() {
+        if (isFinishing && CarPlayVideo.activity === this) CarPlayVideo.onPlayerGone()
+        super.onPause()
+    }
+
     override fun onDestroy() {
         main.removeCallbacks(hideControls)
         main.removeCallbacks(tick)
         if (CarPlayVideo.activity === this) {
             CarPlayVideo.activity = null
+            CarPlayVideo.onPlayerGone()
             CarPlayVideo.onPlayerClosed(if (prepared) player.currentPosition.toInt() else null)
         }
         player.release()

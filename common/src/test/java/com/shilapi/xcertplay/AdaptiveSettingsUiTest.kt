@@ -791,12 +791,15 @@ class AdaptiveSettingsUiTest {
         assertFalse(text(R.string.settings_ambient_title) in vehicle)
         assertFalse(text(R.string.settings_ambient_title) in display)
         assertTrue(text(R.string.side_panel) in advanced)
+        // An experimental /info switch for some cars, not the everyday day/night mode in Display (#1159).
+        assertTrue(text(R.string.settings_declare_automatic_appearance) in advanced)
         assertTrue(display.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(audio.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(vehicle.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_app_appearance)) })
         listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.settings_direct_video_output, R.string.settings_low_latency_decoder, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.settings_disable_media_key_audio_focus, R.string.right_hand_drive, R.string.car_button_in_carplay,
-            R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation).forEach {
+            R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation,
+            R.string.settings_declare_automatic_appearance).forEach {
             assertFalse(text(it), text(it) in display)
         }
     }
@@ -1094,6 +1097,44 @@ class AdaptiveSettingsUiTest {
             assertEquals(0, stops)
         } finally {
             AirPlayPersistence.saveCallAtCallRate(context, false)
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun automaticAppearanceDeclarationIsOnByDefaultAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
+        assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // nothing stored: as every release since 0.2.16
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            PendingReconnect.clear()
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_declare_automatic_appearance) }
+            assertTrue(setting.isChecked)
+
+            setting.performClick()
+
+            assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+
+            setting.performClick()
+
+            assertTrue(setting.isChecked)
+            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertEquals(0, stops)
+        } finally {
+            AirPlayPersistence.saveDeclareAutomaticAppearance(context, true)
             CarPlayBackgroundSession.clear()
             PendingReconnect.clear()
         }

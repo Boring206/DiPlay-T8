@@ -608,6 +608,9 @@
     <string name="video_play">Phát</string>
     <string name="video_pause">Tạm dừng</string>
     <string name="video_cannot_play">Không thể phát video này trên màn hình xe. Video được bảo vệ, như Apple TV+, cần bộ thu được cấp phép.</string>
+    <string name="video_cannot_load">Video đã ngừng tải. Hãy kiểm tra kết nối rồi thử lại.</string>
+    <string name="video_cannot_play_here">Không thể phát video này trên màn hình xe: hệ thống giải trí không đọc hoặc không giải mã được định dạng của video.</string>
+    <string name="video_cannot_play_on_car">Không thể phát video này trên màn hình xe.</string>
     <string name="navigation_widget_label">Dẫn đường CarPlay</string>
     <string name="navigation_widget_description">Lối rẽ tiếp theo, khoảng cách, giờ đến và bài hát từ CarPlay</string>
     <string name="widget_not_connected">CarPlay chưa kết nối</string>
@@ -787,6 +790,8 @@
     <string name="main_buffered_audio_description">Các ứng dụng hỗ trợ, như Apple Music, gửi trước tối đa khoảng hai phút nhạc, nên sẽ không nghe thấy những lúc Wi-Fi gián đoạn ngắn. Các ứng dụng khác vẫn dùng luồng thông thường. Kết nối lại CarPlay.</string>
     <string name="settings_car_bluetooth_audio">Âm thanh CarPlay qua Bluetooth của xe (thử nghiệm)</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay không cung cấp âm thanh CarPlay cho iPhone, nên nhạc, dẫn đường và cuộc gọi sẽ đi qua kết nối Bluetooth của iPhone với xe. Giữ iPhone ghép nối với xe và chọn Bluetooth làm nguồn âm thanh của xe. Nếu âm thanh lại phát trên iPhone, hãy tắt tùy chọn này. Kết nối lại CarPlay.</string>
+    <string name="settings_car_music_link_drop">Ngắt nhạc Bluetooth của xe khi dùng CarPlay (thử nghiệm)</string>
+    <string name="settings_car_music_link_drop_description">Trên một số đầu xe, kết nối nhạc Bluetooth riêng của xe với iPhone sẽ tạm dừng nhạc CarPlay ngay khi nhạc bắt đầu. Khi bật, DiPlay chỉ ngắt kết nối nhạc đó với iPhone của phiên này trong lúc CarPlay chạy và thử kết nối lại khi CarPlay kết thúc; trên một số đầu xe việc này không thực hiện được, và nhạc Bluetooth của xe có thể vẫn tắt sau khi CarPlay kết thúc. Cuộc gọi qua Bluetooth của xe và việc ghép nối vẫn giữ nguyên. Không làm gì khi âm thanh CarPlay phát qua Bluetooth của xe. Khi kết nối bằng cáp, DiPlay dùng iPhone đã chọn trong DiPlay. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="call_echo_cancellation">Khử tiếng vọng cuộc gọi (thử nghiệm)</string>
     <string name="call_echo_cancellation_description">Cố gắng giảm tiếng vọng từ loa gửi đến người bên kia trong cuộc gọi CarPlay. Kết quả tùy thuộc vào hệ thống giải trí. Áp dụng ở lần kết nối CarPlay tiếp theo.</string>
     <string name="call_voice_filter">Giọng nói rõ hơn khi gọi (thử nghiệm)</string>
@@ -802,7 +807,7 @@
     <string name="settings_direct_video_output">Xuất video trực tiếp (thử nghiệm)</string>
     <string name="settings_direct_video_output_description">Gửi hình ảnh CarPlay thẳng tới bộ tổng hợp hình ảnh của hệ thống giải trí thay vì vẽ bên trong cửa sổ DiPlay. Có thể giảm độ trễ khoảng một lần làm mới màn hình. Điều chỉnh hình ảnh không được áp dụng. Kết nối lại CarPlay.</string>
     <string name="settings_low_latency_decoder">Giải mã độ trễ thấp (thử nghiệm)</string>
-    <string name="settings_low_latency_decoder_description">Yêu cầu bộ giải mã video Qualcomm xuất từng khung hình ngay khi giải mã xong thay vì giữ lại các khung tiếp theo, và hiện từng khung đã giải mã từ một luồng xử lý riêng mà không chờ khung tiếp theo đến. Có thể giảm độ trễ vài chục mili giây. Hãy tắt nếu hình ảnh bị nhiễu hoặc đứng hình. Áp dụng ở lần kết nối tiếp theo.</string>
+    <string name="settings_low_latency_decoder_description">Yêu cầu bộ giải mã video xuất từng khung hình ngay khi giải mã xong thay vì giữ lại các khung tiếp theo, và hiện từng khung đã giải mã từ một luồng xử lý riêng mà không chờ khung tiếp theo đến. Bản thân yêu cầu độ trễ thấp chỉ áp dụng cho bộ giải mã Qualcomm; với các bộ giải mã khác, kể cả Spreadtrum, tùy chọn này vẫn bật luồng xuất riêng. Có thể giảm độ trễ vài chục mili giây. Hãy tắt nếu hình ảnh bị nhiễu hoặc đứng hình. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="settings_fps_counter">Bộ đếm FPS</string>
     <string name="settings_fps_counter_description">Hiện bộ đếm ở góc trên bên phải của CarPlay: số khung hình hiển thị mỗi giây (xanh lá từ 50, vàng từ 30, đỏ khi thấp hơn), số khung hình nhận từ iPhone mỗi giây và thời gian giải mã. Màn hình đứng yên sẽ hiện ít khung hình vì iPhone không gửi khung nào.</string>
     <string name="car_button_in_carplay">Nút xe trong CarPlay</string>
@@ -935,8 +940,8 @@
     <string name="settings_gesture_disabled_action">Menu nhanh · đã tắt vuốt (nhấn để thay đổi)</string>
     <string name="bt_suspend_delay">Độ trễ tạm dừng Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d giây sau khi kết nối</string>
-    <string name="bt_suspend_during_carplay">Tạm dừng Bluetooth của xe trong khi dùng CarPlay · cần ADB</string>
-    <string name="bt_suspend_during_carplay_description">Điện thoại giữ kết nối rảnh tay với xe, nên cuộc gọi đổ chuông trên cả điện thoại Bluetooth của xe lẫn CarPlay. Khi CarPlay đang chạy, tạm dừng Bluetooth của xe qua ADB để cuộc gọi chỉ đổ chuông trên CarPlay; khi Bluetooth tắt, cuộc gọi CarPlay dùng loa và micrô trong xe thay vì SCO của điện thoại. Bluetooth bật lại khi CarPlay kết thúc và trước lần bắt tay không dây tiếp theo. Việc ghép nối không bao giờ bị thay đổi. Thay đổi áp dụng ở lần kết nối tiếp theo.</string>
+    <string name="bt_suspend_during_carplay">Tạm dừng Bluetooth của xe trong khi dùng CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Điện thoại giữ kết nối rảnh tay với xe, nên cuộc gọi đổ chuông trên cả điện thoại Bluetooth của xe lẫn CarPlay. Khi CarPlay đang chạy, tạm dừng Bluetooth của xe để cuộc gọi chỉ đổ chuông trên CarPlay; khi Bluetooth tắt, cuộc gọi CarPlay dùng loa và micrô trong xe thay vì SCO của điện thoại. Bluetooth bật lại khi CarPlay kết thúc và trước lần bắt tay không dây tiếp theo. Việc ghép nối không bao giờ bị thay đổi. Thay đổi áp dụng ở lần kết nối tiếp theo. Trên Android 13 trở lên cần ADB.</string>
     <string name="cluster_small_window_card_theme">Chủ đề thẻ chỉ đường ở cửa sổ nhỏ</string>
     <string name="cluster_small_window_card_theme_follow">Theo chủ đề thẻ chỉ đường</string>
     <string name="cluster_small_window_card_size">Thẻ chỉ đường ở cửa sổ nhỏ · kích thước</string>
@@ -968,6 +973,8 @@
     <string name="settings_call_at_call_rate_description">Cung cấp cuộc gọi dưới dạng PCM ở tần số riêng của cuộc gọi (8, 16, 24 hoặc 32 kHz) thay vì Opus 48 kHz, như bộ thu CarPlay gốc. Chỉ dùng với cáp USB: qua Wi-Fi, iPhone khi đó giữ toàn bộ âm thanh CarPlay trên chính nó, nên phiên không dây dùng các định dạng thông thường. Có hiệu lực ở lần kết nối tiếp theo. Nếu cuộc gọi không có âm thanh, hãy tắt tùy chọn này.</string>
     <string name="settings_wheel_long_press_seek">Nhấn giữ tiếp/trước để tua (thử nghiệm)</string>
     <string name="settings_wheel_long_press_seek_description">Trên các hệ thống giải trí có vô lăng gửi phím nhấn giữ riêng cho tiếp và trước (BYD DiLink 3), nhấn giữ sẽ tua tới hoặc tua lui khoảng 2,5 giây thay vì không làm gì. Chưa được thử với iPhone. Có hiệu lực ở lần kết nối tiếp theo.</string>
+    <string name="settings_declare_automatic_appearance">Báo cho iPhone rằng giao diện CarPlay là tự động (thử nghiệm)</string>
+    <string name="settings_declare_automatic_appearance_description">Khi iPhone kết nối, báo cho iPhone rằng CarPlay và bản đồ của nó tự động chọn sáng hoặc tối, như DiPlay vẫn làm từ bản 0.2.16. Nếu CarPlay không theo cài đặt Chế độ ngày/đêm của CarPlay, hãy tắt tùy chọn này. Áp dụng ở lần kết nối tiếp theo.</string>
     <string name="bluetooth_connections_not_real">Bluetooth Android của hệ thống giải trí này báo đã kết nối, nhưng không có gì đến được iPhone: ngay cả kết nối tới một dịch vụ không tồn tại cũng thành công. Bluetooth ở đây do mô-đun riêng của nhà sản xuất xử lý, ứng dụng không dùng được, nên CarPlay không dây không thể hoạt động trên hệ thống giải trí này. Hãy thử kết nối USB.</string>
     <string name="bluetooth_cannot_open_connections">Bluetooth Android của hệ thống giải trí này không thể mở kết nối cho ứng dụng: firmware của nó thiếu phần mà ứng dụng dùng để kết nối. Cuộc gọi và nhạc qua Bluetooth riêng của xe không bị ảnh hưởng, nhưng CarPlay không dây không thể hoạt động trên hệ thống giải trí này. Hãy thử kết nối USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">Nếu Bluetooth không giữ được trạng thái bật ở đó, hệ thống giải trí này đang giữ Bluetooth cho cuộc gọi và nhạc của riêng nó, và ứng dụng không dùng được. Khi đó CarPlay không dây không thể hoạt động: hãy dùng cáp USB.</string>

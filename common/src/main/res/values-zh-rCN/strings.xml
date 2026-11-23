@@ -569,6 +569,9 @@
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
     <string name="video_cannot_play">此视频无法在车机屏幕上播放。受保护的视频（例如 Apple TV+）需要获得授权的接收器。</string>
+    <string name="video_cannot_load">视频已停止加载。请检查连接后重试。</string>
+    <string name="video_cannot_play_here">此视频无法在车机屏幕上播放：车机无法读取或解码其格式。</string>
+    <string name="video_cannot_play_on_car">此视频无法在车机屏幕上播放。</string>
     <string name="safe_area_mapping_summary">安全区域：%1$d x %2$d，位于 (%3$d, %4$d)，画面 %5$d x %6$d</string>
     <string name="navigation_widget_label">CarPlay 导航</string>
     <string name="navigation_widget_description">来自 CarPlay 的下一个转弯、距离、到达时间和歌曲</string>
@@ -750,6 +753,8 @@
     <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
     <string name="settings_car_bluetooth_audio">通过车辆蓝牙播放 CarPlay 音频（实验性）</string>
     <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音频，因此音乐、导航和通话应通过 iPhone 与车辆的蓝牙连接传输。请保持 iPhone 与车辆配对，并将车辆音源设为蓝牙。如果声音改从 iPhone 播放，请关闭此选项。会重新连接 CarPlay。</string>
+    <string name="settings_car_music_link_drop">CarPlay 期间断开车机蓝牙音乐（实验性）</string>
+    <string name="settings_car_music_link_drop_description">在部分车机上，车辆自身与 iPhone 的蓝牙音乐连接会在 CarPlay 音乐开始时立即将其暂停。开启后，CarPlay 运行期间 DiPlay 只断开与本次会话 iPhone 的音乐连接，CarPlay 结束后尝试重新连接；在部分车机上无法做到，CarPlay 结束后车机蓝牙音乐可能保持断开。车辆蓝牙通话和配对保持不变。CarPlay 音频通过车辆蓝牙播放时不起作用。有线连接时使用在 DiPlay 中选择的 iPhone。下次连接时生效。</string>
     <string name="call_echo_cancellation">通话回声消除（实验性）</string>
     <string name="call_echo_cancellation_description">尝试减少 CarPlay 通话中发送给对方的扬声器回声。效果取决于车载主机。下次连接 CarPlay 时生效。</string>
     <string name="call_voice_filter">更清晰的通话人声（实验性）</string>
@@ -765,7 +770,7 @@
     <string name="settings_direct_video_output">直接视频输出（实验性）</string>
     <string name="settings_direct_video_output_description">将 CarPlay 画面直接交给车机的系统合成器，而不是在 DiPlay 窗口内绘制。可将延迟降低约一次屏幕刷新。画面调整不适用。会重新连接 CarPlay。</string>
     <string name="settings_low_latency_decoder">低延迟解码（实验性）</string>
-    <string name="settings_low_latency_decoder_description">要求高通视频解码器在每一帧解码后立即输出，而不是保留后续帧，并由专用线程立即显示每个已解码的帧，无需等待下一帧到达。可将延迟降低数十毫秒。如果画面出现花屏或卡住，请关闭。下次连接时生效。</string>
+    <string name="settings_low_latency_decoder_description">要求视频解码器在每一帧解码后立即输出，而不是保留后续帧，并由专用线程立即显示每个已解码的帧，无需等待下一帧到达。低延迟请求本身仅适用于高通解码器；在包括 Spreadtrum 在内的其他解码器上，该选项仍会启用专用输出线程。可将延迟降低数十毫秒。如果画面出现花屏或卡住，请关闭。下次连接时生效。</string>
     <string name="settings_fps_counter">FPS 计数器</string>
     <string name="settings_fps_counter_description">在 CarPlay 右上角显示计数器：每秒显示的帧数（50 及以上为绿色，30 及以上为黄色，低于 30 为红色）、每秒从 iPhone 接收的帧数以及解码时间。画面静止时帧数很少，因为 iPhone 不发送帧。</string>
     <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
@@ -911,8 +916,8 @@
     <string name="settings_gesture_disabled_action">快捷菜单 · 关闭下滑（点按切换）</string>
     <string name="bt_suspend_delay">蓝牙暂停延时</string>
     <string name="bt_suspend_delay_option">连接 %1$d 秒后</string>
-    <string name="bt_suspend_during_carplay">CarPlay 期间暂停车机蓝牙 · 需要 ADB</string>
-    <string name="bt_suspend_during_carplay_description">手机与车机保持免提连接时，来电会同时弹出车机蓝牙电话和 CarPlay 电话。开启后：CarPlay 连接期间通过 ADB 暂停车机蓝牙，来电只在 CarPlay 响应；蓝牙关闭期间，CarPlay 通话改走中控喇叭和车机麦克风，不再走电话免提。CarPlay 结束或下次无线连接握手前会自动恢复蓝牙。配对不受影响。更改在下次连接时生效。</string>
+    <string name="bt_suspend_during_carplay">CarPlay 期间暂停车机蓝牙</string>
+    <string name="bt_suspend_during_carplay_description">手机与车机保持免提连接时，来电会同时弹出车机蓝牙电话和 CarPlay 电话。开启后：CarPlay 连接期间暂停车机蓝牙，来电只在 CarPlay 响应；蓝牙关闭期间，CarPlay 通话改走中控喇叭和车机麦克风，不再走电话免提。CarPlay 结束或下次无线连接握手前会自动恢复蓝牙。配对不受影响。更改在下次连接时生效。Android 13 及更高版本需要 ADB。</string>
     <string name="cluster_small_window_card_theme">小屏转向卡主题</string>
     <string name="cluster_small_window_card_theme_follow">跟随转向卡主题</string>
     <string name="cluster_small_window_card_size">小屏转向卡 · 大小</string>
@@ -944,6 +949,8 @@
     <string name="settings_call_at_call_rate_description">以通话自身的采样率（8、16、24 或 32 kHz）的 PCM 提供通话音频，而不是 48 kHz 的 Opus，与原厂 CarPlay 接收器一致。仅限 USB 数据线：通过 Wi-Fi 时 iPhone 会把所有 CarPlay 声音留在手机上，因此无线连接提供常规格式。下次连接时生效。如果通话没有声音，请关闭此项。</string>
     <string name="settings_wheel_long_press_seek">长按下一首/上一首快进快退（实验性）</string>
     <string name="settings_wheel_long_press_seek_description">在方向盘为长按“下一首”和“上一首”发送单独按键的车机上（比亚迪 DiLink 3），长按会快进或快退约 2.5 秒，而不是没有反应。尚未在 iPhone 上测试。下次连接时生效。</string>
+    <string name="settings_declare_automatic_appearance">告诉 iPhone CarPlay 外观为自动（实验性）</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone 连接时告诉它 CarPlay 及其地图自动选择浅色或深色，DiPlay 自 0.2.16 起一直这样做。如果 CarPlay 不跟随“CarPlay 日夜模式”设置，请关闭此项。下次连接时生效。</string>
     <string name="bluetooth_connections_not_real">此车机的系统蓝牙回报“已连接”，但实际上没有连到 iPhone：连一个不存在的服务也回报成功。这里的蓝牙由厂商自己的模块处理，应用无法使用，所以此车机无法使用无线 CarPlay。请尝试 USB 连接。</string>
     <string name="bluetooth_cannot_open_connections">此车机的系统蓝牙无法为应用建立连接：固件没有提供应用连接要用的那一部分。车机自己的蓝牙通话和音乐不受影响，但此车机无法使用无线 CarPlay。请尝试 USB 连接。</string>
     <string name="bluetooth_will_not_stay_on_hint">如果蓝牙在那里打不开，或打开后又自己关闭，说明这台车机的蓝牙只供它自己的通话和音乐使用，应用无法使用。这种情况下无法使用无线 CarPlay，请改用 USB 线。</string>

@@ -8,6 +8,7 @@ object BydNavigationOutputs {
     /** Recover a journaled interrupted output when the app opens, even before a phone reconnects. */
     fun onAppOpened(context: Context) {
         BydBluetoothSuspend.onAppOpened(context)
+        CarMusicLinkDrop.restoreIfNeeded(context)
         BydOemClusterNavi.restoreIfNeeded(context)
         BydDiLink3ClusterOutput.restoreIfNeeded(context)
         com.shilapi.xcertplay.network.WifiScanPause.restoreIfNeeded(context)
@@ -32,11 +33,36 @@ object BydNavigationOutputs {
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
     private val fceCluster = NavigationOutputWorker("diplay-fce-cluster-output", FceClusterBridge::clear)
 
-    /** The host reports whether its CarPlay map window is on the cluster (see [BydClusterMapPause]). */
-    fun setClusterMapShown(shown: Boolean) {
-        BydClusterMapPause.clusterMapShown = shown
+    /**
+     * The host reports whether its CarPlay map window is on the cluster, and whether a centre-screen
+     * copy (the centre card or an embedded launcher map) also draws that stream. A copy only stops
+     * the stream pause ([BydClusterMapPause]); the cluster keeps its projection mode.
+     */
+    fun setClusterMapShown(shown: Boolean, mirrored: Boolean) {
+        BydClusterMapPause.clusterMapShown = shown && !mirrored
         BydClusterBridge.setMapShown(shown)
     }
+
+    /** What the host passes to [setClusterMapShown]. */
+    data class ClusterMapSignal(val shown: Boolean, val mirrored: Boolean)
+
+    /**
+     * The host's report, from its presentation, its confirmed ADB cluster route and surface, and
+     * whether any centre-screen copy is up. A copy goes only into [ClusterMapSignal.mirrored] and
+     * never clears [ClusterMapSignal.shown]: the map is still on the cluster, and on DiLink 3 a false
+     * `shown` switches the cluster back to its stock view (AutoContainer 18). In player mode the
+     * copies get no map frames, so they do not count as mirrored.
+     */
+    fun clusterMapSignal(
+        presentation: Boolean,
+        confirmedRoute: Boolean,
+        clusterSurface: Boolean,
+        mirrors: Boolean,
+        player: Boolean,
+    ) = ClusterMapSignal(
+        shown = presentation || (confirmedRoute && clusterSurface),
+        mirrored = mirrors && !player,
+    )
 
     /** The running CarPlay session: told every second whether the cluster currently shows the map. */
     fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }

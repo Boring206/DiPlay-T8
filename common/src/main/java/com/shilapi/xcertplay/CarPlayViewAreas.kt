@@ -36,6 +36,12 @@ class CarPlayViewAreas private constructor(
 
     fun kindOf(index: Int): Kind = slots[index].kind
 
+    /**
+     * Whether the area in use is on a portrait screen. A split-screen window's own shape does not tell: on a
+     * screen narrower than about 2:1 a side-by-side window is taller than wide on a landscape screen (#1176).
+     */
+    val currentPortrait: Boolean get() = slots[current].portrait
+
     /** The area of [kind] with [dockEdge] (or the edge-less one) on the current screen, or null. */
     fun index(kind: Kind, dockEdge: Int?): Int? = index(kind, slots[current].portrait, dockEdge)
 

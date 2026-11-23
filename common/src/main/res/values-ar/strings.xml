@@ -534,6 +534,9 @@
     <string name="video_play">تشغيل</string>
     <string name="video_pause">إيقاف مؤقت</string>
     <string name="video_cannot_play">لا يمكن تشغيل هذا الفيديو على شاشة السيارة. الفيديو المحمي، مثل Apple TV+، يحتاج إلى مستقبل مرخّص.</string>
+    <string name="video_cannot_load">توقف تحميل الفيديو. تحقّق من الاتصال وحاول مرة أخرى.</string>
+    <string name="video_cannot_play_here">لا يمكن تشغيل هذا الفيديو على شاشة السيارة: لا تستطيع وحدة القيادة قراءة صيغته أو فك ترميزها.</string>
+    <string name="video_cannot_play_on_car">لا يمكن تشغيل هذا الفيديو على شاشة السيارة.</string>
     <string name="safe_area_mapping_summary">المنطقة الآمنة: %1$d x %2$d عند (%3$d، %4$d) ضمن %5$d x %6$d</string>
     <string name="navigation_widget_label">تنقل CarPlay</string>
     <string name="navigation_widget_description">المنعطف التالي والمسافة ووقت الوصول والأغنية من CarPlay</string>
@@ -690,6 +693,8 @@
     <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
     <string name="settings_car_bluetooth_audio">صوت CarPlay عبر بلوتوث السيارة (تجريبي)</string>
     <string name="settings_car_bluetooth_audio_description">لا يقدّم DiPlay صوت CarPlay إلى iPhone، لذا يُفترض أن تمر الموسيقى والملاحة والمكالمات عبر اتصال البلوتوث بين iPhone والسيارة. أبقِ iPhone مقترنًا بالسيارة واختر البلوتوث مصدرًا للصوت في السيارة. إذا خرج الصوت من iPhone بدلًا من ذلك، فأوقف هذا الخيار. يعيد توصيل CarPlay.</string>
+    <string name="settings_car_music_link_drop">قطع موسيقى بلوتوث السيارة أثناء CarPlay (تجريبي)</string>
+    <string name="settings_car_music_link_drop_description">في بعض الوحدات، يوقف اتصال موسيقى البلوتوث الخاص بالسيارة مع iPhone موسيقى CarPlay مؤقتًا فور بدئها. عند التفعيل، يقطع DiPlay اتصال الموسيقى فقط مع iPhone هذه الجلسة أثناء عمل CarPlay ويحاول إعادة توصيله عند انتهاء CarPlay؛ وفي بعض الوحدات لا يمكن ذلك، وقد تبقى موسيقى بلوتوث السيارة مقطوعة بعد انتهاء CarPlay. تبقى المكالمات عبر بلوتوث السيارة والاقتران كما هي. لا يفعل شيئًا إذا كان صوت CarPlay يعمل عبر بلوتوث السيارة. عند الاتصال بالكابل يُستخدم iPhone المختار في DiPlay. يسري عند الاتصال التالي.</string>
     <string name="call_echo_cancellation">إلغاء صدى المكالمات (تجريبي)</string>
     <string name="call_echo_cancellation_description">يحاول تقليل صدى السماعات المرسل إلى الطرف الآخر أثناء مكالمات CarPlay. تعتمد النتيجة على وحدة السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح (تجريبي)</string>
@@ -705,7 +710,7 @@
     <string name="settings_direct_video_output">إخراج الفيديو المباشر (تجريبي)</string>
     <string name="settings_direct_video_output_description">يرسل صورة CarPlay مباشرة إلى مُركِّب شاشة الوحدة الرئيسية بدلًا من رسمها داخل نافذة DiPlay. قد يقلل التأخير بمقدار تحديث شاشة واحد تقريبًا. لا تنطبق تعديلات الصورة. يعيد الاتصال بـ CarPlay.</string>
     <string name="settings_low_latency_decoder">فك ترميز منخفض التأخير (تجريبي)</string>
-    <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
+    <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. طلب زمن الاستجابة المنخفض نفسه ينطبق على أجهزة فك ترميز Qualcomm؛ أما أجهزة فك الترميز الأخرى، ومنها Spreadtrum، فيفعّل الزر فيها سلسلة المعالجة المخصصة. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_fps_counter">عداد الإطارات في الثانية</string>
     <string name="settings_fps_counter_description">يعرض عدادًا في الزاوية العلوية اليمنى من CarPlay: الإطارات المعروضة في الثانية (أخضر من 50، أصفر من 30، أحمر أقل من ذلك)، والإطارات المستلمة من iPhone في الثانية، ووقت فك الترميز. تعرض الشاشة الثابتة إطارات قليلة لأن iPhone لا يرسل أي إطارات.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
@@ -788,8 +793,8 @@
     <string name="settings_gesture_disabled_action">القائمة السريعة · السحب معطّل (انقر للتبديل)</string>
     <string name="bt_suspend_delay">تأخير إيقاف البلوتوث</string>
     <string name="bt_suspend_delay_option">%1$d ث بعد الاتصال</string>
-    <string name="bt_suspend_during_carplay">إيقاف بلوتوث السيارة أثناء CarPlay · يتطلب ADB</string>
-    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا عبر ADB طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي.</string>
+    <string name="bt_suspend_during_carplay">إيقاف بلوتوث السيارة أثناء CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي. أندرويد 13 والأحدث يحتاج ADB.</string>
     <string name="cluster_small_window_card_theme">ثيم بطاقة النافذة الصغيرة</string>
     <string name="cluster_small_window_card_theme_follow">يتبع ثيم بطاقة الانعطاف</string>
     <string name="cluster_small_window_card_size">بطاقة النافذة الصغيرة · الحجم</string>
@@ -884,6 +889,8 @@
     <string name="settings_call_at_call_rate_description">يعرض المكالمات بصيغة PCM بتردد المكالمة نفسه (8 أو 16 أو 24 أو 32 كيلوهرتز) بدلًا من Opus بتردد 48 كيلوهرتز، كما يفعل مستقبل CarPlay الأصلي. عبر كابل USB فقط: عبر Wi-Fi كان iPhone يُبقي كل صوت CarPlay لديه، لذلك يعرض الاتصال اللاسلكي الصيغ المعتادة. يسري عند الاتصال التالي. إذا لم يكن هناك صوت في المكالمة فأوقف هذا الخيار.</string>
     <string name="settings_wheel_long_press_seek">الضغط المطوّل على التالي/السابق للتقديم والترجيع (تجريبي)</string>
     <string name="settings_wheel_long_press_seek_description">في الوحدات الرئيسية التي يرسل مقودها مفاتيح خاصة للضغط المطوّل على التالي والسابق (BYD DiLink 3)، يؤدي الضغط المطوّل إلى التقديم السريع أو الترجيع لنحو 2.5 ثانية بدلًا من ألا يحدث شيء. لم تُختبر بعد مع iPhone. يسري عند الاتصال التالي.</string>
+    <string name="settings_declare_automatic_appearance">إبلاغ iPhone بأن مظهر CarPlay تلقائي (تجريبي)</string>
+    <string name="settings_declare_automatic_appearance_description">عند اتصال iPhone، يُبلغه DiPlay بأن CarPlay وخريطته يختاران المظهر الفاتح أو الداكن تلقائيًا، كما يفعل DiPlay منذ الإصدار 0.2.16. إذا لم يتبع CarPlay إعداد وضع النهار والليل في CarPlay، فأوقف هذا الخيار. يُطبَّق عند الاتصال التالي.</string>
     <string name="bluetooth_connections_not_real">يُبلغ بلوتوث Android في وحدة القيادة هذه عن اتصال، لكن لا شيء يصل إلى iPhone: حتى الاتصال بخدمة غير موجودة ينجح. البلوتوث هنا يديره مكوّن خاص بالشركة المصنّعة لا تستطيع التطبيقات استخدامه، لذلك لا يمكن أن يعمل CarPlay اللاسلكي على وحدة القيادة هذه. جرّب اتصال USB.</string>
     <string name="bluetooth_cannot_open_connections">لا يستطيع بلوتوث Android في وحدة القيادة هذه فتح اتصالات للتطبيقات: ينقص البرنامج الثابت الجزء الذي تتصل عبره التطبيقات. المكالمات والموسيقى عبر بلوتوث السيارة نفسه لا تتأثر، لكن لا يمكن أن يعمل CarPlay اللاسلكي على وحدة القيادة هذه. جرّب اتصال USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">إذا لم يبقَ البلوتوث مُشغّلًا هناك، فهذه الوحدة تحتفظ بالبلوتوث لمكالماتها وموسيقاها فقط ولا تستطيع التطبيقات استخدامه. في هذه الحالة لا يمكن أن يعمل CarPlay اللاسلكي: استخدم كابل USB.</string>
