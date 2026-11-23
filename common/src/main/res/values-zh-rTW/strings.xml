@@ -774,7 +774,7 @@
     <string name="settings_direct_video_output">直接影片輸出（實驗性）</string>
     <string name="settings_direct_video_output_description">將 CarPlay 畫面直接交給車機的系統合成器，而不是在 DiPlay 視窗內繪製。可將延遲降低約一次螢幕更新。畫面調整不適用。會重新連線至 CarPlay。</string>
     <string name="settings_low_latency_decoder">低延遲解碼（實驗性）</string>
-    <string name="settings_low_latency_decoder_description">要求高通影片解碼器在每一幀解碼後立即輸出，而不是保留後續幀，並由專用執行緒立即顯示每個已解碼的幀，無需等待下一幀到達。可將延遲降低數十毫秒。如果畫面出現破圖或凍結，請關閉。下次連線時生效。</string>
+    <string name="settings_low_latency_decoder_description">要求影片解碼器在每一幀解碼後立即輸出，而不是保留後續幀，並由專用執行緒立即顯示每個已解碼的幀，無需等待下一幀到達。低延遲要求本身僅適用於高通解碼器；在包括 Spreadtrum 在內的其他解碼器上，此選項仍會啟用專用輸出執行緒。可將延遲降低數十毫秒。如果畫面出現破圖或凍結，請關閉。下次連線時生效。</string>
     <string name="settings_fps_counter">FPS 計數器</string>
     <string name="settings_fps_counter_description">在 CarPlay 右上角顯示計數器：每秒顯示的幀數（50 以上為綠色，30 以上為黃色，低於 30 為紅色）、每秒從 iPhone 接收的幀數以及解碼時間。畫面靜止時幀數很少，因為 iPhone 不會傳送幀。</string>
     <string name="manual_grant_cmd_hint">或在電腦上執行以下 ADB 指令：</string>
