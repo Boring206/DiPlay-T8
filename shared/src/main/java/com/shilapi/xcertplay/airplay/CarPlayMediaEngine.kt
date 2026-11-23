@@ -37,6 +37,13 @@ interface MediaSink {
     fun onIapMessage(bytes: ByteArray) {}
     /** The iPhone asked the car to duck its other audio for a navigation prompt (true), or to restore it. */
     fun onAudioDuck(ducked: Boolean) {}
+    /** Whether a surface is attached that stream [type]'s frames could be drawn on, its own or a mirror. */
+    fun hasVideoOutput(type: Int): Boolean = true
+    /**
+     * How many times a surface for stream [type], its own or a mirror, has been attached; it only grows.
+     * A change shows that one was attached in between, even if it is gone again.
+     */
+    fun videoOutputAttachments(type: Int): Long = 0L
 }
 
 /**
@@ -126,6 +133,17 @@ class CarPlayMediaEngine(
     }
     @Volatile private var nextRemoteControlStreamId = FIRST_REMOTE_CONTROL_STREAM_ID
     @Volatile private var iapTunnelHandler: ((BlockingDuplexByteStream) -> Boolean)? = null
+
+    override fun hasMainScreenOutput(): Boolean = sink.hasVideoOutput(STREAM_TYPE_MAIN_SCREEN)
+    override fun mainScreenOutputAttachments(): Long = sink.videoOutputAttachments(STREAM_TYPE_MAIN_SCREEN)
+
+    /** [sink], noting on [session] that buffered music reached it. */
+    private fun audioNotingSink(session: AirPlaySession): MediaSink = object : MediaSink by sink {
+        override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) {
+            session.noteAudioReceived()
+            sink.onAudioRtp(id, format, rtp, sample)
+        }
+    }
 
     override fun setIapTunnelHandler(handler: ((BlockingDuplexByteStream) -> Boolean)?) {
         iapTunnelHandler = handler
@@ -237,6 +255,9 @@ class CarPlayMediaEngine(
                                 "measuredHz=$hz microphoneClockHz=${microphone?.rtpClockRate ?: "none"}",
                         )
                     }
+                    // Main audio (music arrives as AAC on 102) starts only when the iPhone plays something,
+                    // so a dead session sends none. The alt stream is set up with every session.
+                    if (type == STREAM_TYPE_MAIN_AUDIO || type == STREAM_TYPE_MAIN_HIGH_AUDIO) session.noteAudioReceived()
                     sink.onAudioRtp(streamId, format, rtp, sample)
                 }
 
@@ -297,7 +318,7 @@ class CarPlayMediaEngine(
         }
         val peer = session.remoteAddress ?: return null
         val buffered = try {
-            BufferedAudioStream(key, format, sink, session::logDebug, expectedPeer = peer)
+            BufferedAudioStream(key, format, audioNotingSink(session), session::logDebug, expectedPeer = peer)
         } catch (error: Exception) {
             Log.w(TAG, "buffered audio listener failed", error)
             return null
@@ -707,6 +728,7 @@ class CarPlayMediaEngine(
         private const val STREAM_TYPE_MAIN_SCREEN = 110
         private const val STREAM_TYPE_ALT_SCREEN = 111
         private const val STREAM_TYPE_MAIN_AUDIO = 100
+        private const val STREAM_TYPE_MAIN_HIGH_AUDIO = 102
         private const val STREAM_TYPE_DATA = 130
         private const val DATASTREAM_OUTPUT_KEY = "DataStream-Output-Encryption-Key"
         private const val DATASTREAM_INPUT_KEY = "DataStream-Input-Encryption-Key"

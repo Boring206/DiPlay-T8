@@ -26,14 +26,33 @@ The report includes:
 - `REQUEST_SENT`, followed by a response timeout: TCP worked, but the control endpoint did not return a usable response in time.
 - Incoming AirPlay TCP, followed by an authentication or SETUP error: use the safe request/response milestones to identify the failing protocol exchange.
 
-After a requested Bluetooth handoff, the 45-second watchdog requires a rendered
-video frame before preserving a session whose tunneled iAP2 channel never became
-ready. Session establishment alone can also occur with a black screen and does
-not prevent timeout recovery. A proven video fallback releases the Bluetooth
-bootstrap and reports `STEP handoff/fallback`, explicitly recording that tunneled
-iAP2 is unavailable; `STEP handoff/complete` remains reserved for the normal
-tunnel-ready path. The fallback does not confirm the connection in saved history
-without the existing authenticated-tunnel proof.
+After a requested Bluetooth handoff, the 45-second watchdog keeps a session whose
+tunneled iAP2 channel never became ready only when the session has shown that it
+works: either a main-screen video frame rendered, or the iPhone sent decrypted main
+audio (types 100, 102 or 103) and no main-screen surface was attached at any point
+during the session. The second case covers CarPlay hidden behind another app, where
+no frame can render (#1215). Once a main-screen surface was attached without a frame
+rendering, audio alone is not enough, even if CarPlay was left again before the
+watchdog fired. Session establishment alone can also occur with a black screen and
+does not prevent timeout recovery.
+
+The line `wireless handoff timed out waiting for tunnel iAP2 readiness` is logged
+when the watchdog fires, before either outcome. A kept session logs
+`wireless handoff fallback after rendered video` or
+`wireless handoff fallback after iPhone audio while CarPlay is hidden`, keeps the
+Bluetooth bootstrap (it is the only iAP2 channel, carrying NowPlaying, route
+guidance and call updates) and reports `STEP handoff/fallback`, explicitly
+recording that tunneled iAP2 is unavailable. The bootstrap is released only if
+the tunnel becomes ready later; `STEP handoff/complete` remains reserved for that
+tunnel-ready path. A session that is not kept logs
+`wireless handoff found no working session: ...` with `session`, `renderedFrame`,
+`audio`, `screenAttached` and `screenAttachedDuringSession`, showing which proof
+was missing, and then reconnects. The fallback does not confirm the connection in
+saved history without the existing authenticated-tunnel proof.
+
+Not covered: a session kept on audio while hidden stays kept. If CarPlay is opened
+later and the screen is black, the watchdog does not run again, so the user has to
+reconnect.
 
 ## Association limits
 
