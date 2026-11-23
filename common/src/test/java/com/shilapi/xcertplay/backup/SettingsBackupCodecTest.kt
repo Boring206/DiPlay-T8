@@ -190,9 +190,11 @@ class SettingsBackupCodecTest {
             val outcome = SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": $wrong}}}""".toByteArray())
             assertEquals(0, outcome.applied)
             assertFalse(prefs("xcertplay_airplay").contains("declare_automatic_appearance"))
-            assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // ClassCastException when a String, Int or Float was stored
+            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // ClassCastException when a String, Int or Float was stored
         }
         prefs("xcertplay_airplay").edit().clear().commit()
+        SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": false}}}""".toByteArray())
+        assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
         SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"declare_automatic_appearance": true}}}""".toByteArray())
         assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
     }

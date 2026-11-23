@@ -227,8 +227,8 @@ object AirPlayInfoPlist {
             "features" to (display.features ?: (DISPLAY_FEATURE_HIGH_FIDELITY_TOUCH or DISPLAY_FEATURE_KNOBS)),
             "primaryInputDevice" to display.primaryInputDevice,
         )
-        // Opt-in: a 2023 Tang followed setNightMode only with these declared (#346); with them, a 2024 Yuan Plus
-        // (iOS 18) did not follow it and a Harman head unit (iOS 26) changed only the map (#1159, #1021).
+        // On by default since #346; a driver can turn it off for cars where CarPlay ignores setNightMode while they
+        // are declared (#1159).
         if (declareAutomaticAppearance) AUTOMATIC_APPEARANCE_KEYS.forEach { entry[it] = 0 }
 
         // Several areas let the car move CarPlay between them (another dock edge, the head unit's split

@@ -782,11 +782,12 @@ object AirPlayPersistence {
     }
 
     /**
-     * Declare automatic UI and map appearance on every display in /info, as 0.2.16 to 0.2.22 did for all cars (#346).
-     * Off by default since #1159; experimental, applies at reconnect.
+     * Declare automatic UI and map appearance on every display in /info. On by default, as every release since
+     * 0.2.16 did for all cars (#346); a driver can turn it off where CarPlay does not follow the day/night mode
+     * (#1159). Experimental, applies at reconnect.
      */
     fun loadDeclareAutomaticAppearance(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, false)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, true)
 
     fun saveDeclareAutomaticAppearance(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

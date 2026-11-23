@@ -791,7 +791,7 @@ class AdaptiveSettingsUiTest {
         assertFalse(text(R.string.settings_ambient_title) in vehicle)
         assertFalse(text(R.string.settings_ambient_title) in display)
         assertTrue(text(R.string.side_panel) in advanced)
-        // An experimental /info opt-in for some cars, not the everyday day/night mode in Display (#1159).
+        // An experimental /info switch for some cars, not the everyday day/night mode in Display (#1159).
         assertTrue(text(R.string.settings_declare_automatic_appearance) in advanced)
         assertTrue(display.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(audio.any { it.startsWith(text(R.string.settings_app_appearance)) })
@@ -1104,8 +1104,8 @@ class AdaptiveSettingsUiTest {
 
     @Test
     @Config(sdk = [28, 33])
-    fun automaticAppearanceDeclarationIsOptInAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
-        AirPlayPersistence.saveDeclareAutomaticAppearance(context, false)
+    fun automaticAppearanceDeclarationIsOnByDefaultAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
+        assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // nothing stored: as every release since 0.2.16
         val screen = openSettings()
         val session = mock(CarPlayController::class.java)
         var stops = 0
@@ -1118,17 +1118,23 @@ class AdaptiveSettingsUiTest {
             ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
             val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
                 .single { it.contentDescription == screen.getString(R.string.settings_declare_automatic_appearance) }
-            assertFalse(setting.isChecked)
+            assertTrue(setting.isChecked)
 
             setting.performClick()
 
-            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
             assertTrue(PendingReconnect.isPending(session))
             assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
             assertEquals(0, stops)
+
+            setting.performClick()
+
+            assertTrue(setting.isChecked)
+            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertEquals(0, stops)
         } finally {
-            AirPlayPersistence.saveDeclareAutomaticAppearance(context, false)
+            AirPlayPersistence.saveDeclareAutomaticAppearance(context, true)
             CarPlayBackgroundSession.clear()
             PendingReconnect.clear()
         }

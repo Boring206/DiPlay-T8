@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.airplay
 
 import com.shilapi.xcertplay.media.OpusEncoderSupport
 import com.shilapi.xcertplay.media.SoftwareOpusEncoder
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -19,28 +20,65 @@ class AirPlayInfoPlistTest {
         cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
     )
 
-    /** As 0.2.15: no appearance keys unless the driver opts in (#1159). */
+    /** What every release since 0.2.16 puts in /info for one display of [twoDisplayConfig], in wire order. */
+    private fun displaySince0216(uuid: String, type: Int, width: Int, height: Int, heightPhysical: Int) = linkedMapOf<String, Any?>(
+        "uuid" to uuid,
+        "type" to type,
+        "maxFPS" to 60,
+        "widthPixels" to width,
+        "heightPixels" to height,
+        "widthPhysical" to 200,
+        "heightPhysical" to heightPhysical,
+        "features" to 10,
+        "primaryInputDevice" to 1,
+        "uiAppearanceMode" to 0,
+        "uiAppearanceSetting" to 0,
+        "mapAppearanceMode" to 0,
+        "mapAppearanceSetting" to 0,
+        "viewAreas" to listOf(
+            linkedMapOf<String, Any?>(
+                "widthPixels" to width,
+                "heightPixels" to height,
+                "originXPixels" to 0,
+                "originYPixels" to 0,
+                "safeArea" to linkedMapOf<String, Any?>(
+                    "widthPixels" to width,
+                    "heightPixels" to height,
+                    "originXPixels" to 0,
+                    "originYPixels" to 0,
+                    "drawUIOutsideSafeArea" to true,
+                ),
+            ),
+        ),
+        "initialViewArea" to 0,
+    )
+
+    /** The setting must not change a byte for a driver who never touches it (#346, #1159). */
     @Test
-    fun noDisplayDeclaresAppearanceByDefault() {
-        val displays = AirPlayInfoPlist.build(twoDisplayConfig())["displays"] as List<*>
-        assertEquals(2, displays.size)
-        for (display in displays) {
-            val fields = display as Map<*, *>
-            for (key in appearanceKeys) assertFalse(key, fields.containsKey(key))
-        }
+    fun byDefaultTheInfoReplyIsByteForByteTheOneSentSince0216() {
+        val info = AirPlayInfoPlist.build(twoDisplayConfig())
+        val since0216 = LinkedHashMap(info)
+        since0216["displays"] = listOf(
+            displaySince0216(AirPlayInfoPlist.MAIN_UUID, 110, 1280, 720, 113),
+            displaySince0216(AirPlayInfoPlist.ALT_UUID, 111, 960, 360, 75),
+        )
+        assertArrayEquals(BplistCodec.encode(since0216), BplistCodec.encode(info))
     }
 
-    /** The opt-in restores the #346 declaration a 2023 Tang needed, on both displays and before viewAreas. */
     @Test
-    fun optInDeclaresAutomaticAppearanceOnBothDisplays() {
-        val displays = AirPlayInfoPlist.build(twoDisplayConfig().copy(declareAutomaticAppearance = true))["displays"] as List<*>
+    fun turnedOffNoDisplayDeclaresAppearanceAndNothingElseChanges() {
+        val on = AirPlayInfoPlist.build(twoDisplayConfig())
+        val off = AirPlayInfoPlist.build(twoDisplayConfig().copy(declareAutomaticAppearance = false))
+        val displays = off["displays"] as List<*>
         assertEquals(2, displays.size)
         for (display in displays) {
-            val fields = display as Map<*, *>
-            for (key in appearanceKeys) assertEquals(key, 0, fields[key])
-            val keys = fields.keys.toList()
-            assertEquals(appearanceKeys, keys.subList(keys.indexOf("primaryInputDevice") + 1, keys.indexOf("viewAreas")))
+            for (key in appearanceKeys) assertFalse(key, (display as Map<*, *>).containsKey(key))
         }
+        val onWithoutAppearance = LinkedHashMap(on)
+        onWithoutAppearance["displays"] = (on["displays"] as List<*>).map { display ->
+            (display as Map<*, *>).filterKeys { it !in appearanceKeys }
+        }
+        assertArrayEquals(BplistCodec.encode(onWithoutAppearance), BplistCodec.encode(off))
     }
 
     @Test
