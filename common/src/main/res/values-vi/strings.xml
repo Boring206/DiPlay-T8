@@ -935,8 +935,8 @@
     <string name="settings_gesture_disabled_action">Menu nhanh · đã tắt vuốt (nhấn để thay đổi)</string>
     <string name="bt_suspend_delay">Độ trễ tạm dừng Bluetooth</string>
     <string name="bt_suspend_delay_option">%1$d giây sau khi kết nối</string>
-    <string name="bt_suspend_during_carplay">Tạm dừng Bluetooth của xe trong khi dùng CarPlay · cần ADB</string>
-    <string name="bt_suspend_during_carplay_description">Điện thoại giữ kết nối rảnh tay với xe, nên cuộc gọi đổ chuông trên cả điện thoại Bluetooth của xe lẫn CarPlay. Khi CarPlay đang chạy, tạm dừng Bluetooth của xe qua ADB để cuộc gọi chỉ đổ chuông trên CarPlay; khi Bluetooth tắt, cuộc gọi CarPlay dùng loa và micrô trong xe thay vì SCO của điện thoại. Bluetooth bật lại khi CarPlay kết thúc và trước lần bắt tay không dây tiếp theo. Việc ghép nối không bao giờ bị thay đổi. Thay đổi áp dụng ở lần kết nối tiếp theo.</string>
+    <string name="bt_suspend_during_carplay">Tạm dừng Bluetooth của xe trong khi dùng CarPlay</string>
+    <string name="bt_suspend_during_carplay_description">Điện thoại giữ kết nối rảnh tay với xe, nên cuộc gọi đổ chuông trên cả điện thoại Bluetooth của xe lẫn CarPlay. Khi CarPlay đang chạy, tạm dừng Bluetooth của xe để cuộc gọi chỉ đổ chuông trên CarPlay; khi Bluetooth tắt, cuộc gọi CarPlay dùng loa và micrô trong xe thay vì SCO của điện thoại. Bluetooth bật lại khi CarPlay kết thúc và trước lần bắt tay không dây tiếp theo. Việc ghép nối không bao giờ bị thay đổi. Thay đổi áp dụng ở lần kết nối tiếp theo. Trên Android 13 trở lên cần ADB.</string>
     <string name="cluster_small_window_card_theme">Chủ đề thẻ chỉ đường ở cửa sổ nhỏ</string>
     <string name="cluster_small_window_card_theme_follow">Theo chủ đề thẻ chỉ đường</string>
     <string name="cluster_small_window_card_size">Thẻ chỉ đường ở cửa sổ nhỏ · kích thước</string>

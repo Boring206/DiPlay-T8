@@ -4898,7 +4898,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             AirPlayPersistence.loadBtSuspendDuringCarplay(this), enabled = !adbSwitchChangePending) {
             AirPlayPersistence.saveBtSuspendDuringCarplay(this, it)
             markReconnectNeeded()
-            if (it && BydBluetoothSuspend.adbNeededForPause()) checkAdbState(mayAsk = true)
+            if (it) checkAdbState(mayAsk = true)
         }
         if (AirPlayPersistence.loadBtSuspendDuringCarplay(this)) {
             val delays = listOf(5, 10, 15, 30)
